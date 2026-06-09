@@ -3,20 +3,28 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: TRANSPADILLA — Sistema de seguimiento de transporte público en tiempo real
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: rutas
+    description: Route management
+  - name: buses
+    description: Bus management and GPS
+  - name: stats
+    description: Dashboard statistics
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +32,299 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login and get JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+        "409":
+          description: Email already registered
+
+  /rutas:
+    get:
+      operationId: getRutas
+      tags: [rutas]
+      summary: Get all routes with their stops
+      responses:
+        "200":
+          description: List of routes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ruta"
+    post:
+      operationId: createRuta
+      tags: [rutas]
+      summary: Create a new route (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RutaInput"
+      responses:
+        "201":
+          description: Route created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ruta"
+
+  /rutas/{id}:
+    delete:
+      operationId: deleteRuta
+      tags: [rutas]
+      summary: Delete a route (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Route deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /rutas/{id}/paradas:
+    get:
+      operationId: getParadasByRuta
+      tags: [rutas]
+      summary: Get stops for a specific route
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of stops
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Parada"
+    post:
+      operationId: asignarParada
+      tags: [rutas]
+      summary: Assign a stop to a route (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AsignarParadaInput"
+      responses:
+        "201":
+          description: Stop assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /rutas/paradas/todas:
+    get:
+      operationId: getTodasParadas
+      tags: [rutas]
+      summary: Get all stops
+      responses:
+        "200":
+          description: All stops
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Parada"
+
+  /rutas/paradas/nueva:
+    post:
+      operationId: crearParada
+      tags: [rutas]
+      summary: Create a new stop (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParadaInput"
+      responses:
+        "201":
+          description: Stop created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Parada"
+
+  /buses:
+    get:
+      operationId: getBuses
+      tags: [buses]
+      summary: Get all buses with status and route info
+      responses:
+        "200":
+          description: List of buses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bus"
+    post:
+      operationId: createBus
+      tags: [buses]
+      summary: Create a new bus (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusInput"
+      responses:
+        "201":
+          description: Bus created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bus"
+
+  /buses/{id}:
+    delete:
+      operationId: deleteBus
+      tags: [buses]
+      summary: Delete a bus (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Bus deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /buses/gps:
+    post:
+      operationId: updateGps
+      tags: [buses]
+      summary: Update bus GPS position (conductor)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GpsInput"
+      responses:
+        "200":
+          description: GPS updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /buses/novedad:
+    post:
+      operationId: reportarNovedad
+      tags: [buses]
+      summary: Report an incident or delay (conductor)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NovedadInput"
+      responses:
+        "200":
+          description: Incident reported
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /buses/finalizar:
+    post:
+      operationId: finalizarRecorrido
+      tags: [buses]
+      summary: End a bus journey (conductor)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinalizarInput"
+      responses:
+        "200":
+          description: Journey ended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /stats:
+    get:
+      operationId: getStats
+      tags: [stats]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stats"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +335,208 @@ components:
       required:
         - status
 
+    LoginInput:
+      type: object
+      required: [correo, password]
+      properties:
+        correo:
+          type: string
+        password:
+          type: string
+
+    RegisterInput:
+      type: object
+      required: [nombre, correo, password]
+      properties:
+        nombre:
+          type: string
+        correo:
+          type: string
+        password:
+          type: string
+        rol:
+          type: string
+          enum: [admin, conductor, pasajero]
+
+    AuthResponse:
+      type: object
+      required: [token, usuario]
+      properties:
+        token:
+          type: string
+        usuario:
+          $ref: "#/components/schemas/Usuario"
+
+    RegisterResponse:
+      type: object
+      required: [id, rol]
+      properties:
+        id:
+          type: integer
+        rol:
+          type: string
+
+    Usuario:
+      type: object
+      required: [id, nombre, correo, rol]
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        correo:
+          type: string
+        rol:
+          type: string
+
+    Parada:
+      type: object
+      required: [id, nombre, latitud, longitud]
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        latitud:
+          type: number
+        longitud:
+          type: number
+        orden:
+          type: ["integer", "null"]
+
+    ParadaInput:
+      type: object
+      required: [nombre, latitud, longitud]
+      properties:
+        nombre:
+          type: string
+        latitud:
+          type: number
+        longitud:
+          type: number
+
+    AsignarParadaInput:
+      type: object
+      required: [parada_id, orden]
+      properties:
+        parada_id:
+          type: integer
+        orden:
+          type: integer
+
+    Ruta:
+      type: object
+      required: [id, nombre, color, activa, paradas]
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        color:
+          type: string
+        activa:
+          type: boolean
+        paradas:
+          type: array
+          items:
+            $ref: "#/components/schemas/Parada"
+
+    RutaInput:
+      type: object
+      required: [nombre]
+      properties:
+        nombre:
+          type: string
+        color:
+          type: string
+
+    Bus:
+      type: object
+      required: [id, placa, estado]
+      properties:
+        id:
+          type: integer
+        placa:
+          type: string
+        estado:
+          type: string
+        lat:
+          type: ["number", "null"]
+        lng:
+          type: ["number", "null"]
+        velocidad:
+          type: ["number", "null"]
+        novedad:
+          type: ["string", "null"]
+        actualizado:
+          type: ["string", "null"]
+        ruta_id:
+          type: ["integer", "null"]
+        nombre_ruta:
+          type: ["string", "null"]
+        color_ruta:
+          type: ["string", "null"]
+        conductor_id:
+          type: ["integer", "null"]
+        nombre_conductor:
+          type: ["string", "null"]
+
+    BusInput:
+      type: object
+      required: [placa]
+      properties:
+        placa:
+          type: string
+        ruta_id:
+          type: ["integer", "null"]
+
+    GpsInput:
+      type: object
+      required: [bus_id, lat, lng]
+      properties:
+        bus_id:
+          type: integer
+        lat:
+          type: number
+        lng:
+          type: number
+        velocidad:
+          type: number
+
+    NovedadInput:
+      type: object
+      required: [bus_id, novedad]
+      properties:
+        bus_id:
+          type: integer
+        novedad:
+          type: string
+
+    FinalizarInput:
+      type: object
+      required: [bus_id]
+      properties:
+        bus_id:
+          type: integer
+
+    MessageResponse:
+      type: object
+      required: [mensaje]
+      properties:
+        mensaje:
+          type: string
+
+    Stats:
+      type: object
+      required: [totalBuses, busesActivos, totalRutas, totalParadas, busesConDemora]
+      properties:
+        totalBuses:
+          type: integer
+        busesActivos:
+          type: integer
+        totalRutas:
+          type: integer
+        totalParadas:
+          type: integer
+        busesConDemora:
+          type: integer
