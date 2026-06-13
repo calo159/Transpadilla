@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Bus, Loader2 } from "lucide-react";
+import { Bus, Loader2, ArrowLeft, Shield, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { setAuth } from "@/lib/auth";
+import { setAuth, getUser } from "@/lib/auth";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -12,6 +12,16 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // If already logged in, redirect
+  useEffect(() => {
+    const user = getUser();
+    if (user) {
+      if (user.rol === "admin") setLocation("/admin");
+      else if (user.rol === "conductor") setLocation("/conductor");
+      else setLocation("/");
+    }
+  }, [setLocation]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +45,7 @@ export default function Login() {
       const rol = data.usuario.rol;
       if (rol === "admin") setLocation("/admin");
       else if (rol === "conductor") setLocation("/conductor");
-      else setLocation("/pasajero");
+      else setLocation("/");
     } catch {
       setError("Error de conexión. Intenta de nuevo.");
     } finally {
@@ -66,7 +76,7 @@ export default function Login() {
       const rol = data.usuario.rol;
       if (rol === "admin") setLocation("/admin");
       else if (rol === "conductor") setLocation("/conductor");
-      else setLocation("/pasajero");
+      else setLocation("/");
     } catch {
       setError("Error de conexión");
     } finally {
@@ -75,13 +85,22 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
+      {/* Back to map */}
+      <button
+        onClick={() => setLocation("/")}
+        className="absolute top-4 left-4 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
+      >
+        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+        Volver al mapa
+      </button>
+
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2.5 mb-2">
-            <div className="w-10 h-10 bg-primary/10 border border-primary/30 rounded-xl flex items-center justify-center">
-              <Bus className="w-5 h-5 text-primary" />
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <div className="w-12 h-12 bg-primary/10 border border-primary/30 rounded-2xl flex items-center justify-center">
+              <Bus className="w-6 h-6 text-primary" />
             </div>
             <h1 className="text-3xl font-black tracking-widest text-foreground">
               TRANSPADILLA
@@ -90,8 +109,8 @@ export default function Login() {
           <p className="text-muted-foreground text-sm font-medium">
             Riohacha, La Guajira
           </p>
-          <p className="text-muted-foreground text-xs mt-0.5">
-            Sistema de seguimiento de transporte público en tiempo real
+          <p className="text-muted-foreground/70 text-xs mt-1">
+            Acceso para conductores y administradores
           </p>
         </div>
 
@@ -110,7 +129,7 @@ export default function Login() {
               value={correo}
               onChange={(e) => setCorreo(e.target.value)}
               placeholder="correo@ejemplo.com"
-              className="mt-1.5"
+              className="mt-1.5 h-10"
               autoComplete="email"
               data-testid="input-correo"
               required
@@ -126,7 +145,7 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="mt-1.5"
+              className="mt-1.5 h-10"
               autoComplete="current-password"
               data-testid="input-password"
               required
@@ -134,17 +153,16 @@ export default function Login() {
           </div>
 
           {error && (
-            <p
-              className="text-destructive text-sm text-center py-1"
-              data-testid="error-login"
-            >
-              {error}
-            </p>
+            <div className="bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2">
+              <p className="text-destructive text-sm text-center" data-testid="error-login">
+                {error}
+              </p>
+            </div>
           )}
 
           <Button
             type="submit"
-            className="w-full h-10 font-semibold"
+            className="w-full h-11 font-bold text-sm tracking-wide"
             disabled={loading}
             data-testid="button-login"
           >
@@ -156,46 +174,46 @@ export default function Login() {
         </form>
 
         {/* Demo accounts */}
-        <div className="mt-4 bg-card/60 border border-border rounded-xl p-4 space-y-2">
-          <p className="text-xs font-semibold text-foreground mb-3">
-            Accesos rápidos de prueba:
+        <div className="mt-4 bg-card/60 border border-border rounded-2xl p-4 space-y-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Accesos de prueba
           </p>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              {
-                label: "Admin",
-                correo: "admin@transpadilla.co",
-                pass: "admin123",
-                color: "bg-purple-500/10 text-purple-400 border-purple-500/30",
-              },
-              {
-                label: "Conductor",
-                correo: "conductor@transpadilla.co",
-                pass: "conductor123",
-                color: "bg-blue-500/10 text-blue-400 border-blue-500/30",
-              },
-              {
-                label: "Pasajero",
-                correo: "pasajero@transpadilla.co",
-                pass: "pasajero123",
-                color: "bg-green-500/10 text-green-400 border-green-500/30",
-              },
-            ].map((demo) => (
-              <button
-                key={demo.label}
-                type="button"
-                onClick={() => loginRapido(demo.correo, demo.pass)}
-                disabled={loading}
-                className={`text-xs font-semibold py-2 px-3 rounded-lg border transition-opacity hover:opacity-80 disabled:opacity-50 ${demo.color}`}
-              >
-                {demo.label}
-              </button>
-            ))}
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => loginRapido("admin@transpadilla.co", "admin123")}
+              disabled={loading}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 transition-colors disabled:opacity-50"
+            >
+              <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                <Shield className="w-4 h-4 text-purple-400" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-foreground">Administrador</p>
+                <p className="text-[10px] text-muted-foreground">Gestión de rutas, buses y paradas</p>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => loginRapido("conductor@transpadilla.co", "conductor123")}
+              disabled={loading}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10 transition-colors disabled:opacity-50"
+            >
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Truck className="w-4 h-4 text-blue-400" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-foreground">Conductor</p>
+                <p className="text-[10px] text-muted-foreground">Transmisión GPS y reporte de novedades</p>
+              </div>
+            </button>
           </div>
-          <p className="text-xs text-muted-foreground text-center pt-1">
-            Haz clic para entrar directamente
-          </p>
         </div>
+
+        {/* Footer */}
+        <p className="text-center text-[10px] text-muted-foreground/50 mt-6 tracking-wider">
+          TRANSPADILLA © {new Date().getFullYear()} · Riohacha, La Guajira
+        </p>
       </div>
     </div>
   );

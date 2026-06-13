@@ -3,7 +3,11 @@ import { useLocation } from "wouter";
 import { useGetRutas, useGetBuses, getGetBusesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { clearAuth, getUser } from "@/lib/auth";
-import { Bus, MapPin, LogOut, Radio, AlertTriangle, X, PanelLeftClose, PanelLeftOpen, Search, Clock } from "lucide-react";
+import {
+  Bus, MapPin, LogOut, Radio, AlertTriangle, X,
+  PanelLeftClose, PanelLeftOpen, Search, Clock,
+  LogIn, Shield, ChevronRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { io, type Socket } from "socket.io-client";
@@ -60,10 +64,11 @@ export default function Pasajero() {
   // Init map once
   useEffect(() => {
     if (mapContainerRef.current && !mapRef.current) {
-      const map = L.map(mapContainerRef.current, { zoomControl: true }).setView([11.5444, -72.9072], 13);
+      const map = L.map(mapContainerRef.current, { zoomControl: false }).setView([11.5444, -72.9072], 13);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap",
       }).addTo(map);
+      L.control.zoom({ position: "bottomright" }).addTo(map);
       mapRef.current = map;
     }
     return () => {
@@ -86,12 +91,17 @@ export default function Pasajero() {
       ruta.paradas.forEach((p) => {
         const icon = L.divIcon({
           className: "",
-          html: `<div style="width:10px;height:10px;border-radius:50%;background:${ruta.color};border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,.5)"></div>`,
-          iconSize: [10, 10],
-          iconAnchor: [5, 5],
+          html: `<div style="width:12px;height:12px;border-radius:50%;background:${ruta.color};border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,.45)"></div>`,
+          iconSize: [12, 12],
+          iconAnchor: [6, 6],
         });
         const m = L.marker([p.latitud, p.longitud], { icon })
-          .bindPopup(`<b>${p.nombre}</b><br><span style="color:#8a9bb0">${ruta.nombre}</span>`)
+          .bindPopup(`
+            <div style="min-width:120px">
+              <b style="font-size:13px">${p.nombre}</b><br>
+              <span style="color:#64748b;font-size:11px">${ruta.nombre}</span>
+            </div>
+          `)
           .addTo(map);
         stopMarkersRef.current.push(m);
       });
@@ -140,18 +150,18 @@ export default function Pasajero() {
 
       const icon = L.divIcon({
         className: "",
-        html: `<div style="background:${color};color:white;padding:3px 6px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.6);font-family:monospace;cursor:pointer">${placa || "BUS"}</div>`,
-        iconSize: [60, 22],
-        iconAnchor: [30, 11],
+        html: `<div style="background:${color};color:white;padding:4px 8px;border-radius:8px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.5);font-family:'Inter',system-ui,sans-serif;letter-spacing:0.5px;cursor:pointer;border:2px solid rgba(255,255,255,0.3)">${placa || "BUS"}</div>`,
+        iconSize: [70, 26],
+        iconAnchor: [35, 13],
       });
 
       if (markersRef.current[busId]) {
         markersRef.current[busId]!.setLatLng([lat, lng]);
         markersRef.current[busId]!.setIcon(icon);
         markersRef.current[busId]!.setPopupContent(`
-          <div style="min-width:150px">
-            <b style="font-size:14px;font-family:monospace">${placa || "BUS"}</b><br>
-            <span style="color:#8a9bb0;font-size:12px">${routeName}</span><br>
+          <div style="min-width:160px;font-family:'Inter',system-ui,sans-serif">
+            <b style="font-size:14px;letter-spacing:0.5px">${placa || "BUS"}</b><br>
+            <span style="color:#64748b;font-size:12px">${routeName}</span><br>
             ${vel > 0 ? `<span style="color:#4ade80;font-size:12px">● ${Math.round(vel)} km/h</span><br>` : ""}
             ${novText}
           </div>
@@ -159,9 +169,9 @@ export default function Pasajero() {
       } else {
         const marker = L.marker([lat, lng], { icon })
           .bindPopup(`
-            <div style="min-width:150px">
-              <b style="font-size:14px;font-family:monospace">${placa || "BUS"}</b><br>
-              <span style="color:#8a9bb0;font-size:12px">${routeName}</span><br>
+            <div style="min-width:160px;font-family:'Inter',system-ui,sans-serif">
+              <b style="font-size:14px;letter-spacing:0.5px">${placa || "BUS"}</b><br>
+              <span style="color:#64748b;font-size:12px">${routeName}</span><br>
               ${vel > 0 ? `<span style="color:#4ade80;font-size:12px">● ${Math.round(vel)} km/h</span>` : ""}
             </div>
           `)
@@ -236,53 +246,50 @@ export default function Pasajero() {
       {/* Sidebar */}
       <div
         className="flex flex-col bg-sidebar border-r border-border overflow-hidden transition-all duration-300 ease-in-out"
-        style={{ width: sidebarOpen ? 288 : 0, minWidth: sidebarOpen ? 288 : 0 }}
+        style={{ width: sidebarOpen ? 300 : 0, minWidth: sidebarOpen ? 300 : 0 }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-          <div className="flex items-center gap-2">
-            <Bus className="w-4 h-4 text-primary" />
-            <span className="text-sm font-bold tracking-wider text-foreground">TRANSPADILLA</span>
+        {/* Header / Branding */}
+        <div className="px-4 py-4 border-b border-border shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary/10 border border-primary/30 rounded-xl flex items-center justify-center">
+              <Bus className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-base font-black tracking-widest text-foreground">TRANSPADILLA</h1>
+              <p className="text-[10px] text-muted-foreground font-medium tracking-wide">Transporte público · Riohacha</p>
+            </div>
           </div>
-          <Button
-            variant="ghost" size="sm"
-            onClick={() => { clearAuth(); setLocation("/"); }}
-            data-testid="button-salir"
-            className="h-7 px-2 text-muted-foreground hover:text-foreground"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-          </Button>
         </div>
 
         {/* Live stats */}
-        <div className="flex items-center gap-3 px-4 py-2 border-b border-border text-xs shrink-0">
-          <div className="flex items-center gap-1">
-            <div className={`w-2 h-2 rounded-full ${activeBuses.length > 0 ? "bg-green-500" : "bg-muted"}`} />
-            <span className="text-muted-foreground">{activeBuses.length} activos</span>
+        <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border text-xs shrink-0">
+          <div className="flex items-center gap-1.5">
+            <div className={`w-2 h-2 rounded-full ${activeBuses.length > 0 ? "bg-green-500 animate-pulse" : "bg-muted"}`} />
+            <span className="text-muted-foreground font-medium">{activeBuses.length} activos</span>
           </div>
           {demorasBuses.length > 0 && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-yellow-500" />
-              <span className="text-yellow-400">{demorasBuses.length} demora</span>
+              <span className="text-yellow-400 font-medium">{demorasBuses.length} demora</span>
             </div>
           )}
           <span className="ml-auto text-muted-foreground">{rutas.length} rutas</span>
         </div>
 
         {/* Search */}
-        <div className="px-3 py-2 border-b border-border shrink-0">
+        <div className="px-3 py-2.5 border-b border-border shrink-0">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar ruta..."
-              className="pl-8 h-8 text-xs bg-background border-border"
+              className="pl-8 h-9 text-xs bg-background border-border rounded-lg"
             />
             {busqueda && (
               <button
                 onClick={() => setBusqueda("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -292,14 +299,14 @@ export default function Pasajero() {
 
         {/* Routes list */}
         <div className="flex-1 overflow-y-auto py-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-2">
-            Rutas {rutasFiltradas.length !== rutas.length && `(${rutasFiltradas.length})`}
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-4 py-2">
+            Rutas disponibles {rutasFiltradas.length !== rutas.length && `(${rutasFiltradas.length})`}
           </p>
           {rutas.length === 0 && (
-            <p className="px-4 py-6 text-xs text-muted-foreground text-center">Cargando rutas...</p>
+            <p className="px-4 py-8 text-xs text-muted-foreground text-center">Cargando rutas...</p>
           )}
           {busqueda && rutasFiltradas.length === 0 && (
-            <p className="px-4 py-6 text-xs text-muted-foreground text-center">Sin resultados para "{busqueda}"</p>
+            <p className="px-4 py-8 text-xs text-muted-foreground text-center">Sin resultados para "{busqueda}"</p>
           )}
           {rutasFiltradas.map((ruta) => {
             const isSelected = selectedRutaId === ruta.id;
@@ -310,38 +317,38 @@ export default function Pasajero() {
                 key={ruta.id}
                 onClick={() => handleSelectRuta(ruta.id)}
                 data-testid={`ruta-item-${ruta.id}`}
-                className={`w-full text-left px-4 py-3 transition-all border-l-2 ${isSelected ? "bg-accent/10 border-primary" : "border-transparent hover:bg-secondary/50"}`}
-                style={{ opacity: dimmed ? 0.4 : 1 }}
+                className={`w-full text-left px-4 py-3.5 transition-all border-l-[3px] ${isSelected ? "bg-accent/10 border-primary" : "border-transparent hover:bg-secondary/50"}`}
+                style={{ opacity: dimmed ? 0.35 : 1 }}
               >
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2.5 mb-1">
                   <div
-                    className="w-3 h-3 rounded-full flex-shrink-0 transition-all"
+                    className="w-3.5 h-3.5 rounded-full flex-shrink-0 transition-all"
                     style={{
                       background: ruta.color,
-                      boxShadow: isSelected ? `0 0 6px ${ruta.color}` : "none",
+                      boxShadow: isSelected ? `0 0 8px ${ruta.color}` : "none",
                     }}
                   />
-                  <span className="text-sm font-medium text-foreground truncate">{ruta.nombre}</span>
-                  <div className="ml-auto flex items-center gap-1 flex-shrink-0">
+                  <span className="text-sm font-semibold text-foreground truncate">{ruta.nombre}</span>
+                  <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
                     {rutaBuses.length > 0 && (
-                      <span className="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded font-semibold">
+                      <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-bold">
                         {rutaBuses.length} bus{rutaBuses.length !== 1 ? "es" : ""}
                       </span>
                     )}
                     {ruta.activa && !rutaBuses.length && (
-                      <span className="text-xs text-green-400 font-semibold">Activa</span>
+                      <span className="text-[10px] text-green-400/70 font-semibold">Activa</span>
                     )}
                   </div>
                 </div>
                 {isSelected && ruta.paradas.length > 0 && (
-                  <div className="mt-2 pl-5 space-y-1">
+                  <div className="mt-2.5 pl-6 space-y-1.5">
                     {ruta.paradas.map((p, i) => (
-                      <div key={p.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <div key={p.id} className="flex items-center gap-2 text-xs text-muted-foreground">
                         <MapPin className="w-3 h-3 flex-shrink-0" style={{ color: ruta.color }} />
-                        <span>{p.nombre}</span>
-                        {i === 0 && <span className="ml-auto text-[10px] opacity-60">inicio</span>}
+                        <span className="truncate">{p.nombre}</span>
+                        {i === 0 && <span className="ml-auto text-[9px] opacity-50 font-medium">INICIO</span>}
                         {i === ruta.paradas.length - 1 && ruta.paradas.length > 1 && (
-                          <span className="ml-auto text-[10px] opacity-60">fin</span>
+                          <span className="ml-auto text-[9px] opacity-50 font-medium">FIN</span>
                         )}
                       </div>
                     ))}
@@ -358,12 +365,12 @@ export default function Pasajero() {
           if (!rutaBuses.length) return null;
           return (
             <div className="border-t border-border p-3 shrink-0">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Buses en ruta</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Buses en ruta</p>
               {rutaBuses.map((b) => (
-                <div key={b.id} className="bg-card border border-border rounded-lg p-2 mb-2 text-xs">
+                <div key={b.id} className="bg-card border border-border rounded-lg p-2.5 mb-2 text-xs">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-mono font-bold text-foreground">{b.placa}</span>
-                    <span className={`px-1.5 py-0.5 rounded font-semibold ${
+                    <span className="font-mono font-bold text-foreground tracking-wide">{b.placa}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                       b.estado === "activo" ? "bg-green-500/20 text-green-400"
                       : b.estado === "demora" ? "bg-yellow-500/20 text-yellow-400"
                       : "bg-muted/20 text-muted-foreground"
@@ -386,8 +393,51 @@ export default function Pasajero() {
         })()}
 
         {/* Footer */}
-        <div className="px-4 py-2 border-t border-border text-xs text-muted-foreground shrink-0">
-          {user ? `Hola, ${user.nombre}` : "Vista pública"} · Riohacha, La Guajira
+        <div className="px-4 py-3 border-t border-border shrink-0">
+          {user ? (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
+                  <span className="text-xs font-bold text-primary">{user.nombre.charAt(0).toUpperCase()}</span>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-foreground">{user.nombre}</p>
+                  <p className="text-[10px] text-muted-foreground capitalize">{user.rol}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                {(user.rol === "admin" || user.rol === "conductor") && (
+                  <Button
+                    variant="ghost" size="sm"
+                    onClick={() => setLocation(user.rol === "admin" ? "/admin" : "/conductor")}
+                    className="h-7 px-2 text-muted-foreground hover:text-primary"
+                    title="Ir al panel"
+                  >
+                    <Shield className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost" size="sm"
+                  onClick={() => { clearAuth(); window.location.reload(); }}
+                  className="h-7 px-2 text-muted-foreground hover:text-foreground"
+                  title="Cerrar sesión"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setLocation("/login")}
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors group"
+            >
+              <div className="flex items-center gap-2">
+                <LogIn className="w-4 h-4 text-primary" />
+                <span className="text-xs font-semibold text-foreground">Iniciar sesión</span>
+              </div>
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -398,7 +448,7 @@ export default function Pasajero() {
         {/* Sidebar toggle */}
         <button
           onClick={() => setSidebarOpen((o) => !o)}
-          className="absolute top-3 left-3 z-[1000] bg-card/90 backdrop-blur border border-border rounded-lg p-2 shadow-md hover:bg-secondary transition-colors"
+          className="absolute top-3 left-3 z-[1000] bg-card/95 backdrop-blur-sm border border-border rounded-xl p-2.5 shadow-lg hover:bg-secondary transition-colors"
           title={sidebarOpen ? "Ocultar panel" : "Mostrar panel"}
         >
           {sidebarOpen
@@ -411,33 +461,52 @@ export default function Pasajero() {
         {selectedRutaId !== null && (
           <button
             onClick={() => setSelectedRutaId(null)}
-            className="absolute top-3 left-14 z-[1000] flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-lg px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors shadow-md"
+            className="absolute top-3 left-16 z-[1000] flex items-center gap-1.5 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors shadow-lg"
           >
             <X className="w-3 h-3" />
-            Ver todas las rutas
+            Ver todas
+          </button>
+        )}
+
+        {/* Login button on map (when sidebar closed and not logged in) */}
+        {!sidebarOpen && !user && (
+          <button
+            onClick={() => setLocation("/login")}
+            className="absolute top-3 right-3 z-[1000] flex items-center gap-2 bg-primary text-primary-foreground rounded-xl px-4 py-2.5 text-xs font-semibold shadow-lg hover:bg-primary/90 transition-colors"
+          >
+            <LogIn className="w-3.5 h-3.5" />
+            Iniciar sesión
           </button>
         )}
 
         {/* Novedad alert */}
         {novedad && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-yellow-500/20 border border-yellow-500/50 rounded-xl px-4 py-3 flex items-start gap-3 max-w-md shadow-xl">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-yellow-500/15 backdrop-blur-sm border border-yellow-500/40 rounded-2xl px-5 py-3.5 flex items-start gap-3 max-w-md shadow-2xl">
             <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm font-semibold text-yellow-300">
+              <p className="text-sm font-bold text-yellow-300">
                 Alerta {novedad.placa ? `— Bus ${novedad.placa}` : "de conductor"}
               </p>
-              <p className="text-sm text-yellow-200">{novedad.novedad}</p>
+              <p className="text-sm text-yellow-200/90 mt-0.5">{novedad.novedad}</p>
             </div>
-            <button onClick={() => setNovedad(null)}>
+            <button onClick={() => setNovedad(null)} className="hover:opacity-70 transition-opacity">
               <X className="w-4 h-4 text-yellow-400" />
             </button>
           </div>
         )}
 
         {/* Live indicator */}
-        <div className="absolute bottom-4 right-4 z-[1000] flex items-center gap-2 bg-card/90 backdrop-blur border border-border rounded-lg px-3 py-1.5 text-xs">
-          <Radio className="w-3.5 h-3.5 text-primary" />
-          <span className="text-muted-foreground">En vivo</span>
+        <div className="absolute bottom-4 left-3 z-[1000] flex items-center gap-2 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-lg">
+          <div className="relative">
+            <Radio className="w-3.5 h-3.5 text-primary" />
+            <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          </div>
+          <span className="text-xs text-muted-foreground font-medium">En vivo</span>
+        </div>
+
+        {/* Branding watermark on map */}
+        <div className="absolute bottom-4 right-14 z-[999] text-[10px] text-muted-foreground/40 font-bold tracking-widest select-none">
+          TRANSPADILLA
         </div>
       </div>
     </div>

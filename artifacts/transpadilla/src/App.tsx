@@ -23,8 +23,8 @@ const queryClient = new QueryClient({
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Login} />
-      <Route path="/pasajero" component={Pasajero} />
+      <Route path="/" component={Pasajero} />
+      <Route path="/login" component={Login} />
       <Route path="/conductor" component={Conductor} />
       <Route path="/admin" component={Admin} />
       <Route component={NotFound} />
