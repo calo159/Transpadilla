@@ -20,15 +20,16 @@ import { getUser, clearAuth } from "@/lib/auth";
 import {
   Bus, LogOut, Map, MapPin, BarChart3, Plus, Trash2,
   RefreshCw, Users, Activity, AlertTriangle, Route,
-  Clock, Radio,
+  Clock, Radio, TrafficCone,
 } from "lucide-react";
+import TraficoTab from "./TraficoTab";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
-type Tab = "dashboard" | "rutas" | "buses" | "paradas";
+type Tab = "dashboard" | "rutas" | "buses" | "paradas" | "trafico";
 
 const COLORES = [
   { label: "Azul", value: "#3498db" },
@@ -173,6 +174,7 @@ export default function Admin() {
     { id: "rutas", label: "Rutas", icon: <Route className="w-4 h-4" /> },
     { id: "buses", label: "Buses", icon: <Bus className="w-4 h-4" /> },
     { id: "paradas", label: "Paradas", icon: <MapPin className="w-4 h-4" /> },
+    { id: "trafico", label: "Tráfico", icon: <TrafficCone className="w-4 h-4" /> },
   ];
 
   const activeBuses = buses.filter((b) => b.estado === "activo");
@@ -237,7 +239,8 @@ export default function Admin() {
             <h1 className="text-lg font-bold text-foreground capitalize">{
               tab === "dashboard" ? "Dashboard" :
               tab === "rutas" ? "Gestión de Rutas" :
-              tab === "buses" ? "Gestión de Buses" : "Gestión de Paradas"
+              tab === "buses" ? "Gestión de Buses" :
+              tab === "paradas" ? "Gestión de Paradas" : "Monitoreo de Tráfico"
             }</h1>
             <p className="text-xs text-muted-foreground">Riohacha, La Guajira</p>
           </div>
@@ -724,6 +727,9 @@ export default function Admin() {
               </div>
             </div>
           )}
+
+          {/* TRAFICO */}
+          {tab === "trafico" && <TraficoTab />}
 
         </div>
       </div>
