@@ -307,7 +307,7 @@ export default function Admin() {
             Ir al mapa
           </button>
 
-          {navItems.slice(4).map((item) => (
+          {navItems.slice(5).map((item) => (
             <button
               key={item.id}
               onClick={() => setTab(item.id)}
