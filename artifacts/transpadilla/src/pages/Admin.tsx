@@ -203,7 +203,36 @@ export default function Admin() {
         </div>
 
         <nav className="flex-1 p-3 space-y-1">
-          {navItems.map((item) => (
+          {navItems.slice(0, 4).map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setTab(item.id)}
+              data-testid={`nav-${item.id}`}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                tab === item.id
+                  ? "text-foreground bg-white/5 border-l-2"
+                  : "text-muted-foreground hover:bg-white/5 hover:text-foreground border-l-2 border-transparent"
+              }`}
+              style={tab === item.id ? { borderLeftColor: "var(--tp-yellow)", paddingLeft: "10px" } : {}}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+
+          {/* Separador visual */}
+          <div className="h-px bg-border/50 mx-2 my-1" />
+
+          {/* Ir al mapa — encima de Tráfico */}
+          <button
+            onClick={() => setLocation("/")}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:bg-white/5 hover:text-foreground border-l-2 border-transparent"
+          >
+            <Map className="w-4 h-4" />
+            Ir al mapa
+          </button>
+
+          {navItems.slice(4).map((item) => (
             <button
               key={item.id}
               onClick={() => setTab(item.id)}
@@ -222,13 +251,6 @@ export default function Admin() {
         </nav>
 
         <div className="p-4 border-t border-border space-y-1.5">
-          <Button
-            variant="ghost" size="sm"
-            className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground h-8"
-            onClick={() => setLocation("/")}
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />Ir al mapa
-          </Button>
           <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 py-0.5">
             <Users className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="truncate">{user?.nombre ?? "Admin"}</span>
