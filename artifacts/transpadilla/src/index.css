@@ -85,22 +85,22 @@
   --tp-whatsapp: #25D366;       /* Verde WhatsApp para botón de atención */
 
   /* ── Fondos oscuros en tono marino TransPadilla ── */
-  --background:     222 35% 5%;     /* #080D18 — más profundo/marino */
+  --background:     225 65% 5%;     /* Navy profundo TransPadilla */
   --foreground:     215 22% 93%;
 
-  --border:         220 24% 15%;
-  --input:          220 24% 17%;
+  --border:         225 50% 14%;
+  --input:          225 50% 16%;
   --ring:           219 73% 40%;    /* Azul marino para focus rings */
 
   /* Cards */
-  --card:           221 30% 8%;     /* #0C1220 */
+  --card:           225 55% 9%;     /* Navy oscuro */
   --card-foreground:215 22% 93%;
-  --card-border:    220 22% 17%;
+  --card-border:    225 48% 15%;
 
-  /* Sidebar — capa más oscura */
-  --sidebar:        222 35% 6%;
+  /* Sidebar — navy #0D2461 oscurecido */
+  --sidebar:        225 65% 7%;
   --sidebar-foreground:   215 20% 88%;
-  --sidebar-border:       220 24% 13%;
+  --sidebar-border:       225 50% 12%;
   --sidebar-primary:      219 73% 40%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent:       221 26% 13%;

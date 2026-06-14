@@ -204,6 +204,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/Parada"
 
+  /rutas/paradas/{id}:
+    delete:
+      operationId: deleteParada
+      tags: [rutas]
+      summary: Delete a stop (admin) — also removes from all routes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Stop deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
   /buses:
     get:
       operationId: getBuses
