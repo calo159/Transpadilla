@@ -47,11 +47,12 @@ router.post("/auth/login", async (req, res) => {
 });
 
 router.post("/auth/register", async (req, res) => {
-  const { nombre, correo, password, rol = "pasajero" } = req.body as {
+  const { nombre, correo, password, rol = "pasajero", identificacion } = req.body as {
     nombre: string;
     correo: string;
     password: string;
     rol?: string;
+    identificacion?: string;
   };
   if (!nombre || !correo || !password) {
     res.status(400).json({ error: "Todos los campos son requeridos" });
@@ -68,7 +69,7 @@ router.post("/auth/register", async (req, res) => {
   const hash = await bcrypt.hash(password, 10);
   const [nuevo] = await db
     .insert(usuarios)
-    .values({ nombre, correo, password: hash, rol })
+    .values({ nombre, correo, password: hash, rol, identificacion: identificacion ?? null })
     .returning({ id: usuarios.id, rol: usuarios.rol });
   res.status(201).json(nuevo);
 });

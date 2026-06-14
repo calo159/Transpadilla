@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import {
   useGetRutas, useGetBuses, useGetStats, useGetTodasParadas,
@@ -7,11 +7,11 @@ import {
   getGetRutasQueryKey, getGetBusesQueryKey, getGetTodasParadasQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { getUser, clearAuth } from "@/lib/auth";
+import { getUser, clearAuth, getToken } from "@/lib/auth";
 import {
   Bus, LogOut, Map, MapPin, BarChart3, Plus, Trash2,
   RefreshCw, Users, Activity, AlertTriangle, Route,
-  Clock, Radio, TrafficCone, ChevronLeft,
+  Clock, Radio, TrafficCone, ChevronLeft, UserCheck, Eye, EyeOff,
 } from "lucide-react";
 import TraficoTab from "./TraficoTab";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { LogoTP } from "@/components/LogoTP";
 
-type Tab = "dashboard" | "rutas" | "buses" | "paradas" | "trafico";
+type Tab = "dashboard" | "rutas" | "buses" | "paradas" | "conductores" | "trafico";
+
+interface Conductor {
+  id: number;
+  nombre: string;
+  correo: string;
+  identificacion: string | null;
+}
 
 const COLORES = [
   { label: "Azul TransPadilla", value: "#1757C2" },
@@ -51,6 +58,32 @@ export default function Admin() {
   const [asignarRutaId, setAsignarRutaId] = useState<string>("");
   const [asignarParadaId, setAsignarParadaId] = useState<string>("");
   const [asignarOrden, setAsignarOrden] = useState("0");
+
+  // Conductores
+  const [conductores, setConductores] = useState<Conductor[]>([]);
+  const [conductoresLoading, setConductoresLoading] = useState(false);
+  const [condNombre, setCondNombre] = useState("");
+  const [condIdentificacion, setCondIdentificacion] = useState("");
+  const [condCorreo, setCondCorreo] = useState("");
+  const [condPassword, setCondPassword] = useState("");
+  const [condShowPass, setCondShowPass] = useState(false);
+  const [condPending, setCondPending] = useState(false);
+
+  const fetchConductores = useCallback(async () => {
+    setConductoresLoading(true);
+    try {
+      const res = await fetch("/api/conductores", {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (res.ok) setConductores(await res.json() as Conductor[]);
+    } finally {
+      setConductoresLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tab === "conductores") fetchConductores();
+  }, [tab, fetchConductores]);
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useGetStats({
     query: { queryKey: ["stats"], refetchInterval: 15000 },
@@ -164,12 +197,53 @@ export default function Admin() {
     }
   };
 
+  const handleRegistrarConductor = async () => {
+    if (!condNombre.trim() || !condIdentificacion.trim() || !condCorreo.trim() || !condPassword.trim()) {
+      toast({ title: "Completa todos los campos", variant: "destructive" }); return;
+    }
+    setCondPending(true);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ nombre: condNombre.trim(), correo: condCorreo.trim(), password: condPassword, rol: "conductor", identificacion: condIdentificacion.trim() }),
+      });
+      if (!res.ok) {
+        const err = await res.json() as { error?: string };
+        toast({ title: err.error ?? "Error al registrar conductor", variant: "destructive" }); return;
+      }
+      toast({ title: `Conductor "${condNombre.trim()}" registrado` });
+      setCondNombre(""); setCondIdentificacion(""); setCondCorreo(""); setCondPassword("");
+      fetchConductores();
+    } catch {
+      toast({ title: "Error de conexión", variant: "destructive" });
+    } finally {
+      setCondPending(false);
+    }
+  };
+
+  const handleDeleteConductor = async (id: number, nombre: string) => {
+    if (!confirm(`¿Eliminar al conductor "${nombre}"? Perderá acceso al sistema.`)) return;
+    try {
+      const res = await fetch(`/api/conductores/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: `Conductor "${nombre}" eliminado` });
+      setConductores((prev) => prev.filter((c) => c.id !== id));
+    } catch {
+      toast({ title: "Error al eliminar conductor", variant: "destructive" });
+    }
+  };
+
   const navItems = [
-    { id: "dashboard" as Tab, label: "Dashboard", icon: <BarChart3 className="w-4 h-4" /> },
-    { id: "rutas"     as Tab, label: "Rutas",     icon: <Route className="w-4 h-4" /> },
-    { id: "buses"     as Tab, label: "Buses",     icon: <Bus className="w-4 h-4" /> },
-    { id: "paradas"   as Tab, label: "Paradas",   icon: <MapPin className="w-4 h-4" /> },
-    { id: "trafico"   as Tab, label: "Tráfico",   icon: <TrafficCone className="w-4 h-4" /> },
+    { id: "dashboard"   as Tab, label: "Dashboard",   icon: <BarChart3 className="w-4 h-4" /> },
+    { id: "rutas"       as Tab, label: "Rutas",       icon: <Route className="w-4 h-4" /> },
+    { id: "buses"       as Tab, label: "Buses",       icon: <Bus className="w-4 h-4" /> },
+    { id: "paradas"     as Tab, label: "Paradas",     icon: <MapPin className="w-4 h-4" /> },
+    { id: "conductores" as Tab, label: "Conductores", icon: <UserCheck className="w-4 h-4" /> },
+    { id: "trafico"     as Tab, label: "Tráfico",     icon: <TrafficCone className="w-4 h-4" /> },
   ];
 
   const activeBuses   = buses.filter((b) => b.estado === "activo");
@@ -177,11 +251,12 @@ export default function Admin() {
   const demoraBuses   = buses.filter((b) => b.estado === "demora");
 
   const tabTitle: Record<Tab, string> = {
-    dashboard: "Dashboard",
-    rutas:     "Gestión de Rutas",
-    buses:     "Gestión de Buses",
-    paradas:   "Gestión de Paradas",
-    trafico:   "Monitoreo de Tráfico",
+    dashboard:   "Dashboard",
+    rutas:       "Gestión de Rutas",
+    buses:       "Gestión de Buses",
+    paradas:     "Gestión de Paradas",
+    conductores: "Conductores",
+    trafico:     "Monitoreo de Tráfico",
   };
 
   const inputCls = "bg-background border-border h-11 text-base rounded-xl md:h-9 md:text-sm md:rounded-lg";
@@ -203,7 +278,7 @@ export default function Admin() {
         </div>
 
         <nav className="flex-1 p-3 space-y-1">
-          {navItems.slice(0, 4).map((item) => (
+          {navItems.slice(0, 5).map((item) => (
             <button
               key={item.id}
               onClick={() => setTab(item.id)}
@@ -655,6 +730,127 @@ export default function Admin() {
                           onClick={() => handleDeleteParada(p.id, p.nombre)}
                           className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
                           data-testid={`delete-parada-${p.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* CONDUCTORES */}
+          {tab === "conductores" && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Formulario de registro */}
+              <div className="bg-card border border-border rounded-xl p-4 md:p-5 h-fit">
+                <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-primary" /> Registrar conductor
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-xs mb-1.5">Nombre completo</Label>
+                    <Input
+                      value={condNombre}
+                      onChange={(e) => setCondNombre(e.target.value)}
+                      placeholder="Ej: Carlos Rodríguez"
+                      className={inputCls}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs mb-1.5">Número de identificación (CC / CE)</Label>
+                    <Input
+                      value={condIdentificacion}
+                      onChange={(e) => setCondIdentificacion(e.target.value)}
+                      placeholder="Ej: 1234567890"
+                      className={`${inputCls} font-mono`}
+                      inputMode="numeric"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs mb-1.5">Correo (usuario para iniciar sesión)</Label>
+                    <Input
+                      value={condCorreo}
+                      onChange={(e) => setCondCorreo(e.target.value)}
+                      placeholder="conductor@transpadilla.co"
+                      className={inputCls}
+                      type="email"
+                      inputMode="email"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs mb-1.5">Contraseña</Label>
+                    <div className="relative">
+                      <Input
+                        value={condPassword}
+                        onChange={(e) => setCondPassword(e.target.value)}
+                        placeholder="Mínimo 6 caracteres"
+                        className={`${inputCls} pr-11`}
+                        type={condShowPass ? "text" : "password"}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setCondShowPass((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {condShowPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      El conductor usará este correo y contraseña para entrar al sistema.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleRegistrarConductor}
+                    disabled={condPending}
+                    className="w-full h-11 rounded-xl"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    {condPending ? "Registrando..." : "Registrar conductor"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Lista de conductores */}
+              <div className="bg-card border border-border rounded-xl p-4 md:p-5">
+                <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-primary" /> Conductores registrados
+                  </span>
+                  <button onClick={fetchConductores} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+                    <RefreshCw className="w-3 h-3" /> Actualizar
+                  </button>
+                </h3>
+                {conductoresLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3].map((i) => <div key={i} className="h-16 bg-muted/40 rounded-xl animate-pulse" />)}
+                  </div>
+                ) : conductores.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    No hay conductores registrados. Crea el primero.
+                  </p>
+                ) : (
+                  <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                    {conductores.map((c) => (
+                      <div key={c.id} className="flex items-start gap-3 p-3 bg-secondary/30 border border-border rounded-xl">
+                        <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold" style={{ background: "rgba(23,87,194,0.2)", color: "var(--tp-sky)" }}>
+                          {c.nombre.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">{c.nombre}</p>
+                          <p className="text-xs text-muted-foreground truncate">{c.correo}</p>
+                          {c.identificacion && (
+                            <p className="text-xs font-mono mt-0.5" style={{ color: "var(--tp-sky)" }}>
+                              CC {c.identificacion}
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost" size="sm"
+                          onClick={() => handleDeleteConductor(c.id, c.nombre)}
+                          className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

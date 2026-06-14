@@ -160,10 +160,23 @@ router.get(
         nombre: usuarios.nombre,
         correo: usuarios.correo,
         rol: usuarios.rol,
+        identificacion: usuarios.identificacion,
       })
       .from(usuarios)
       .where(eq(usuarios.rol, "conductor"));
     res.json(rows);
+  },
+);
+
+router.delete(
+  "/conductores/:id",
+  authMiddleware,
+  requireRol("admin"),
+  async (req, res) => {
+    const id = parseInt(String(req.params["id"]));
+    await db.update(buses).set({ conductor_id: null }).where(eq(buses.conductor_id, id));
+    await db.delete(usuarios).where(eq(usuarios.id, id));
+    res.json({ mensaje: "Conductor eliminado" });
   },
 );
 
