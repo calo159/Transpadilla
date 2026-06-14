@@ -58,24 +58,16 @@ WSGI_APPLICATION = 'trafico_config.wsgi.application'
 # se manejan con app_label distinto para no chocar con Drizzle)
 # ----------------------------------------------------------------
 from urllib.parse import urlparse, parse_qs
+from dotenv import load_dotenv
 
+# Cargar las variables sensibles desde el .env de la raíz del repo (python-dotenv).
+# No sobreescribe variables que ya estén definidas en el entorno del sistema.
+load_dotenv(BASE_DIR.parent / ".env")
 
-def _cargar_database_url():
-    """Obtiene DATABASE_URL del entorno; si no está, la lee del .env de la raíz del repo."""
-    url = os.environ.get("DATABASE_URL")
-    if url:
-        return url
-    # El .env vive en la raíz del monorepo (dos niveles arriba de este archivo)
-    env_path = BASE_DIR.parent / ".env"
-    if env_path.exists():
-        for linea in env_path.read_text(encoding="utf-8").splitlines():
-            linea = linea.strip()
-            if linea.startswith("DATABASE_URL="):
-                return linea.split("=", 1)[1].strip().strip('"').strip("'")
-    return "postgresql://postgres:postgres@localhost:5432/transpadilla"
-
-
-DATABASE_URL = _cargar_database_url()
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql://postgres:postgres@localhost:5432/transpadilla",
+)
 
 _p = urlparse(DATABASE_URL)
 _query = parse_qs(_p.query)
