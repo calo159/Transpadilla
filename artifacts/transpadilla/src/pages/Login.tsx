@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Loader2, ArrowLeft, Shield, Truck, Eye, EyeOff, MessageCircle, Instagram } from "lucide-react";
+import { Loader2, ArrowLeft, Eye, EyeOff, MessageCircle, Instagram } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,7 +55,6 @@ export default function Login() {
   };
 
   const handleLogin = (e: React.FormEvent) => { e.preventDefault(); doLogin(correo, password); };
-  const loginRapido = (c: string, p: string) => { setCorreo(c); setPassword(p); doLogin(c, p); };
 
   return (
     <div
@@ -208,51 +207,6 @@ export default function Login() {
             {loading ? "Ingresando..." : "Iniciar sesión"}
           </Button>
         </form>
-
-        {/* Accesos rápidos demo */}
-        <div
-          className="mt-4 rounded-2xl p-4 space-y-3"
-          style={{ background: "rgba(12,18,32,0.7)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(12px)" }}
-        >
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 text-center">
-            Accesos rápidos de prueba
-          </p>
-          <div className="space-y-2.5">
-            <button
-              type="button"
-              onClick={() => loginRapido("admin@transpadilla.co", "admin123")}
-              disabled={loading}
-              className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-colors disabled:opacity-50"
-              style={{ borderColor: "rgba(156,39,176,0.25)", background: "rgba(156,39,176,0.08)" }}
-            >
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: "rgba(156,39,176,0.15)" }}>
-                <Shield className="w-4.5 h-4.5" style={{ width: "18px", height: "18px", color: "#c084fc" }} />
-              </div>
-              <div className="text-left">
-                <p className="text-sm font-semibold text-white">Administrador</p>
-                <p className="text-[11px] text-white/40">Gestión de rutas, buses y paradas</p>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => loginRapido("conductor@transpadilla.co", "conductor123")}
-              disabled={loading}
-              className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-colors disabled:opacity-50"
-              style={{ borderColor: "rgba(75,169,216,0.25)", background: "rgba(75,169,216,0.08)" }}
-            >
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: "rgba(75,169,216,0.15)" }}>
-                <Truck className="w-4.5 h-4.5" style={{ width: "18px", height: "18px", color: "var(--tp-sky)" }} />
-              </div>
-              <div className="text-left">
-                <p className="text-sm font-semibold text-white">Conductor</p>
-                <p className="text-[11px] text-white/40">Transmisión GPS y reporte de novedades</p>
-              </div>
-            </button>
-          </div>
-        </div>
 
         {/* Footer */}
         <div className="mt-6 text-center space-y-1">

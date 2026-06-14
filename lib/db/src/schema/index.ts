@@ -15,6 +15,7 @@ export const usuarios = pgTable("usuarios", {
   correo: varchar("correo", { length: 100 }).notNull().unique(),
   password: varchar("password", { length: 200 }).notNull(),
   rol: varchar("rol", { length: 20 }).notNull().default("pasajero"),
+  identificacion: varchar("identificacion", { length: 30 }),
 });
 
 export const rutas = pgTable("rutas", {
