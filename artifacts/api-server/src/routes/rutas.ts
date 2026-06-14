@@ -56,7 +56,7 @@ router.delete(
   authMiddleware,
   requireRol("admin"),
   async (req, res) => {
-    await db.delete(rutas).where(eq(rutas.id, parseInt(req.params["id"]!)));
+    await db.delete(rutas).where(eq(rutas.id, parseInt(String(req.params["id"]))));
     res.json({ mensaje: "Ruta eliminada" });
   },
 );
@@ -70,7 +70,7 @@ router.patch(
     await db
       .update(rutas)
       .set({ activa })
-      .where(eq(rutas.id, parseInt(req.params["id"]!)));
+      .where(eq(rutas.id, parseInt(String(req.params["id"]))));
     res.json({ mensaje: "Ruta actualizada" });
   },
 );
@@ -99,7 +99,7 @@ router.post(
 );
 
 router.get("/rutas/:id/paradas", async (req, res) => {
-  const rutaId = parseInt(req.params["id"]!);
+  const rutaId = parseInt(String(req.params["id"]));
   const stops = await db
     .select({
       id: paradas.id,
@@ -120,7 +120,7 @@ router.post(
   authMiddleware,
   requireRol("admin"),
   async (req, res) => {
-    const rutaId = parseInt(req.params["id"]!);
+    const rutaId = parseInt(String(req.params["id"]));
     const { parada_id, orden } = req.body as {
       parada_id: number;
       orden: number;

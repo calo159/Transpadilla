@@ -23,10 +23,46 @@ class BusGPS(models.Model):
         return self.placa
 
 
+# ----------------------------------------------------------------
+# Modelos NO administrados que leen las tablas de TRANSPADILLA
+# (rutas, paradas, ruta_paradas) creadas por Drizzle. Se usan para
+# generar los tramos de tráfico dinámicamente a partir de las rutas.
+# ----------------------------------------------------------------
+class RutaTP(models.Model):
+    nombre = models.CharField(max_length=100)
+    color = models.CharField(max_length=20)
+    activa = models.BooleanField(default=True)
+
+    class Meta:
+        managed = False
+        db_table = 'rutas'
+
+
+class ParadaTP(models.Model):
+    nombre = models.CharField(max_length=100)
+    latitud = models.FloatField()
+    longitud = models.FloatField()
+
+    class Meta:
+        managed = False
+        db_table = 'paradas'
+
+
+class RutaParadaTP(models.Model):
+    ruta_id = models.IntegerField()
+    parada_id = models.IntegerField()
+    orden = models.IntegerField(default=0)
+
+    class Meta:
+        managed = False
+        db_table = 'ruta_paradas'
+
+
 class TramoVia(models.Model):
     """
-    Un tramo de vía monitoreado (segmento entre dos puntos).
-    Se define manualmente para las calles principales de Riohacha.
+    Un tramo de vía monitoreado (segmento entre dos paradas consecutivas
+    de una ruta). Se genera/sincroniza automáticamente desde las rutas y
+    paradas que el administrador crea en el panel (ver sincronizar_tramos).
     """
     nombre = models.CharField(max_length=150)
     lat_inicio = models.FloatField()
@@ -34,9 +70,17 @@ class TramoVia(models.Model):
     lat_fin = models.FloatField()
     lng_fin = models.FloatField()
     radio_deteccion_metros = models.FloatField(default=150)
+    # Vínculo con la ruta de TRANSPADILLA que originó el tramo
+    ruta_id = models.IntegerField(null=True)
+    ruta_nombre = models.CharField(max_length=100, blank=True, default="")
+    ruta_color = models.CharField(max_length=20, blank=True, default="#3498db")
+    parada_inicio_id = models.IntegerField(null=True)
+    parada_fin_id = models.IntegerField(null=True)
 
     class Meta:
         db_table = 'trafico_tramo_via'
+        # Un tramo único por par de paradas dentro de una ruta
+        unique_together = ('ruta_id', 'parada_inicio_id', 'parada_fin_id')
 
     def __str__(self):
         return self.nombre

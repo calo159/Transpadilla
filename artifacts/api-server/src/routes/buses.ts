@@ -58,7 +58,7 @@ router.delete(
   authMiddleware,
   requireRol("admin"),
   async (req, res) => {
-    await db.delete(buses).where(eq(buses.id, parseInt(req.params["id"]!)));
+    await db.delete(buses).where(eq(buses.id, parseInt(String(req.params["id"]))));
     res.json({ mensaje: "Bus eliminado" });
   },
 );
@@ -176,7 +176,7 @@ router.patch(
     await db
       .update(buses)
       .set({ conductor_id: conductor_id ?? null })
-      .where(eq(buses.id, parseInt(req.params["id"]!)));
+      .where(eq(buses.id, parseInt(String(req.params["id"]))));
     res.json({ mensaje: "Conductor actualizado" });
   },
 );

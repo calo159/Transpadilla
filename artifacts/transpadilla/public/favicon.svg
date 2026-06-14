@@ -1,3 +1,19 @@
 <svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="180" height="180" rx="36" fill="#FF3C00"/>
+  <rect width="180" height="180" rx="36" fill="#0A7BFF"/>
+  <!-- bus body -->
+  <rect x="30" y="55" width="120" height="75" rx="12" fill="white" opacity="0.95"/>
+  <!-- windows row -->
+  <rect x="44" y="70" width="28" height="22" rx="5" fill="#0A7BFF"/>
+  <rect x="80" y="70" width="28" height="22" rx="5" fill="#0A7BFF"/>
+  <rect x="116" y="70" width="20" height="22" rx="5" fill="#0A7BFF"/>
+  <!-- front stripe -->
+  <rect x="30" y="55" width="120" height="16" rx="12" fill="#0058C4"/>
+  <rect x="30" y="63" width="120" height="8" fill="#0058C4"/>
+  <!-- wheels -->
+  <circle cx="58" cy="133" r="16" fill="#0A0F1C"/>
+  <circle cx="58" cy="133" r="8" fill="#334155"/>
+  <circle cx="122" cy="133" r="16" fill="#0A0F1C"/>
+  <circle cx="122" cy="133" r="8" fill="#334155"/>
+  <!-- TP text -->
+  <text x="90" y="115" font-family="Arial,sans-serif" font-size="18" font-weight="900" fill="#0A7BFF" text-anchor="middle" letter-spacing="2">TP</text>
 </svg>

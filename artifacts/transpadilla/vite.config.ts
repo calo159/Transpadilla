@@ -2,81 +2,49 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { VitePWA } from "vite-plugin-pwa";
+import basicSsl from "@vitejs/plugin-basic-ssl";
 
-const rawPort = process.env.PORT;
-if (!rawPort) {
-  throw new Error("PORT environment variable is required but was not provided.");
-}
-const port = Number(rawPort);
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
-const basePath = process.env.BASE_PATH;
-if (!basePath) {
-  throw new Error("BASE_PATH environment variable is required but was not provided.");
-}
+const port = Number(process.env.PORT ?? "5173");
+const basePath = process.env.BASE_PATH ?? "/";
+// HTTPS local (necesario para que el GPS del conductor funcione en el celular).
+// Se activa con la variable de entorno HTTPS=true (ver iniciar-https.ps1).
+const useHttps = process.env.HTTPS === "true";
 
 export default defineConfig({
   base: basePath,
   plugins: [
+    ...(useHttps ? [basicSsl()] : []),
     react(),
     tailwindcss(),
-    runtimeErrorOverlay(),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg"],
       manifest: {
-        name: "TRANSPADILLA — Transporte Público Riohacha",
-        short_name: "TRANSPADILLA",
-        description: "Sistema de rastreo de buses en tiempo real para Riohacha, La Guajira",
-        theme_color: "#0f172a",
-        background_color: "#0f172a",
+        name: "TransPadilla — Transporte Público Riohacha",
+        short_name: "TransPadilla",
+        description: "Sistema de rastreo de buses en tiempo real para Riohacha, La Guajira. Moviendo la Ciudad.",
+        theme_color: "#0D2461",
+        background_color: "#090E1A",
         display: "standalone",
         orientation: "portrait",
         scope: basePath,
         start_url: basePath,
         icons: [
-          {
-            src: "pwa-192x192.png",
-            sizes: "192x192",
-            type: "image/png",
-          },
-          {
-            src: "pwa-512x512.png",
-            sizes: "512x512",
-            type: "image/png",
-          },
-          {
-            src: "pwa-512x512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "maskable",
-          },
+          { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
+          { src: "pwa-512x512.png", sizes: "512x512", type: "image/png" },
+          { src: "pwa-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
         screenshots: [
-          {
-            src: "screenshot-wide.png",
-            sizes: "1280x720",
-            type: "image/png",
-            form_factor: "wide",
-            label: "TRANSPADILLA — Vista del mapa de Riohacha",
-          },
-          {
-            src: "screenshot-mobile.png",
-            sizes: "390x844",
-            type: "image/png",
-            form_factor: "narrow",
-            label: "TRANSPADILLA — Seguimiento en tiempo real",
-          },
+          { src: "screenshot-wide.png", sizes: "1280x720", type: "image/png", form_factor: "wide", label: "TransPadilla — Vista del mapa de Riohacha" },
+          { src: "screenshot-mobile.png", sizes: "390x844", type: "image/png", form_factor: "narrow", label: "TransPadilla — Seguimiento en tiempo real" },
         ],
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/{s}\.tile\.openstreetmap\.org\/.*/i,
+            urlPattern: /^https:\/\/[a-z]\.tile\.openstreetmap\.org\/.*/i,
             handler: "CacheFirst",
             options: {
               cacheName: "osm-tiles",
@@ -86,19 +54,10 @@ export default defineConfig({
         ],
       },
     }),
-    ...(process.env.NODE_ENV !== "production" && process.env.REPL_ID !== undefined
-      ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer({ root: path.resolve(import.meta.dirname, "..") })
-          ),
-          await import("@replit/vite-plugin-dev-banner").then((m) => m.devBanner()),
-        ]
-      : []),
   ],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
-      "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
     },
     dedupe: ["react", "react-dom"],
   },
@@ -112,7 +71,21 @@ export default defineConfig({
     strictPort: true,
     host: "0.0.0.0",
     allowedHosts: true,
+    https: useHttps ? {} : undefined,
     fs: { strict: true },
+    proxy: {
+      "/api": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/socket.io": {
+        target: "http://localhost:8080",
+        ws: true,
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   preview: {
     port,

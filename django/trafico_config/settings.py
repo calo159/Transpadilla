@@ -57,27 +57,40 @@ WSGI_APPLICATION = 'trafico_config.wsgi.application'
 # (solo lectura sobre la tabla de buses; modelos propios de tráfico
 # se manejan con app_label distinto para no chocar con Drizzle)
 # ----------------------------------------------------------------
-DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://postgres:password@helium/heliumdb?sslmode=disable"
-)
+from urllib.parse import urlparse, parse_qs
 
-import re
-_match = re.match(
-    r"postgresql://(?P<user>[^:]+):(?P<password>[^@]*)@(?P<host>[^/]+)/(?P<name>[^?]+)",
-    DATABASE_URL
-)
-_db = _match.groupdict() if _match else {}
+
+def _cargar_database_url():
+    """Obtiene DATABASE_URL del entorno; si no está, la lee del .env de la raíz del repo."""
+    url = os.environ.get("DATABASE_URL")
+    if url:
+        return url
+    # El .env vive en la raíz del monorepo (dos niveles arriba de este archivo)
+    env_path = BASE_DIR.parent / ".env"
+    if env_path.exists():
+        for linea in env_path.read_text(encoding="utf-8").splitlines():
+            linea = linea.strip()
+            if linea.startswith("DATABASE_URL="):
+                return linea.split("=", 1)[1].strip().strip('"').strip("'")
+    return "postgresql://postgres:postgres@localhost:5432/transpadilla"
+
+
+DATABASE_URL = _cargar_database_url()
+
+_p = urlparse(DATABASE_URL)
+_query = parse_qs(_p.query)
+# sslmode: usar el de la URL si viene, si no 'prefer' (local no exige SSL)
+_sslmode = _query.get("sslmode", ["prefer"])[0]
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': _db.get('name', 'heliumdb'),
-        'USER': _db.get('user', 'postgres'),
-        'PASSWORD': _db.get('password', ''),
-        'HOST': _db.get('host', 'helium'),
-        'PORT': '5432',
-        'OPTIONS': {'sslmode': 'disable'},
+        'NAME': (_p.path or "/transpadilla").lstrip("/"),
+        'USER': _p.username or "postgres",
+        'PASSWORD': _p.password or "",
+        'HOST': _p.hostname or "localhost",
+        'PORT': str(_p.port or 5432),
+        'OPTIONS': {'sslmode': _sslmode},
     }
 }
 
@@ -94,6 +107,5 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from .models import TramoVia, EstadoTrafico, LecturaVelocidad
-from .traffic_service import procesar_gps_buses, recalcular_estados
+from .traffic_service import procesar_gps_buses, recalcular_estados, sincronizar_tramos
 
 
 def mapa_trafico(request):
@@ -16,7 +16,12 @@ def api_estado_trafico(request):
     """
     Devuelve el estado actual de todos los tramos de vía,
     incluyendo coordenadas para dibujarlos en el mapa.
+
+    Sincroniza primero los tramos con las rutas/paradas actuales, de modo que
+    siempre reflejen las rutas que el administrador tiene configuradas.
     """
+    sincronizar_tramos()
+
     tramos = TramoVia.objects.select_related('estado_actual').all()
     data = []
     for tramo in tramos:
@@ -43,6 +48,9 @@ def api_estado_trafico(request):
             "velocidad_promedio": velocidad_promedio,
             "muestras": muestras,
             "actualizado": actualizado,
+            "ruta_id": tramo.ruta_id,
+            "ruta_nombre": tramo.ruta_nombre,
+            "ruta_color": tramo.ruta_color,
         })
 
     return Response({"tramos": data})

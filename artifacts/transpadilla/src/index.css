@@ -66,7 +66,7 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* TRANSPADILLA — dark transport theme (single mode, always dark) */
+/* TransPadilla — Azul Marino + Amarillo Guajiro — "Moviendo la Ciudad" */
 :root {
   --button-outline: rgba(255,255,255, .10);
   --badge-outline: rgba(255,255,255, .05);
@@ -74,38 +74,62 @@
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
 
-  --background:     220 22% 8%;
-  --foreground:     215 20% 90%;
-  --border:         220 16% 18%;
-  --card:           220 20% 11%;
-  --card-foreground:215 20% 90%;
-  --card-border:    220 16% 20%;
-  --sidebar:        220 22% 9%;
-  --sidebar-foreground:   215 18% 88%;
-  --sidebar-border:       220 16% 16%;
-  --sidebar-primary:      210 90% 54%;
+  /* ── TransPadilla brand palette ── */
+  --tp-yellow: #F5C200;         /* Amarillo Guajiro — color icónico de la marca */
+  --tp-yellow-rgb: 245, 194, 0;
+  --tp-amber: #F5C200;          /* alias para compatibilidad */
+  --tp-amber-rgb: 245, 194, 0;
+  --tp-navy: #0D2461;           /* Azul marino profundo — fondo logo */
+  --tp-sky: #4BA9D8;            /* Azul cielo Caribe — círculo del logo */
+  --tp-sky-rgb: 75, 169, 216;
+  --tp-whatsapp: #25D366;       /* Verde WhatsApp para botón de atención */
+
+  /* ── Fondos oscuros en tono marino TransPadilla ── */
+  --background:     222 35% 5%;     /* #080D18 — más profundo/marino */
+  --foreground:     215 22% 93%;
+
+  --border:         220 24% 15%;
+  --input:          220 24% 17%;
+  --ring:           219 73% 40%;    /* Azul marino para focus rings */
+
+  /* Cards */
+  --card:           221 30% 8%;     /* #0C1220 */
+  --card-foreground:215 22% 93%;
+  --card-border:    220 22% 17%;
+
+  /* Sidebar — capa más oscura */
+  --sidebar:        222 35% 6%;
+  --sidebar-foreground:   215 20% 88%;
+  --sidebar-border:       220 24% 13%;
+  --sidebar-primary:      219 73% 40%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent:       220 18% 16%;
+  --sidebar-accent:       221 26% 13%;
   --sidebar-accent-foreground:  215 18% 88%;
-  --sidebar-ring:         210 90% 54%;
-  --popover:        220 20% 10%;
-  --popover-foreground:   215 20% 90%;
-  --popover-border:       220 16% 18%;
-  --primary:        210 90% 54%;
+  --sidebar-ring:         219 73% 40%;
+
+  --popover:        221 30% 8%;
+  --popover-foreground:   215 22% 93%;
+  --popover-border:       220 24% 15%;
+
+  /* ── Primary: Azul TransPadilla (#0D2461 profundo, aclarado para UI) ── */
+  --primary:        219 73% 40%;   /* #1757C2 — azul marino brillante */
   --primary-foreground: 0 0% 100%;
-  --secondary:      220 18% 16%;
-  --secondary-foreground: 215 15% 80%;
-  --muted:          220 16% 18%;
-  --muted-foreground: 215 15% 52%;
-  --accent:         210 85% 50%;
+
+  --secondary:      221 26% 13%;
+  --secondary-foreground: 215 16% 82%;
+
+  --muted:          221 22% 15%;
+  --muted-foreground: 215 14% 50%;
+
+  --accent:         219 70% 35%;
   --accent-foreground: 0 0% 100%;
+
   --destructive:    0 72% 50%;
   --destructive-foreground: 0 0% 100%;
-  --input:          220 16% 20%;
-  --ring:           210 90% 54%;
-  --chart-1:        210 90% 54%;
+
+  --chart-1:        219 73% 40%;
   --chart-2:        160 65% 42%;
-  --chart-3:        35 85% 55%;
+  --chart-3:        48 100% 48%;    /* amarillo TransPadilla */
   --chart-4:        270 70% 58%;
   --chart-5:        0 72% 50%;
 
@@ -114,14 +138,14 @@
   --app-font-mono: 'Menlo', 'Fira Code', monospace;
   --radius: .5rem;
 
-  --shadow-2xs: 0px 1px 2px 0px rgba(0,0,0,.4);
-  --shadow-xs: 0px 2px 4px 0px rgba(0,0,0,.4);
-  --shadow-sm: 0px 2px 4px 0px rgba(0,0,0,.4), 0px 1px 2px -1px rgba(0,0,0,.3);
-  --shadow: 0px 4px 8px 0px rgba(0,0,0,.4), 0px 2px 4px -1px rgba(0,0,0,.3);
-  --shadow-md: 0px 6px 12px 0px rgba(0,0,0,.4), 0px 2px 4px -1px rgba(0,0,0,.3);
-  --shadow-lg: 0px 8px 16px 0px rgba(0,0,0,.45), 0px 4px 8px -2px rgba(0,0,0,.3);
-  --shadow-xl: 0px 12px 24px 0px rgba(0,0,0,.5), 0px 8px 16px -4px rgba(0,0,0,.3);
-  --shadow-2xl: 0px 20px 48px 0px rgba(0,0,0,.6);
+  --shadow-2xs: 0px 1px 2px 0px rgba(0,0,0,.55);
+  --shadow-xs: 0px 2px 4px 0px rgba(0,0,0,.55);
+  --shadow-sm: 0px 2px 4px 0px rgba(0,0,0,.55), 0px 1px 2px -1px rgba(0,0,0,.45);
+  --shadow: 0px 4px 8px 0px rgba(0,0,0,.55), 0px 2px 4px -1px rgba(0,0,0,.45);
+  --shadow-md: 0px 6px 12px 0px rgba(0,0,0,.55), 0px 2px 4px -1px rgba(0,0,0,.45);
+  --shadow-lg: 0px 8px 16px 0px rgba(0,0,0,.6), 0px 4px 8px -2px rgba(0,0,0,.45);
+  --shadow-xl: 0px 12px 24px 0px rgba(0,0,0,.65), 0px 8px 16px -4px rgba(0,0,0,.45);
+  --shadow-2xl: 0px 20px 48px 0px rgba(0,0,0,.75);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
@@ -144,19 +168,24 @@
 @layer base {
   * { @apply border-border; }
   body { @apply font-sans antialiased bg-background text-foreground; }
+
+  /* Eliminate 300ms tap delay on all interactive elements */
+  button, a, [role="button"], input, select, textarea, label {
+    touch-action: manipulation;
+  }
 }
 
-/* Leaflet overrides for dark theme */
+/* Leaflet overrides for dark TransPadilla theme */
 .leaflet-container {
-  background: hsl(220 22% 7%) !important;
+  background: hsl(222 28% 5%) !important;
   font-family: inherit;
 }
 .leaflet-popup-content-wrapper {
   background: hsl(var(--card));
   color: hsl(var(--foreground));
   border: 1px solid hsl(var(--border));
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.6);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.7);
   font-size: 13px;
 }
 .leaflet-popup-tip { background: hsl(var(--card)); }
@@ -165,19 +194,54 @@
   background: hsl(var(--card)) !important;
   color: hsl(var(--foreground)) !important;
   border-color: hsl(var(--border)) !important;
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 18px !important;
 }
 .leaflet-control-zoom a:hover { background: hsl(var(--secondary)) !important; }
 .leaflet-control-attribution {
-  background: hsla(220,22%,8%,.8) !important;
+  background: hsla(222,28%,6%,.85) !important;
   color: hsl(var(--muted-foreground)) !important;
   font-size: 10px;
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+
+/* Bottom sheet for mobile map view */
+.tp-bottom-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: hsl(var(--sidebar));
+  border-top: 1px solid hsl(var(--border));
+  border-radius: 20px 20px 0 0;
+  transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+}
+
+/* ── TransPadilla brand utilities ── */
+.tp-amber         { color: var(--tp-yellow); }
+.tp-amber-bg      { background-color: var(--tp-yellow); }
+.tp-amber-border  { border-color: var(--tp-yellow); }
+.tp-amber-glow    { box-shadow: 0 0 12px rgba(var(--tp-yellow-rgb), 0.4); }
+.tp-yellow        { color: var(--tp-yellow); }
+.tp-sky           { color: var(--tp-sky); }
+.tp-sky-bg        { background-color: var(--tp-sky); }
+.tp-navy          { color: var(--tp-navy); }
+
+/* Primary glow para estados activos */
+.tp-primary-glow { box-shadow: 0 0 16px rgba(23, 87, 194, 0.45); }
+
+/* Gradiente de marca TransPadilla */
+.tp-gradient { background: linear-gradient(135deg, var(--tp-navy) 0%, #1757C2 100%); }
+.tp-gradient-sky { background: linear-gradient(135deg, #1757C2 0%, var(--tp-sky) 100%); }
 
 @layer utilities {
   input[type="search"]::-webkit-search-cancel-button { @apply hidden; }

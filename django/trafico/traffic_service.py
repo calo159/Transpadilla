@@ -18,12 +18,65 @@ from django.utils import timezone
 from django.db.models import Avg
 from math import radians, cos, sin, asin, sqrt
 
-from .models import BusGPS, TramoVia, LecturaVelocidad, EstadoTrafico
+from .models import (
+    BusGPS, TramoVia, LecturaVelocidad, EstadoTrafico,
+    RutaTP, ParadaTP, RutaParadaTP,
+)
 
 VENTANA_MINUTOS = 10
 
 UMBRAL_FLUIDO = 25   # >= 25 km/h
 UMBRAL_LENTO = 8     # 8-24 km/h ; < 8 km/h = detenido
+
+
+def sincronizar_tramos():
+    """
+    Genera/actualiza/elimina los tramos de tráfico a partir de las rutas y
+    paradas reales de TRANSPADILLA. Cada par de paradas consecutivas (según
+    el orden de ruta_paradas) de cada ruta activa se convierte en un TramoVia.
+
+    Así, cuando el admin crea o edita rutas/paradas en el panel, los tramos de
+    tráfico se mantienen sincronizados automáticamente.
+
+    Retorna el número de tramos vigentes tras la sincronización.
+    """
+    paradas = {p.id: p for p in ParadaTP.objects.all()}
+    claves_vigentes = set()
+
+    for ruta in RutaTP.objects.filter(activa=True):
+        enlaces = list(
+            RutaParadaTP.objects.filter(ruta_id=ruta.id).order_by('orden')
+        )
+        for i in range(len(enlaces) - 1):
+            p_ini = paradas.get(enlaces[i].parada_id)
+            p_fin = paradas.get(enlaces[i + 1].parada_id)
+            if not p_ini or not p_fin:
+                continue
+
+            clave = (ruta.id, p_ini.id, p_fin.id)
+            claves_vigentes.add(clave)
+
+            TramoVia.objects.update_or_create(
+                ruta_id=ruta.id,
+                parada_inicio_id=p_ini.id,
+                parada_fin_id=p_fin.id,
+                defaults={
+                    'nombre': f"{ruta.nombre}: {p_ini.nombre} - {p_fin.nombre}",
+                    'lat_inicio': p_ini.latitud,
+                    'lng_inicio': p_ini.longitud,
+                    'lat_fin': p_fin.latitud,
+                    'lng_fin': p_fin.longitud,
+                    'ruta_nombre': ruta.nombre,
+                    'ruta_color': ruta.color,
+                },
+            )
+
+    # Eliminar tramos que ya no corresponden a ninguna ruta/par vigente
+    for tramo in TramoVia.objects.all():
+        if (tramo.ruta_id, tramo.parada_inicio_id, tramo.parada_fin_id) not in claves_vigentes:
+            tramo.delete()
+
+    return len(claves_vigentes)
 
 
 def haversine_metros(lat1, lng1, lat2, lng2):
@@ -37,14 +90,43 @@ def haversine_metros(lat1, lng1, lat2, lng2):
     return R * c
 
 
+def _distancia_punto_segmento_metros(lat, lng, lat1, lng1, lat2, lng2):
+    """
+    Distancia (en metros) de un punto al segmento [inicio, fin].
+    Proyecta el punto sobre el segmento usando una aproximación plana
+    (válida a escala urbana), corrigiendo la longitud por la latitud.
+    """
+    lat_ref = radians((lat1 + lat2) / 2)
+    m_por_grado_lat = 111320.0
+    m_por_grado_lng = 111320.0 * cos(lat_ref)
+
+    # Coordenadas locales en metros respecto al inicio del segmento
+    px = (lng - lng1) * m_por_grado_lng
+    py = (lat - lat1) * m_por_grado_lat
+    bx = (lng2 - lng1) * m_por_grado_lng
+    by = (lat2 - lat1) * m_por_grado_lat
+
+    long2 = bx * bx + by * by
+    if long2 == 0:
+        return sqrt(px * px + py * py)
+    # Parámetro de proyección, recortado al segmento [0, 1]
+    t = max(0.0, min(1.0, (px * bx + py * by) / long2))
+    cx = bx * t
+    cy = by * t
+    return sqrt((px - cx) ** 2 + (py - cy) ** 2)
+
+
 def punto_cerca_de_tramo(lat, lng, tramo: TramoVia) -> bool:
     """
-    Verifica si un punto GPS está cerca del tramo de vía,
-    comparando contra el punto medio del tramo (aproximación simple).
+    Verifica si un punto GPS está cerca del tramo de vía, midiendo la
+    distancia del punto al segmento completo (no solo al punto medio),
+    para que funcione bien con tramos largos entre paradas.
     """
-    mid_lat = (tramo.lat_inicio + tramo.lat_fin) / 2
-    mid_lng = (tramo.lng_inicio + tramo.lng_fin) / 2
-    distancia = haversine_metros(lat, lng, mid_lat, mid_lng)
+    distancia = _distancia_punto_segmento_metros(
+        lat, lng,
+        tramo.lat_inicio, tramo.lng_inicio,
+        tramo.lat_fin, tramo.lng_fin,
+    )
     return distancia <= tramo.radio_deteccion_metros
 
 
@@ -66,14 +148,19 @@ def procesar_gps_buses():
 
     Retorna un resumen de lo procesado (útil para la API/endpoint manual).
     """
-    ahora = timezone.now()
-    hace_5_min = ahora - timedelta(minutes=5)
+    # Mantener los tramos sincronizados con las rutas/paradas actuales
+    sincronizar_tramos()
 
+    ahora = timezone.now()
+
+    # Buses que están en recorrido ahora mismo (el conductor controla el
+    # estado activo/inactivo al iniciar/finalizar). No se filtra por la marca
+    # de tiempo `actualizado` porque esa columna la escribe el api-server (Node)
+    # como timestamp sin zona horaria y compararla aquí causaría desfases.
     buses_activos = BusGPS.objects.filter(
         estado='activo',
         lat__isnull=False,
         lng__isnull=False,
-        actualizado__gte=hace_5_min,
     )
 
     tramos = TramoVia.objects.all()
