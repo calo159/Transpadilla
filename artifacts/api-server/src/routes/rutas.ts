@@ -98,6 +98,18 @@ router.post(
   },
 );
 
+router.delete(
+  "/rutas/paradas/:id",
+  authMiddleware,
+  requireRol("admin"),
+  async (req, res) => {
+    const id = parseInt(String(req.params["id"]));
+    await db.delete(ruta_paradas).where(eq(ruta_paradas.parada_id, id));
+    await db.delete(paradas).where(eq(paradas.id, id));
+    res.json({ mensaje: "Parada eliminada" });
+  },
+);
+
 router.get("/rutas/:id/paradas", async (req, res) => {
   const rutaId = parseInt(String(req.params["id"]));
   const stops = await db

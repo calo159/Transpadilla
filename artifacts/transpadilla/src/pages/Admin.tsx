@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import {
   useGetRutas, useGetBuses, useGetStats, useGetTodasParadas,
   useCreateRuta, useDeleteRuta, useCreateBus, useDeleteBus,
-  useCrearParada, useAsignarParada,
+  useCrearParada, useAsignarParada, useDeleteParada,
   getGetRutasQueryKey, getGetBusesQueryKey, getGetTodasParadasQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -71,58 +71,97 @@ export default function Admin() {
   const deleteBus = useDeleteBus();
   const crearParada = useCrearParada();
   const asignarParadaMutation = useAsignarParada();
+  const deleteParada = useDeleteParada();
 
   const handleCreateRuta = async () => {
     if (!rutaNombre.trim()) { toast({ title: "El nombre de la ruta es obligatorio", variant: "destructive" }); return; }
-    await createRuta.mutateAsync({ data: { nombre: rutaNombre.trim(), color: rutaColor } });
-    queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
-    queryClient.invalidateQueries({ queryKey: ["stats"] });
-    setRutaNombre(""); setRutaColor("#1757C2");
-    toast({ title: "Ruta creada exitosamente" });
+    try {
+      await createRuta.mutateAsync({ data: { nombre: rutaNombre.trim(), color: rutaColor } });
+      queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      setRutaNombre(""); setRutaColor("#1757C2");
+      toast({ title: "Ruta creada exitosamente" });
+    } catch {
+      toast({ title: "Error al crear la ruta", variant: "destructive" });
+    }
   };
 
   const handleDeleteRuta = async (id: number, nombre: string) => {
     if (!confirm(`¿Eliminar la ruta "${nombre}"? Esta acción no se puede deshacer.`)) return;
-    await deleteRuta.mutateAsync({ id });
-    queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
-    queryClient.invalidateQueries({ queryKey: ["stats"] });
-    toast({ title: `Ruta "${nombre}" eliminada` });
+    try {
+      await deleteRuta.mutateAsync({ id });
+      queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      toast({ title: `Ruta "${nombre}" eliminada` });
+    } catch {
+      toast({ title: "Error al eliminar la ruta", variant: "destructive" });
+    }
   };
 
   const handleCreateBus = async () => {
     if (!busPlaca.trim()) { toast({ title: "La placa es obligatoria", variant: "destructive" }); return; }
-    await createBus.mutateAsync({ data: { placa: busPlaca.trim().toUpperCase(), ruta_id: busRutaId ? parseInt(busRutaId, 10) : null } });
-    queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
-    queryClient.invalidateQueries({ queryKey: ["stats"] });
-    setBusPlaca(""); setBusRutaId("");
-    toast({ title: "Bus registrado exitosamente" });
+    try {
+      const ruta_id = (busRutaId && busRutaId !== "none") ? parseInt(busRutaId, 10) : null;
+      await createBus.mutateAsync({ data: { placa: busPlaca.trim().toUpperCase(), ruta_id } });
+      queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      setBusPlaca(""); setBusRutaId("");
+      toast({ title: "Bus registrado exitosamente" });
+    } catch {
+      toast({ title: "Error al registrar el bus", variant: "destructive" });
+    }
   };
 
   const handleDeleteBus = async (id: number, placa: string) => {
     if (!confirm(`¿Eliminar el bus "${placa}"?`)) return;
-    await deleteBus.mutateAsync({ id });
-    queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
-    queryClient.invalidateQueries({ queryKey: ["stats"] });
-    toast({ title: `Bus "${placa}" eliminado` });
+    try {
+      await deleteBus.mutateAsync({ id });
+      queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      toast({ title: `Bus "${placa}" eliminado` });
+    } catch {
+      toast({ title: "Error al eliminar el bus", variant: "destructive" });
+    }
   };
 
   const handleCrearParada = async () => {
     if (!paradaNombre.trim() || !paradaLat || !paradaLng) { toast({ title: "Completa todos los campos", variant: "destructive" }); return; }
     const lat = parseFloat(paradaLat); const lng = parseFloat(paradaLng);
     if (isNaN(lat) || isNaN(lng)) { toast({ title: "Latitud y longitud deben ser números", variant: "destructive" }); return; }
-    await crearParada.mutateAsync({ data: { nombre: paradaNombre.trim(), latitud: lat, longitud: lng } });
-    queryClient.invalidateQueries({ queryKey: getGetTodasParadasQueryKey() });
-    queryClient.invalidateQueries({ queryKey: ["stats"] });
-    setParadaNombre(""); setParadaLat(""); setParadaLng("");
-    toast({ title: "Parada creada" });
+    try {
+      await crearParada.mutateAsync({ data: { nombre: paradaNombre.trim(), latitud: lat, longitud: lng } });
+      queryClient.invalidateQueries({ queryKey: getGetTodasParadasQueryKey() });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      setParadaNombre(""); setParadaLat(""); setParadaLng("");
+      toast({ title: "Parada creada" });
+    } catch {
+      toast({ title: "Error al crear la parada", variant: "destructive" });
+    }
   };
 
   const handleAsignarParada = async () => {
     if (!asignarRutaId || !asignarParadaId) { toast({ title: "Selecciona ruta y parada", variant: "destructive" }); return; }
-    await asignarParadaMutation.mutateAsync({ id: parseInt(asignarRutaId, 10), data: { parada_id: parseInt(asignarParadaId, 10), orden: parseInt(asignarOrden, 10) || 0 } });
-    queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
-    setAsignarParadaId(""); setAsignarOrden("0");
-    toast({ title: "Parada asignada a la ruta" });
+    try {
+      await asignarParadaMutation.mutateAsync({ id: parseInt(asignarRutaId, 10), data: { parada_id: parseInt(asignarParadaId, 10), orden: parseInt(asignarOrden, 10) || 0 } });
+      queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
+      setAsignarParadaId(""); setAsignarOrden("0");
+      toast({ title: "Parada asignada a la ruta" });
+    } catch {
+      toast({ title: "Error al asignar la parada", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteParada = async (id: number, nombre: string) => {
+    if (!confirm(`¿Eliminar la parada "${nombre}"? Se quitará de todas las rutas.`)) return;
+    try {
+      await deleteParada.mutateAsync({ id });
+      queryClient.invalidateQueries({ queryKey: getGetTodasParadasQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      toast({ title: `Parada "${nombre}" eliminada` });
+    } catch {
+      toast({ title: "Error al eliminar la parada", variant: "destructive" });
+    }
   };
 
   const navItems = [
@@ -152,7 +191,7 @@ export default function Admin() {
     <div className="flex h-screen bg-background overflow-hidden">
 
       {/* ─── DESKTOP SIDEBAR ─────────────────────────────────────────────── */}
-      <div className="hidden md:flex flex-col w-56 min-w-56 bg-sidebar border-r border-border">
+      <div className="hidden md:flex flex-col w-56 min-w-56 border-r border-border" style={{ background: "linear-gradient(180deg, hsl(225 65% 8%) 0%, hsl(225 65% 6%) 100%)" }}>
         <div className="flex items-center gap-2.5 px-4 py-4 border-b border-border">
           <LogoTP size={32} />
           <div>
@@ -171,9 +210,10 @@ export default function Admin() {
               data-testid={`nav-${item.id}`}
               className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 tab === item.id
-                  ? "bg-primary/10 text-primary border border-primary/20"
-                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  ? "text-foreground bg-white/5 border-l-2"
+                  : "text-muted-foreground hover:bg-white/5 hover:text-foreground border-l-2 border-transparent"
               }`}
+              style={tab === item.id ? { borderLeftColor: "var(--tp-yellow)", paddingLeft: "10px" } : {}}
             >
               {item.icon}
               {item.label}
@@ -208,7 +248,7 @@ export default function Admin() {
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
         {/* ── MOBILE HEADER ── */}
-        <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-sidebar shrink-0">
+        <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-border shrink-0" style={{ background: "hsl(225 65% 8%)" }}>
           <div className="flex items-center gap-2.5">
             <LogoTP size={32} />
             <div>
@@ -229,7 +269,7 @@ export default function Admin() {
         </div>
 
         {/* ── MOBILE TABS ── */}
-        <div className="md:hidden flex border-b border-border bg-sidebar shrink-0 overflow-x-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+        <div className="md:hidden flex border-b border-border shrink-0 overflow-x-auto" style={{ background: "hsl(225 65% 7%)", WebkitOverflowScrolling: "touch" }}>
           {navItems.map((item) => (
             <button
               key={item.id}
@@ -237,9 +277,10 @@ export default function Admin() {
               data-testid={`nav-${item.id}`}
               className={`flex items-center gap-1.5 px-4 py-3 text-xs font-semibold whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${
                 tab === item.id
-                  ? "border-primary text-primary"
+                  ? "text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
+              style={tab === item.id ? { borderBottomColor: "var(--tp-yellow)" } : {}}
             >
               {item.icon}
               {item.label}
@@ -248,7 +289,7 @@ export default function Admin() {
         </div>
 
         {/* ── DESKTOP TOPBAR ── */}
-        <div className="hidden md:flex items-center justify-between px-6 py-3 border-b border-border bg-sidebar/50 shrink-0">
+        <div className="hidden md:flex items-center justify-between px-6 py-3 border-b border-border shrink-0" style={{ background: "hsl(225 65% 8% / 0.6)" }}>
           <div>
             <h1 className="text-lg font-bold text-foreground">{tabTitle[tab]}</h1>
             <p className="text-xs text-muted-foreground">Riohacha, La Guajira · TransPadilla</p>
@@ -316,8 +357,8 @@ export default function Admin() {
                   ) : (
                     <div className="space-y-2">
                       {[
-                        { label: "Activos",    items: activeBuses,  style: "border-green-500/20 bg-green-500/5 text-green-400" },
-                        { label: "Con demora", items: demoraBuses,  style: "border-amber-500/20 bg-amber-500/5 text-amber-400" },
+                        { label: "Activos",    items: activeBuses,   style: "border-green-500/20 bg-green-500/5 text-green-400" },
+                        { label: "Con demora", items: demoraBuses,   style: "border-amber-500/20 bg-amber-500/5 text-amber-400" },
                         { label: "Inactivos",  items: inactiveBuses, style: "border-border bg-muted/5 text-muted-foreground" },
                       ].filter((g) => g.items.length > 0).map((group) => (
                         <div key={group.label} className={`border rounded-xl p-3 ${group.style}`}>
@@ -464,7 +505,7 @@ export default function Admin() {
                     <Select value={busRutaId} onValueChange={setBusRutaId}>
                       <SelectTrigger className={selectTriggerCls} data-testid="select-bus-ruta"><SelectValue placeholder="Sin ruta asignada" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="0">Sin ruta</SelectItem>
+                        <SelectItem value="none">Sin ruta</SelectItem>
                         {rutas.map((r) => <SelectItem key={r.id} value={r.id.toString()}>{r.nombre}</SelectItem>)}
                       </SelectContent>
                     </Select>
@@ -586,7 +627,15 @@ export default function Admin() {
                           <p className="text-sm font-medium text-foreground">{p.nombre}</p>
                           <p className="text-xs font-mono text-muted-foreground mt-0.5">{p.latitud.toFixed(5)}, {p.longitud.toFixed(5)}</p>
                         </div>
-                        <span className="text-[10px] text-muted-foreground font-mono flex-shrink-0">#{p.id}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono flex-shrink-0 mt-0.5">#{p.id}</span>
+                        <Button
+                          variant="ghost" size="sm"
+                          onClick={() => handleDeleteParada(p.id, p.nombre)}
+                          className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
+                          data-testid={`delete-parada-${p.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     ))}
                   </div>

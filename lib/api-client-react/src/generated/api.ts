@@ -785,6 +785,74 @@ export const useCrearParada = <TError = ErrorType<unknown>,
       return useMutation(getCrearParadaMutationOptions(options));
     }
 
+export const getDeleteParadaUrl = (id: number,) => {
+
+
+
+
+  return `/api/rutas/paradas/${id}`
+}
+
+/**
+ * @summary Delete a stop (admin) — also removes from all routes
+ */
+export const deleteParada = async (id: number, options?: RequestInit): Promise<MessageResponse> => {
+
+  return customFetch<MessageResponse>(getDeleteParadaUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteParadaMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteParada>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteParada>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteParada'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteParada>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteParada(id,requestOptions)
+        }
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteParadaMutationResult = NonNullable<Awaited<ReturnType<typeof deleteParada>>>
+
+    export type DeleteParadaMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a stop (admin) — also removes from all routes
+ */
+export const useDeleteParada = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteParada>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteParada>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteParadaMutationOptions(options));
+    }
+
 export const getGetBusesUrl = () => {
 
 
