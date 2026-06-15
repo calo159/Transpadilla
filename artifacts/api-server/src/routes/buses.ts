@@ -75,15 +75,20 @@ router.post(
       lng: number;
       velocidad?: number;
     };
+    // Conserva el reporte activo: si el bus tiene una novedad, se mantiene en
+    // "demora" hasta que el conductor la retire; no se borra al moverse.
+    const [actual] = await db
+      .select({ novedad: buses.novedad })
+      .from(buses)
+      .where(eq(buses.id, bus_id));
     await db
       .update(buses)
       .set({
         lat,
         lng,
         velocidad: velocidad ?? null,
-        estado: "activo",
+        estado: actual?.novedad ? "demora" : "activo",
         actualizado: new Date(),
-        novedad: null,
       })
       .where(eq(buses.id, bus_id));
 
@@ -126,6 +131,28 @@ router.post(
     }
 
     res.json({ mensaje: "Novedad reportada" });
+  },
+);
+
+router.post(
+  "/buses/limpiar-novedad",
+  authMiddleware,
+  requireRol("conductor", "admin"),
+  async (req, res) => {
+    const { bus_id } = req.body as { bus_id: number };
+    const [busRow] = await db.select().from(buses).where(eq(buses.id, bus_id));
+    await db
+      .update(buses)
+      .set({ novedad: null, estado: "activo", actualizado: new Date() })
+      .where(eq(buses.id, bus_id));
+
+    try {
+      getIO().emit("bus:novedad", { busId: bus_id, novedad: null, placa: busRow?.placa });
+    } catch {
+      // socket.io not yet initialized
+    }
+
+    res.json({ mensaje: "Reporte retirado" });
   },
 );
 
