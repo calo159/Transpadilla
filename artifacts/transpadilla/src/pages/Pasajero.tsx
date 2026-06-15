@@ -6,7 +6,7 @@ import { clearAuth, getUser } from "@/lib/auth";
 import {
   Bus, MapPin, LogOut, Radio, AlertTriangle, X,
   Search, Clock, LogIn, Shield, ChevronRight, ChevronUp,
-  Menu, MessageCircle, Instagram, Phone, LocateFixed, Loader2,
+  Menu, MessageCircle, Instagram, Phone, LocateFixed, Loader2, Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,11 +47,24 @@ export default function Pasajero() {
   const queryClient = useQueryClient();
 
   const [selectedRutaId, setSelectedRutaId] = useState<number | null>(null);
+  const [etaPorParada, setEtaPorParada] = useState<Record<number, { eta: number; placa: string }>>({});
   const [novedad, setNovedad] = useState<Novedad | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sheetState, setSheetState] = useState<SheetState>("collapsed");
   const [busqueda, setBusqueda] = useState("");
   const [locating, setLocating] = useState(false);
+  // Rutas favoritas del pasajero (se recuerdan en localStorage y van arriba).
+  const [favoritos, setFavoritos] = useState<number[]>(() => {
+    try { return JSON.parse(localStorage.getItem("tp_favoritos") ?? "[]") as number[]; }
+    catch { return []; }
+  });
+  const toggleFavorito = (id: number) => {
+    setFavoritos((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      try { localStorage.setItem("tp_favoritos", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
   // Guía de bienvenida: se muestra solo la primera vez (se recuerda en localStorage).
   const [showWelcome, setShowWelcome] = useState(
     () => typeof localStorage !== "undefined" && !localStorage.getItem("tp_welcome_visto"),
@@ -69,7 +82,9 @@ export default function Pasajero() {
   const { data: rutas = [] } = useGetRutas({ query: { queryKey: ["rutas"], refetchInterval: 15000 } });
   const { data: buses = [] } = useGetBuses({ query: { queryKey: getGetBusesQueryKey(), refetchInterval: 10000 } });
 
-  const rutasFiltradas = rutas.filter((r) => r.nombre.toLowerCase().includes(busqueda.toLowerCase()));
+  const rutasFiltradas = rutas
+    .filter((r) => r.nombre.toLowerCase().includes(busqueda.toLowerCase()))
+    .sort((a, b) => (favoritos.includes(b.id) ? 1 : 0) - (favoritos.includes(a.id) ? 1 : 0));
   const selectedRuta = rutas.find((r) => r.id === selectedRutaId);
   const activeBuses = buses.filter((b) => b.estado === "activo");
   const demorasBuses = buses.filter((b) => b.estado === "demora");
@@ -145,6 +160,15 @@ export default function Pasajero() {
       const routeName = bus?.nombre_ruta ?? "";
       const vel = bus?.velocidad ?? 0;
       const novText = bus?.novedad ? `<span style="color:var(--tp-yellow,#F5C200)">⚠ ${bus.novedad}</span><br>` : "";
+      const ocupMap: Record<string, { label: string; color: string }> = {
+        vacio: { label: "Vacío", color: "#22c55e" },
+        medio: { label: "Medio lleno", color: "#F5C200" },
+        lleno: { label: "Lleno", color: "#ef4444" },
+      };
+      const ocup = bus?.ocupacion ? ocupMap[bus.ocupacion] : undefined;
+      const ocupText = ocup
+        ? `<span style="color:${ocup.color};font-size:12px">● Ocupación: ${ocup.label}</span><br>`
+        : "";
 
       const icon = L.divIcon({
         className: "",
@@ -157,6 +181,7 @@ export default function Pasajero() {
           <b style="font-size:14px;letter-spacing:0.5px">${placa || "BUS"}</b><br>
           <span style="color:#64748b;font-size:12px">${routeName}</span><br>
           ${vel > 0 ? `<span style="color:#22c55e;font-size:12px">● ${Math.round(vel)} km/h</span><br>` : ""}
+          ${ocupText}
           ${novText}
           <span style="color:#94a3b8;font-size:11px">Tarifa: ${TARIFA_COP} COP</span>
         </div>`;
@@ -194,6 +219,9 @@ export default function Pasajero() {
       setNovedad(data);
       setTimeout(() => setNovedad(null), 12000);
     });
+    socket.on("bus:ocupacion", () => {
+      queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
+    });
     return () => { socket.disconnect(); };
   }, [buses, updateBusMarker, queryClient]);
 
@@ -217,6 +245,36 @@ export default function Pasajero() {
     const t = setTimeout(() => mapRef.current?.invalidateSize(), 310);
     return () => clearTimeout(t);
   }, [sidebarOpen, sheetState]);
+
+  // ETA del próximo bus por parada de la ruta seleccionada (lo calcula Django).
+  useEffect(() => {
+    if (selectedRutaId === null) { setEtaPorParada({}); return; }
+    let cancelado = false;
+    const cargarEta = async () => {
+      try {
+        const res = await fetch(`/api/trafico/eta/?ruta_id=${selectedRutaId}`);
+        if (!res.ok || cancelado) return;
+        const data = (await res.json()) as {
+          paradas: { parada_id: number; eta_min: number | null; placa: string | null }[];
+        };
+        const mapa: Record<number, { eta: number; placa: string }> = {};
+        for (const p of data.paradas) {
+          if (p.eta_min !== null && p.placa) mapa[p.parada_id] = { eta: p.eta_min, placa: p.placa };
+        }
+        if (!cancelado) setEtaPorParada(mapa);
+      } catch { /* tráfico no disponible — se ignora */ }
+    };
+    cargarEta();
+    const t = setInterval(cargarEta, 15000);
+    return () => { cancelado = true; clearInterval(t); };
+  }, [selectedRutaId, buses]);
+
+  // El próximo bus que llega (menor ETA entre las paradas de la ruta).
+  const proximoBus = (() => {
+    const vals = Object.values(etaPorParada);
+    if (!vals.length) return null;
+    return vals.reduce((a, b) => (b.eta < a.eta ? b : a));
+  })();
 
   const cycleSheet = () => {
     setSheetState((s) => s === "collapsed" ? "half" : s === "half" ? "full" : "collapsed");
@@ -386,20 +444,42 @@ export default function Pasajero() {
                       {rutaBuses.length} en vivo
                     </span>
                   )}
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); toggleFavorito(ruta.id); }}
+                    className="p-0.5"
+                    aria-label="Marcar como favorita"
+                  >
+                    <Star
+                      className="w-4 h-4"
+                      style={favoritos.includes(ruta.id)
+                        ? { color: "var(--tp-yellow)", fill: "var(--tp-yellow)" }
+                        : { color: "var(--muted-foreground, #94a3b8)" }}
+                    />
+                  </span>
                 </div>
               </div>
               {isSelected && ruta.paradas.length > 0 && (
                 <div className="mt-2.5 pl-6 space-y-1.5">
-                  {ruta.paradas.map((p, i) => (
-                    <div key={p.id} className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <MapPin className="w-3 h-3 flex-shrink-0" style={{ color: ruta.color }} />
-                      <span className="truncate">{p.nombre}</span>
-                      {i === 0 && <span className="ml-auto text-[9px] opacity-50 font-bold">INICIO</span>}
-                      {i === ruta.paradas.length - 1 && ruta.paradas.length > 1 && (
-                        <span className="ml-auto text-[9px] opacity-50 font-bold">FIN</span>
-                      )}
-                    </div>
-                  ))}
+                  {ruta.paradas.map((p, i) => {
+                    const eta = etaPorParada[p.id];
+                    return (
+                      <div key={p.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <MapPin className="w-3 h-3 flex-shrink-0" style={{ color: ruta.color }} />
+                        <span className="flex-1 truncate">{p.nombre}</span>
+                        {eta && (
+                          <span className="text-[10px] font-bold text-green-400 whitespace-nowrap">
+                            {eta.eta <= 0 ? "llegando" : `~${eta.eta} min`}
+                          </span>
+                        )}
+                        {i === 0 && <span className="text-[9px] opacity-50 font-bold">INICIO</span>}
+                        {i === ruta.paradas.length - 1 && ruta.paradas.length > 1 && (
+                          <span className="text-[9px] opacity-50 font-bold">FIN</span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </button>
@@ -576,18 +656,36 @@ export default function Pasajero() {
                 <X className="w-4 h-4" />
               </button>
             </div>
+            {/* Próximo bus (ETA calculado por Django) */}
+            {proximoBus && (
+              <div className="flex items-center gap-2 mb-2.5 px-2.5 py-2 rounded-lg" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
+                <Clock className="w-4 h-4 text-green-400 flex-shrink-0" />
+                <span className="text-xs text-foreground">
+                  Próximo bus <span className="font-mono font-bold">{proximoBus.placa}</span>:{" "}
+                  <span className="font-bold text-green-400">{proximoBus.eta <= 0 ? "llegando" : `~${proximoBus.eta} min`}</span>
+                </span>
+              </div>
+            )}
             {selectedRuta.paradas.length > 0 && (
               <div className="space-y-1.5 mb-2">
-                {selectedRuta.paradas.map((p, i) => (
-                  <div key={p.id} className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <MapPin className="w-3 h-3 flex-shrink-0" style={{ color: selectedRuta.color }} />
-                    <span>{p.nombre}</span>
-                    {i === 0 && <span className="ml-auto text-[9px] opacity-60 font-bold">INICIO</span>}
-                    {i === selectedRuta.paradas.length - 1 && selectedRuta.paradas.length > 1 && (
-                      <span className="ml-auto text-[9px] opacity-60 font-bold">FIN</span>
-                    )}
-                  </div>
-                ))}
+                {selectedRuta.paradas.map((p, i) => {
+                  const eta = etaPorParada[p.id];
+                  return (
+                    <div key={p.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <MapPin className="w-3 h-3 flex-shrink-0" style={{ color: selectedRuta.color }} />
+                      <span className="flex-1 truncate">{p.nombre}</span>
+                      {eta && (
+                        <span className="text-[10px] font-bold text-green-400 whitespace-nowrap">
+                          {eta.eta <= 0 ? "llegando" : `~${eta.eta} min`}
+                        </span>
+                      )}
+                      {i === 0 && <span className="text-[9px] opacity-60 font-bold">INICIO</span>}
+                      {i === selectedRuta.paradas.length - 1 && selectedRuta.paradas.length > 1 && (
+                        <span className="text-[9px] opacity-60 font-bold">FIN</span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
             {buses.filter((b) => b.ruta_id === selectedRuta.id && b.estado !== "inactivo").map((b) => (
@@ -638,6 +736,20 @@ export default function Pasajero() {
                     )}
                   </div>
                 </div>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); toggleFavorito(ruta.id); }}
+                  className="p-1 flex-shrink-0"
+                  aria-label="Marcar como favorita"
+                >
+                  <Star
+                    className="w-5 h-5"
+                    style={favoritos.includes(ruta.id)
+                      ? { color: "var(--tp-yellow)", fill: "var(--tp-yellow)" }
+                      : { color: "var(--muted-foreground, #94a3b8)" }}
+                  />
+                </span>
                 <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               </button>
             );

@@ -93,6 +93,8 @@ export interface Bus {
   /** @nullable */
   novedad?: string | null;
   /** @nullable */
+  ocupacion?: string | null;
+  /** @nullable */
   actualizado?: string | null;
   /** @nullable */
   ruta_id?: number | null;

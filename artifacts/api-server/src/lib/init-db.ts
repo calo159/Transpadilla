@@ -53,12 +53,14 @@ CREATE TABLE IF NOT EXISTS buses (
   lng real,
   velocidad real,
   novedad text,
+  ocupacion varchar(10),
   actualizado timestamp
 );
 
--- Columna agregada después del diseño inicial; ALTER idempotente por si la
--- tabla usuarios ya existía sin ella.
+-- Columnas agregadas después del diseño inicial; ALTER idempotente por si las
+-- tablas ya existían sin ellas.
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS identificacion varchar(30);
+ALTER TABLE buses ADD COLUMN IF NOT EXISTS ocupacion varchar(10);
 `;
 
 export async function ensureSchema(): Promise<void> {

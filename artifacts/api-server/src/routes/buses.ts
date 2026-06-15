@@ -17,6 +17,7 @@ router.get("/buses", async (_req, res) => {
       lng: buses.lng,
       velocidad: buses.velocidad,
       novedad: buses.novedad,
+      ocupacion: buses.ocupacion,
       actualizado: buses.actualizado,
       ruta_id: buses.ruta_id,
       nombre_ruta: rutas.nombre,
@@ -129,6 +130,35 @@ router.post(
 );
 
 router.post(
+  "/buses/ocupacion",
+  authMiddleware,
+  requireRol("conductor", "admin"),
+  async (req, res) => {
+    const { bus_id, ocupacion } = req.body as {
+      bus_id: number;
+      ocupacion: string;
+    };
+    const niveles = ["vacio", "medio", "lleno"];
+    if (!niveles.includes(ocupacion)) {
+      res.status(400).json({ error: "Nivel de ocupación inválido" });
+      return;
+    }
+    await db
+      .update(buses)
+      .set({ ocupacion, actualizado: new Date() })
+      .where(eq(buses.id, bus_id));
+
+    try {
+      getIO().emit("bus:ocupacion", { busId: bus_id, ocupacion });
+    } catch {
+      // socket.io not yet initialized
+    }
+
+    res.json({ mensaje: "Ocupación actualizada" });
+  },
+);
+
+router.post(
   "/buses/finalizar",
   authMiddleware,
   requireRol("conductor", "admin"),
@@ -142,6 +172,7 @@ router.post(
         lng: null,
         velocidad: null,
         novedad: null,
+        ocupacion: null,
         actualizado: new Date(),
       })
       .where(eq(buses.id, bus_id));

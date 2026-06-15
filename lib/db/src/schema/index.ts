@@ -57,6 +57,7 @@ export const buses = pgTable("buses", {
   lng: real("lng"),
   velocidad: real("velocidad"),
   novedad: text("novedad"),
+  ocupacion: varchar("ocupacion", { length: 10 }),
   actualizado: timestamp("actualizado"),
 });
 
