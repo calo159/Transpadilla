@@ -1,0 +1,76 @@
+# ============================================================================
+#  TransPadilla — Render Blueprint (Infrastructure as Code)
+#  Despliega TODO el sistema en Render con un solo archivo:
+#    1. transpadilla-web      → Node (API Express + Socket.IO + frontend React)
+#    2. transpadilla-trafico  → Django (microservicio de tráfico)
+#    3. transpadilla-db       → PostgreSQL gestionado (compartido por ambos)
+#
+#  Cómo usar:
+#    1. Sube este repo a GitHub.
+#    2. En Render: New → Blueprint → conecta el repo → Apply.
+#    3. Render crea los 3 recursos y los enlaza automáticamente.
+#    4. ÚNICO paso manual: copia la URL pública del servicio
+#       "transpadilla-trafico" (https://transpadilla-trafico.onrender.com)
+#       y pégala en la variable TRAFICO_URL del servicio "transpadilla-web".
+#       (Está marcada como sync:false justamente para que la pegues tú.)
+# ============================================================================
+
+databases:
+  - name: transpadilla-db
+    databaseName: transpadilla
+    plan: free
+
+services:
+  # ──────────────────────────────────────────────────────────────────────────
+  #  Servicio principal: API + Socket.IO + frontend (un solo dominio)
+  # ──────────────────────────────────────────────────────────────────────────
+  - type: web
+    name: transpadilla-web
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm run build:prod
+    startCommand: pnpm --filter @workspace/api-server start
+    healthCheckPath: /api/healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: transpadilla-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SEED_ON_START
+        value: "true"
+      # URL pública del microservicio Django. Se pega manualmente tras el primer
+      # deploy (ver instrucciones arriba). Ejemplo:
+      #   https://transpadilla-trafico.onrender.com
+      - key: TRAFICO_URL
+        sync: false
+
+  # ──────────────────────────────────────────────────────────────────────────
+  #  Microservicio de tráfico (Django + Gunicorn)
+  # ──────────────────────────────────────────────────────────────────────────
+  - type: web
+    name: transpadilla-trafico
+    runtime: python
+    plan: free
+    region: oregon
+    rootDir: django
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
+    startCommand: gunicorn trafico_config.wsgi:application --bind 0.0.0.0:$PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: transpadilla-db
+          property: connectionString
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      # Django acepta cualquier subdominio de onrender.com (prefijo con punto).
+      - key: DJANGO_ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: PYTHON_VERSION
+        value: "3.12.6"

@@ -7,7 +7,7 @@ import {
   getGetRutasQueryKey, getGetBusesQueryKey, getGetTodasParadasQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { getUser, clearAuth, getToken } from "@/lib/auth";
+import { getUser, clearAuth, getToken, homeForRol } from "@/lib/auth";
 import {
   Bus, LogOut, Map, MapPin, BarChart3, Plus, Trash2,
   RefreshCw, Users, Activity, AlertTriangle, Route,
@@ -47,6 +47,13 @@ export default function Admin() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("dashboard");
+
+  // Guard de rol: solo un admin puede ver este panel. Cualquier otro usuario es
+  // enviado a su propia página (conductor → /conductor, pasajero → /).
+  useEffect(() => {
+    if (!user) { setLocation("/login"); return; }
+    if (user.rol !== "admin") setLocation(homeForRol(user.rol));
+  }, [user, setLocation]);
 
   const [rutaNombre, setRutaNombre] = useState("");
   const [rutaColor, setRutaColor] = useState("#1757C2");
@@ -237,6 +244,28 @@ export default function Admin() {
     }
   };
 
+  const handleAsignarBusConductor = async (conductorId: number, newBusId: number | null, prevBusId: number | null) => {
+    const patch = async (busId: number, cId: number | null) => {
+      const r = await fetch(`/api/buses/${busId}/conductor`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ conductor_id: cId }),
+      });
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error ?? `HTTP ${r.status}`);
+      }
+    };
+    try {
+      if (prevBusId && prevBusId !== newBusId) await patch(prevBusId, null);
+      if (newBusId) await patch(newBusId, conductorId);
+      await queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
+      toast({ title: newBusId ? "Bus asignado al conductor" : "Bus desasignado" });
+    } catch (err) {
+      toast({ title: `Error al asignar bus: ${String(err)}`, variant: "destructive" });
+    }
+  };
+
   const navItems = [
     { id: "dashboard"   as Tab, label: "Dashboard",   icon: <BarChart3 className="w-4 h-4" /> },
     { id: "rutas"       as Tab, label: "Rutas",       icon: <Route className="w-4 h-4" /> },
@@ -261,6 +290,10 @@ export default function Admin() {
 
   const inputCls = "bg-background border-border h-11 text-base rounded-xl md:h-9 md:text-sm md:rounded-lg";
   const selectTriggerCls = "bg-background border-border h-11 text-base rounded-xl md:h-9 md:text-sm md:rounded-lg";
+
+  // Evita que el panel admin se muestre (aunque sea un instante) a quien no es admin;
+  // el useEffect de arriba ya lo está redirigiendo a su propia página.
+  if (!user || user.rol !== "admin") return null;
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -833,29 +866,55 @@ export default function Admin() {
                   </p>
                 ) : (
                   <div className="space-y-2 max-h-[500px] overflow-y-auto">
-                    {conductores.map((c) => (
-                      <div key={c.id} className="flex items-start gap-3 p-3 bg-secondary/30 border border-border rounded-xl">
-                        <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold" style={{ background: "rgba(23,87,194,0.2)", color: "var(--tp-sky)" }}>
-                          {c.nombre.charAt(0).toUpperCase()}
+                    {conductores.map((c) => {
+                      const assignedBus = buses.find((b) => b.conductor_id === c.id);
+                      return (
+                        <div key={c.id} className="p-3 bg-secondary/30 border border-border rounded-xl space-y-2">
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold" style={{ background: "rgba(23,87,194,0.2)", color: "var(--tp-sky)" }}>
+                              {c.nombre.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-foreground truncate">{c.nombre}</p>
+                              <p className="text-xs text-muted-foreground truncate">{c.correo}</p>
+                              {c.identificacion && (
+                                <p className="text-xs font-mono mt-0.5" style={{ color: "var(--tp-sky)" }}>
+                                  CC {c.identificacion}
+                                </p>
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost" size="sm"
+                              onClick={() => handleDeleteConductor(c.id, c.nombre)}
+                              className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Bus asignado</p>
+                            <Select
+                              value={assignedBus?.id.toString() ?? "none"}
+                              onValueChange={(v) =>
+                                handleAsignarBusConductor(c.id, v === "none" ? null : parseInt(v, 10), assignedBus?.id ?? null)
+                              }
+                            >
+                              <SelectTrigger className="h-8 text-xs rounded-lg bg-background border-border">
+                                <SelectValue placeholder="Sin bus" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Sin bus asignado</SelectItem>
+                                {buses.map((b) => (
+                                  <SelectItem key={b.id} value={b.id.toString()}>
+                                    {b.placa}{b.nombre_ruta ? ` — ${b.nombre_ruta}` : ""}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-foreground truncate">{c.nombre}</p>
-                          <p className="text-xs text-muted-foreground truncate">{c.correo}</p>
-                          {c.identificacion && (
-                            <p className="text-xs font-mono mt-0.5" style={{ color: "var(--tp-sky)" }}>
-                              CC {c.identificacion}
-                            </p>
-                          )}
-                        </div>
-                        <Button
-                          variant="ghost" size="sm"
-                          onClick={() => handleDeleteConductor(c.id, c.nombre)}
-                          className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

@@ -28,3 +28,16 @@ export function clearAuth(): void {
 export function getToken(): string | null {
   return localStorage.getItem("transpadilla_token");
 }
+
+/**
+ * Ruta de inicio que corresponde a cada rol. Se usa para los guards de las
+ * páginas: cada usuario debe permanecer en su propio panel.
+ *  - admin     → /admin
+ *  - conductor → /conductor
+ *  - pasajero / sin sesión → / (mapa público)
+ */
+export function homeForRol(rol: string | undefined | null): string {
+  if (rol === "admin") return "/admin";
+  if (rol === "conductor") return "/conductor";
+  return "/";
+}
