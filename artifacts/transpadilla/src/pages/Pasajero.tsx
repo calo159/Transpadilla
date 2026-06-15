@@ -52,6 +52,14 @@ export default function Pasajero() {
   const [sheetState, setSheetState] = useState<SheetState>("collapsed");
   const [busqueda, setBusqueda] = useState("");
   const [locating, setLocating] = useState(false);
+  // Guía de bienvenida: se muestra solo la primera vez (se recuerda en localStorage).
+  const [showWelcome, setShowWelcome] = useState(
+    () => typeof localStorage !== "undefined" && !localStorage.getItem("tp_welcome_visto"),
+  );
+  const dismissWelcome = () => {
+    setShowWelcome(false);
+    try { localStorage.setItem("tp_welcome_visto", "1"); } catch { /* ignore */ }
+  };
   // Arrastre del bottom sheet (swipe). dragOffset = px en vivo durante el gesto.
   const [dragOffset, setDragOffset] = useState<number | null>(null);
   const dragRef = useRef<{ startY: number; startPx: number; moved: boolean } | null>(null);
@@ -362,16 +370,20 @@ export default function Pasajero() {
               className={`w-full text-left px-4 py-3.5 transition-all border-l-[3px] ${isSelected ? "bg-primary/8 border-primary" : "border-transparent hover:bg-secondary/50"}`}
               style={{ opacity: dimmed ? 0.3 : 1 }}
             >
-              <div className="flex items-center gap-2.5 mb-1">
+              <div className="flex items-center gap-2.5">
                 <div
                   className="w-3.5 h-3.5 rounded-full flex-shrink-0 transition-all"
                   style={{ background: ruta.color, boxShadow: isSelected ? `0 0 8px ${ruta.color}` : "none" }}
                 />
-                <span className="text-sm font-semibold text-foreground truncate">{ruta.nombre}</span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-semibold text-foreground truncate block">{ruta.nombre}</span>
+                  <span className="text-[11px] text-muted-foreground">{ruta.paradas.length} paradas</span>
+                </div>
                 <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
                   {rutaBuses.length > 0 && (
-                    <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-bold">
-                      {rutaBuses.length} bus{rutaBuses.length !== 1 ? "es" : ""}
+                    <span className="flex items-center gap-1 text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                      {rutaBuses.length} en vivo
                     </span>
                   )}
                 </div>
@@ -598,19 +610,34 @@ export default function Pasajero() {
         <div className="space-y-2">
           {rutasFiltradas.filter((r) => r.id !== selectedRutaId).map((ruta) => {
             const rutaBuses = buses.filter((b) => b.ruta_id === ruta.id && b.estado !== "inactivo");
+            const enVivo = rutaBuses.length > 0;
             return (
               <button
                 key={ruta.id}
                 onClick={() => handleSelectRuta(ruta.id)}
-                className="w-full flex items-center gap-3 px-3.5 py-3.5 rounded-xl bg-card border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-left active:scale-[0.98]"
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl bg-card border border-border hover:border-primary/30 active:bg-primary/5 transition-all text-left active:scale-[0.98]"
               >
-                <div className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ background: ruta.color }} />
-                <span className="text-sm font-semibold text-foreground flex-1 truncate">{ruta.nombre}</span>
-                {rutaBuses.length > 0 && (
-                  <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-bold flex-shrink-0">
-                    {rutaBuses.length} bus{rutaBuses.length !== 1 ? "es" : ""}
-                  </span>
-                )}
+                {/* Indicador de color de la ruta */}
+                <div
+                  className="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center"
+                  style={{ background: ruta.color + "22" }}
+                >
+                  <Bus className="w-4.5 h-4.5" style={{ color: ruta.color, width: 18, height: 18 }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{ruta.nombre}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[11px] text-muted-foreground">{ruta.paradas.length} paradas</span>
+                    {enVivo ? (
+                      <span className="flex items-center gap-1 text-[11px] font-semibold text-green-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                        {rutaBuses.length} en vivo
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground/60">sin buses ahora</span>
+                    )}
+                  </div>
+                </div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               </button>
             );
@@ -749,6 +776,46 @@ export default function Pasajero() {
             </button>
           )}
         </div>
+
+        {/* Guía de bienvenida (primera visita) */}
+        {showWelcome && (
+          <div className="absolute inset-0 z-[1001] flex items-end md:items-center justify-center p-4 pb-28 md:pb-4 pointer-events-none">
+            <div className="pointer-events-auto w-full max-w-sm rounded-2xl border shadow-2xl p-5"
+              style={{ background: "rgba(12,18,32,0.96)", borderColor: "rgba(75,169,216,0.3)", backdropFilter: "blur(16px)" }}>
+              <div className="flex items-center gap-3 mb-3">
+                <LogoTP size={40} />
+                <div>
+                  <p className="text-base font-black tracking-wide text-white">
+                    Bienvenido a Trans<span style={{ color: "var(--tp-sky)" }}>Padilla</span>
+                  </p>
+                  <p className="text-[11px] font-semibold" style={{ color: "var(--tp-yellow)" }}>Rastrea tu bus en tiempo real</p>
+                </div>
+              </div>
+              <div className="space-y-2.5 mb-4">
+                {[
+                  { icon: <Bus className="w-4 h-4" />, txt: "Mira los buses moverse en vivo en el mapa." },
+                  { icon: <MapPin className="w-4 h-4" />, txt: "Toca tu ruta para ver sus paradas y buses." },
+                  { icon: <LocateFixed className="w-4 h-4" />, txt: "Usa el botón de ubicación para ver qué bus tienes cerca." },
+                ].map((step, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: "rgba(23,87,194,0.2)", color: "var(--tp-sky)" }}>
+                      {step.icon}
+                    </div>
+                    <p className="text-sm text-white/85">{step.txt}</p>
+                  </div>
+                ))}
+              </div>
+              <Button
+                onClick={dismissWelcome}
+                className="w-full h-11 rounded-xl font-bold text-white border-0"
+                style={{ background: "linear-gradient(135deg, #1757C2 0%, var(--tp-sky) 100%)" }}
+              >
+                Entendido, ver el mapa
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Alerta de novedad */}
         {novedad && (
