@@ -3,6 +3,9 @@
 Sistema de rastreo de transporte público en tiempo real para Riohacha, La Guajira.
 **Moviendo la Ciudad.**
 
+> 🌐 App desplegada: **https://transpadilla-web.onrender.com**
+> (Esta guía es solo para correr el proyecto en tu PC; para mostrarlo basta la URL.)
+
 ---
 
 ## ▶ Arrancar la app (uso diario)
@@ -48,8 +51,8 @@ real de los buses. Lo gestiona un microservicio **Django** (puerto 8000 interno)
 - Si alguna vez falta, ejecuta una vez: **`configurar-trafico.ps1`**.
 - Los tramos se **generan solos** desde las rutas y paradas que creas en el panel
   Admin (cada par de paradas consecutivas = un tramo). No hay que configurarlos.
-- Para ver colores en vivo: entra como **conductor**, activa el **modo simulación**
-  y los buses se moverán; en el tab Tráfico verás los tramos cambiar de color.
+- Para ver colores en vivo: entra como **conductor**, **inicia recorrido** (transmite
+  tu GPS real) y muévete; en el tab Tráfico verás los tramos cambiar de color.
 
 La configuración está en el archivo **`.env`** (no lo subas a internet).
 
