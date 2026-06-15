@@ -11,8 +11,8 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-           // @replit: no hover, and add primary border
-           "bg-primary text-primary-foreground border border-primary-border",
+           // TransPadilla: gradiente de marca (azul marino → celeste) con sombra sutil.
+           "tp-gradient-sky text-white border-0 shadow-sm shadow-primary/30",
         destructive:
           "bg-destructive text-destructive-foreground shadow-sm border-destructive-border",
         outline:

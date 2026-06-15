@@ -212,6 +212,9 @@
 ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
 
+/* Selección de texto con el celeste de la marca */
+::selection { background: rgba(var(--tp-sky-rgb), 0.30); color: #fff; }
+
 /* Bottom sheet for mobile map view */
 .tp-bottom-sheet {
   position: fixed;
