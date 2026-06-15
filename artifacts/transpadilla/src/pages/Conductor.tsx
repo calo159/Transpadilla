@@ -2,8 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useGetBuses, useUpdateGps, useReportarNovedad, useFinalizarRecorrido, getGetBusesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { getUser, clearAuth, homeForRol } from "@/lib/auth";
-import { Bus, LogOut, Play, Square, AlertTriangle, Radio, Clock, ChevronLeft } from "lucide-react";
+import { getUser, clearAuth, homeForRol, getToken } from "@/lib/auth";
+import { Bus, LogOut, Play, Square, AlertTriangle, Radio, Clock, ChevronLeft, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -70,6 +70,7 @@ export default function Conductor() {
   const [novedadCustom, setNovedadCustom] = useState("");
   const [showCustom, setShowCustom] = useState(false);
   const [showNovedad, setShowNovedad] = useState(false);
+  const [ocupacion, setOcupacion] = useState<string | null>(null);
 
   const elapsed = useElapsedTime(activo);
 
@@ -141,8 +142,26 @@ export default function Conductor() {
     if (busId) { await finalizarRecorrido.mutateAsync({ data: { bus_id: busId } }); queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() }); }
     setActivo(false); setGpsLat(null); setGpsLng(null); setGpsCount(0);
     busMarkerRef.current?.remove(); busMarkerRef.current = null;
-    setShowNovedad(false);
+    setShowNovedad(false); setOcupacion(null);
     toast({ title: "Recorrido finalizado", description: `Duración: ${elapsed}` });
+  };
+
+  const enviarOcupacion = async (nivel: "vacio" | "medio" | "lleno") => {
+    if (!busId) return;
+    setOcupacion(nivel);
+    try {
+      const res = await fetch("/api/buses/ocupacion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ bus_id: busId, ocupacion: nivel }),
+      });
+      if (!res.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
+      const etiqueta = nivel === "vacio" ? "Vacío" : nivel === "medio" ? "Medio" : "Lleno";
+      toast({ title: `Ocupación: ${etiqueta}` });
+    } catch {
+      toast({ title: "Error al reportar ocupación", variant: "destructive" });
+    }
   };
 
   const enviarNovedad = async () => {
@@ -247,6 +266,37 @@ export default function Conductor() {
                 <Square className="w-5 h-5 mr-2 fill-white" />
                 FINALIZAR RECORRIDO
               </Button>
+
+              {/* Ocupación del bus */}
+              <div className="bg-card border border-border rounded-xl p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">¿Qué tan lleno va?</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { val: "vacio", label: "Vacío", color: "#22c55e" },
+                    { val: "medio", label: "Medio", color: "#F5C200" },
+                    { val: "lleno", label: "Lleno", color: "#ef4444" },
+                  ] as const).map((o) => {
+                    const activa = ocupacion === o.val;
+                    return (
+                      <button
+                        key={o.val}
+                        onClick={() => enviarOcupacion(o.val)}
+                        className="h-11 rounded-xl text-sm font-bold border-2 transition-all active:scale-95"
+                        style={{
+                          borderColor: o.color,
+                          background: activa ? o.color : "transparent",
+                          color: activa ? "#000" : o.color,
+                        }}
+                      >
+                        {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
               {/* Novedad toggle */}
               <button

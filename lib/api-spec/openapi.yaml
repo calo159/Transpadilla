@@ -487,6 +487,8 @@ components:
           type: ["number", "null"]
         novedad:
           type: ["string", "null"]
+        ocupacion:
+          type: ["string", "null"]
         actualizado:
           type: ["string", "null"]
         ruta_id:
