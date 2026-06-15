@@ -4,8 +4,7 @@
 transporte público de **Riohacha, La Guajira** en tiempo real, con monitoreo de
 tráfico calculado a partir de la velocidad real de los buses.
 
-> Proyecto Final — **Programación Avanzada**, Universidad de La Guajira (2026-I)
-> Docente: Eduardo Sierra.
+
 
 ### 🌐 App en vivo
 **https://transpadilla-web.onrender.com**
@@ -30,8 +29,7 @@ novedades y la empresa no tiene visibilidad de su flota ni del estado de las ví
   de la ciudad como un mapa tipo Google (verde = fluido, amarillo = lento,
   rojo = detenido).
 
-El destinatario real es la **empresa TransPadilla** y la **Gobernación de La
-Guajira**, como herramienta para mejorar y supervisar el servicio.
+El destinatario real es la **empresa TransPadilla**, como herramienta para mejorar y supervisar el servicio.
 
 ---
 
