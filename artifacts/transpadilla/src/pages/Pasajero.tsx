@@ -6,7 +6,7 @@ import { clearAuth, getUser } from "@/lib/auth";
 import {
   Bus, MapPin, LogOut, Radio, AlertTriangle, X,
   Search, Clock, LogIn, Shield, ChevronRight, ChevronUp,
-  Menu, MessageCircle, Instagram, Phone, LocateFixed, Loader2, Star,
+  Menu, MessageCircle, Instagram, Phone, LocateFixed, Loader2, Star, HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,6 +94,8 @@ export default function Pasajero() {
     setShowWelcome(false);
     try { localStorage.setItem("tp_welcome_visto", "1"); } catch { /* ignore */ }
   };
+  // Panel de ayuda "¿Cómo funciona?" — accesible en cualquier momento con el botón ?.
+  const [showAyuda, setShowAyuda] = useState(false);
   // Arrastre del bottom sheet (swipe). dragOffset = px en vivo durante el gesto.
   const [dragOffset, setDragOffset] = useState<number | null>(null);
   const dragRef = useRef<{ startY: number; startPx: number; moved: boolean } | null>(null);
@@ -1042,6 +1044,87 @@ export default function Pasajero() {
           </div>
         )}
 
+        {/* Panel de ayuda "¿Cómo funciona?" */}
+        {showAyuda && (
+          <div className="absolute inset-0 z-[1003] flex items-end md:items-center justify-center p-3 md:p-4" style={{ background: "rgba(0,0,0,0.5)" }}>
+            <div
+              className="pointer-events-auto w-full max-w-md rounded-2xl border shadow-2xl flex flex-col max-h-[85vh]"
+              style={{ background: "rgba(12,18,32,0.98)", borderColor: "rgba(75,169,216,0.3)", backdropFilter: "blur(16px)" }}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <LogoTP size={32} />
+                  <div>
+                    <p className="text-sm font-black tracking-wide text-white">¿Cómo funciona?</p>
+                    <p className="text-[11px]" style={{ color: "var(--tp-yellow)" }}>Guía rápida de TransPadilla</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowAyuda(false)} className="w-8 h-8 rounded-full flex items-center justify-center text-white/70 hover:bg-white/10" aria-label="Cerrar ayuda">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Contenido */}
+              <div className="overflow-y-auto px-5 py-4 space-y-4">
+                {/* Funciones */}
+                <div className="space-y-3">
+                  {[
+                    { icon: <Search className="w-4 h-4" />, t: "Buscar ruta", d: "Escribe el nombre de tu ruta para encontrarla al instante." },
+                    { icon: <MapPin className="w-4 h-4" />, t: "Seleccionar ruta", d: "Toca una ruta para resaltarla en el mapa y ver sus paradas y buses." },
+                    { icon: <LocateFixed className="w-4 h-4" />, t: "Mi ubicación", d: "Centra el mapa en ti. Así los buses se ordenan del más cercano y ves cuánto tardan en llegar a ti." },
+                    { icon: <Clock className="w-4 h-4" />, t: "Tiempo de llegada (ETA)", d: "Minutos estimados que falta para que el bus llegue a tu ubicación o parada." },
+                    { icon: <LocateFixed className="w-4 h-4" />, t: "Seguir un bus", d: "Elige un bus y el mapa lo seguirá automáticamente mientras se mueve." },
+                    { icon: <Star className="w-4 h-4" />, t: "Favoritos", d: "Marca con ⭐ tus rutas frecuentes; quedan siempre arriba." },
+                    { icon: <MessageCircle className="w-4 h-4" />, t: "Atención al cliente", d: "Escríbenos por WhatsApp ante cualquier duda o reclamo." },
+                  ].map((f, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "rgba(23,87,194,0.2)", color: "var(--tp-sky)" }}>
+                        {f.icon}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white">{f.t}</p>
+                        <p className="text-xs text-white/65 leading-snug">{f.d}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Leyenda de ocupación */}
+                <div className="pt-3 border-t border-white/10">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-2">Ocupación del bus</p>
+                  <div className="flex flex-wrap gap-3 text-xs text-white/80">
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: "#22c55e" }} /> Vacío</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: "#F5C200" }} /> Medio lleno</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: "#ef4444" }} /> Lleno</span>
+                  </div>
+                </div>
+
+                {/* Leyenda de estado / alertas */}
+                <div className="pt-3 border-t border-white/10">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-2">Estado del bus</p>
+                  <div className="space-y-1.5 text-xs text-white/80">
+                    <span className="flex items-center gap-1.5"><span className="px-1.5 py-0.5 rounded-full font-bold bg-green-500/20 text-green-400 text-[10px]">activo</span> En recorrido, normal.</span>
+                    <span className="flex items-center gap-1.5"><span className="px-1.5 py-0.5 rounded-full font-bold bg-amber-500/20 text-amber-400 text-[10px]">demora</span> Con una novedad reportada por el conductor.</span>
+                    <span className="flex items-center gap-2"><AlertTriangle className="w-3.5 h-3.5" style={{ color: "var(--tp-yellow)" }} /> Alerta: aviso del conductor (accidente, desvío, reparación…).</span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-white/40 text-center pt-1">
+                  Tarifa: <span style={{ color: "var(--tp-yellow)" }} className="font-bold">{TARIFA_COP} COP</span> · No necesitas cuenta para ver los buses.
+                </p>
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 py-3 border-t border-white/10 shrink-0">
+                <Button onClick={() => setShowAyuda(false)} className="w-full h-11 rounded-xl font-bold text-white border-0" style={{ background: "linear-gradient(135deg, #1757C2 0%, var(--tp-sky) 100%)" }}>
+                  Entendido
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Alerta de novedad — vistosa, con animación de entrada y botón de cerrar */}
         {novedad && (
           <div
@@ -1066,6 +1149,16 @@ export default function Pasajero() {
             </button>
           </div>
         )}
+
+        {/* Botón de ayuda "¿Cómo funciona?" */}
+        <button
+          onClick={() => setShowAyuda(true)}
+          className="absolute bottom-[208px] md:bottom-36 left-3 z-[1000] flex items-center justify-center w-11 h-11 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg hover:bg-secondary active:scale-95 transition-all"
+          title="¿Cómo funciona?"
+          aria-label="¿Cómo funciona?"
+        >
+          <HelpCircle className="w-5 h-5" style={{ color: "var(--tp-sky)" }} />
+        </button>
 
         {/* Botón "Mi ubicación" (GPS del pasajero) */}
         <button
