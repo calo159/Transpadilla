@@ -338,12 +338,12 @@ export default function Pasajero() {
     setSheetState((s) => s === "collapsed" ? "half" : s === "half" ? "full" : "collapsed");
   };
 
-  const sheetTranslate = sheetState === "collapsed" ? "calc(100% - 64px)" : sheetState === "half" ? "45%" : "0%";
+  const sheetTranslate = sheetState === "collapsed" ? "calc(100% - 136px)" : sheetState === "half" ? "45%" : "0%";
 
   // ── Arrastre del bottom sheet (swipe up/down) ──────────────────────────────
   const snapPx = (state: SheetState): number => {
     const h = window.innerHeight;
-    if (state === "collapsed") return h - 64;
+    if (state === "collapsed") return h - 136;
     if (state === "half") return h * 0.45;
     return 0;
   };
@@ -359,7 +359,7 @@ export default function Pasajero() {
     const delta = e.touches[0]!.clientY - d.startY;
     if (Math.abs(delta) > 4) d.moved = true;
     const h = window.innerHeight;
-    setDragOffset(Math.min(h - 64, Math.max(0, d.startPx + delta)));
+    setDragOffset(Math.min(h - 136, Math.max(0, d.startPx + delta)));
   };
   const onSheetTouchEnd = () => {
     const d = dragRef.current;
@@ -369,7 +369,7 @@ export default function Pasajero() {
     suppressClickRef.current = true; // evita que el click posterior cicle el sheet
     const h = window.innerHeight;
     const current = dragOffset ?? d.startPx;
-    const points: [SheetState, number][] = [["full", 0], ["half", h * 0.45], ["collapsed", h - 64]];
+    const points: [SheetState, number][] = [["full", 0], ["half", h * 0.45], ["collapsed", h - 136]];
     let best = points[0]!;
     for (const p of points) if (Math.abs(p[1] - current) < Math.abs(best[1] - current)) best = p;
     setSheetState(best[0]);
@@ -689,7 +689,7 @@ export default function Pasajero() {
         className="w-full flex flex-col items-center pt-2.5 pb-3 px-4 shrink-0"
         style={{ touchAction: "none" }}
       >
-        <div className="w-12 h-1.5 rounded-full bg-muted-foreground/40 mb-3" />
+        <div className="w-12 h-1.5 rounded-full bg-muted-foreground/40 mb-2.5" />
         <div className="w-full flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
@@ -707,15 +707,15 @@ export default function Pasajero() {
         </div>
       </button>
 
-      {/* Contenido del sheet */}
-      <div className="flex-1 overflow-y-auto px-4 pb-safe" style={{ height: "calc(100% - 72px)" }}>
-        {/* Buscador */}
-        <div className="relative mb-3">
+      {/* Buscador SIEMPRE visible en el peek (entrada principal, tipo app de transporte) */}
+      <div className="px-4 pb-3 shrink-0">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar ruta..."
+            onFocus={() => setSheetState("full")}
+            placeholder="¿A dónde vas? Busca tu ruta"
             className="pl-10 h-11 text-base bg-background border-border rounded-xl"
           />
           {busqueda && (
@@ -724,7 +724,10 @@ export default function Pasajero() {
             </button>
           )}
         </div>
+      </div>
 
+      {/* Contenido del sheet (scrollable) */}
+      <div className="flex-1 overflow-y-auto px-4 pb-safe min-h-0">
         {/* Ruta seleccionada */}
         {selectedRuta && (
           <div className="mb-3 rounded-xl border p-3" style={{ borderColor: selectedRuta.color + "60", background: selectedRuta.color + "0D" }}>
