@@ -29,7 +29,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: pnpm install --frozen-lockfile && pnpm run build:prod
+    buildCommand: pnpm install --no-frozen-lockfile && pnpm run build:prod
     startCommand: pnpm --filter @workspace/api-server start
     healthCheckPath: /api/healthz
     envVars:
