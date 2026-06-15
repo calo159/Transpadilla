@@ -7,6 +7,10 @@ tráfico calculado a partir de la velocidad real de los buses.
 > Proyecto Final — **Programación Avanzada**, Universidad de La Guajira (2026-I)
 > Docente: Eduardo Sierra.
 
+### 🌐 App en vivo
+**https://transpadilla-web.onrender.com**
+> Plan gratuito: la primera carga puede tardar ~50 s mientras el servidor "despierta".
+
 ---
 
 ## 🎯 El problema que resuelve
@@ -37,12 +41,17 @@ Guajira**, como herramienta para mejorar y supervisar el servicio.
    dibujadas sobre las calles reales y paradas, sin requerir inicio de sesión.
 2. **Autenticación por roles** (JWT) — pasajero, conductor y administrador, cada
    uno con su propia interfaz.
-3. **Panel del conductor** — transmisión de GPS real, inicio/fin de recorrido y
-   reporte de novedades en vivo. El bus lo asigna el administrador.
-4. **Panel de administración (CRUD)** — gestión de rutas, paradas y buses con
-   persistencia en base de datos.
+3. **Panel del conductor** — transmisión de GPS real, inicio/fin de recorrido,
+   reporte de **ocupación** (vacío/medio/lleno) y de **novedades** en vivo. El bus
+   lo asigna el administrador.
+4. **Panel de administración (CRUD)** — gestión de rutas, paradas, buses y
+   conductores con persistencia en base de datos.
 5. **Monitoreo de tráfico (microservicio Python/Django)** — clasifica cada tramo
    de vía según la velocidad real de los buses y lo colorea en el mapa.
+6. **ETA "próximo bus en ~X min"** — el microservicio Python estima el tiempo de
+   llegada del próximo bus a cada parada (distancia Haversine ÷ velocidad real).
+7. **Comodidad del pasajero** — rutas favoritas, "seguir mi bus" (el mapa lo
+   sigue), botón de ubicación y ocupación visible en cada bus.
 
 ---
 
