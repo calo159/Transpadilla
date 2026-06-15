@@ -14,7 +14,10 @@ const app: Express = express();
 // esquema (p.ej. "host:puerto" o "https://host").
 let traficoTarget = process.env["TRAFICO_URL"] ?? "http://localhost:8000";
 if (!/^https?:\/\//i.test(traficoTarget)) {
-  traficoTarget = `http://${traficoTarget}`;
+  // Render inyecta solo el host (sin esquema). Un host remoto usa https;
+  // localhost en desarrollo usa http.
+  const esLocal = /^(localhost|127\.|0\.0\.0\.0)/i.test(traficoTarget);
+  traficoTarget = `${esLocal ? "http" : "https"}://${traficoTarget}`;
 }
 
 app.use(

@@ -45,11 +45,14 @@ services:
         generateValue: true
       - key: SEED_ON_START
         value: "true"
-      # URL pública del microservicio Django. Se pega manualmente tras el primer
-      # deploy (ver instrucciones arriba). Ejemplo:
-      #   https://transpadilla-trafico.onrender.com
+      # URL del microservicio Django: Render la inyecta automaticamente con el
+      # host del servicio (p.ej. "transpadilla-trafico.onrender.com"). El backend
+      # le antepone https:// solo. Asi no hay que configurarla a mano.
       - key: TRAFICO_URL
-        sync: false
+        fromService:
+          type: web
+          name: transpadilla-trafico
+          property: host
 
   # ──────────────────────────────────────────────────────────────────────────
   #  Microservicio de tráfico (Django + Gunicorn)
