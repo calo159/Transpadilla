@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useGetBuses, useUpdateGps, useReportarNovedad, useFinalizarRecorrido, getGetBusesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getUser, clearAuth, homeForRol, getToken } from "@/lib/auth";
-import { Bus, LogOut, Play, Square, AlertTriangle, Radio, Clock, ChevronLeft, Users } from "lucide-react";
+import { Bus, LogOut, Play, Square, AlertTriangle, Radio, Clock, ChevronLeft, Users, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -71,6 +71,7 @@ export default function Conductor() {
   const [showCustom, setShowCustom] = useState(false);
   const [showNovedad, setShowNovedad] = useState(false);
   const [ocupacion, setOcupacion] = useState<string | null>(null);
+  const [showMapa, setShowMapa] = useState(false);
 
   const elapsed = useElapsedTime(activo);
 
@@ -104,6 +105,15 @@ export default function Conductor() {
     }
     return () => { mapRef.current?.remove(); mapRef.current = null; };
   }, []);
+
+  // El mapa está oculto por defecto; al mostrarlo hay que recalcular su tamaño.
+  useEffect(() => {
+    if (showMapa) {
+      const t = setTimeout(() => mapRef.current?.invalidateSize(), 60);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [showMapa]);
 
   const sendGps = useCallback((lat: number, lng: number, vel: number) => {
     if (!busId) return;
@@ -179,9 +189,9 @@ export default function Conductor() {
   if (!user || user.rol !== "conductor") return null;
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-background overflow-hidden">
-      {/* ─── PANEL (top on mobile, left on desktop) ─── */}
-      <div className="flex flex-col bg-sidebar border-b md:border-b-0 md:border-r border-border md:w-80 md:min-w-80 md:overflow-y-auto">
+    <div className="min-h-screen bg-background">
+      {/* Panel del conductor — columna centrada, es lo principal (sin mapa grande) */}
+      <div className="max-w-md mx-auto flex flex-col min-h-screen bg-sidebar md:border-x border-border">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
           <div className="flex items-center gap-2.5">
@@ -204,7 +214,7 @@ export default function Conductor() {
         </div>
 
         {/* Content */}
-        <div className="flex flex-col gap-3 p-4 md:flex-1">
+        <div className="flex-1 flex flex-col gap-3 p-4 overflow-y-auto">
           {/* Driver info + GPS status */}
           <div className={`rounded-xl p-3 border transition-colors ${activo ? "border-green-500/30" : "bg-card border-border"}`} style={activo ? { background: "rgba(16,185,129,0.05)" } : {}}>
             <div className="flex items-center justify-between">
@@ -240,6 +250,15 @@ export default function Conductor() {
               </div>
             )}
           </div>
+
+          {/* Sin bus asignado */}
+          {!busId && (
+            <div className="bg-card border border-border rounded-xl px-6 py-8 text-center">
+              <Bus className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <p className="text-sm font-semibold text-foreground">Sin bus asignado</p>
+              <p className="text-xs text-muted-foreground mt-1">El administrador debe asignarte un bus para iniciar tu recorrido</p>
+            </div>
+          )}
 
           {/* Start / Stop buttons */}
           {!activo ? (
@@ -347,28 +366,29 @@ export default function Conductor() {
               )}
             </div>
           )}
-        </div>
-      </div>
 
-      {/* ─── MAP ─── */}
-      <div className="flex-1 relative min-h-0">
-        <div ref={mapContainerRef} className="w-full h-full" data-testid="map-conductor" />
-
-        {/* Live badge */}
-        <div className="absolute bottom-4 right-4 z-[1000] flex items-center gap-2 bg-card/90 backdrop-blur border border-border rounded-xl px-3 py-1.5 text-xs shadow-lg">
-          <Radio className={`w-3.5 h-3.5 ${activo ? "text-green-400" : "text-muted-foreground"}`} />
-          <span className="text-muted-foreground">{activo ? "Transmitiendo GPS" : "GPS inactivo"}</span>
-        </div>
-
-        {!busId && !activo && (
-          <div className="absolute inset-0 flex items-center justify-center z-[500] pointer-events-none">
-            <div className="bg-card/95 border border-border rounded-xl px-8 py-6 text-center shadow-2xl">
-              <Bus className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm font-semibold text-foreground">Sin bus asignado</p>
-              <p className="text-xs text-muted-foreground mt-1">El administrador debe asignarte un bus</p>
-            </div>
+          {/* Estado de transmisión */}
+          <div className="flex items-center justify-center gap-2 text-xs py-1">
+            <Radio className={`w-3.5 h-3.5 ${activo ? "text-green-400" : "text-muted-foreground"}`} />
+            <span className="text-muted-foreground">{activo ? "Transmitiendo GPS en vivo" : "GPS inactivo"}</span>
           </div>
-        )}
+
+          {/* Mapa opcional — oculto por defecto; lo principal es el panel */}
+          <button
+            onClick={() => setShowMapa((v) => !v)}
+            className="w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground py-2.5 border border-border rounded-xl transition-colors"
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            {showMapa ? "Ocultar mapa" : "Ver mi ubicación en el mapa"}
+          </button>
+          <div style={{ display: showMapa ? "block" : "none" }}>
+            <div
+              ref={mapContainerRef}
+              className="w-full h-56 rounded-xl overflow-hidden border border-border"
+              data-testid="map-conductor"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
