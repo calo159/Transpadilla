@@ -6,7 +6,7 @@ import { clearAuth, getUser } from "@/lib/auth";
 import {
   Bus, MapPin, LogOut, Radio, AlertTriangle, X,
   Search, Clock, LogIn, Shield, ChevronRight, ChevronUp,
-  Menu, MessageCircle, Instagram, Phone,
+  Menu, MessageCircle, Instagram, Phone, LocateFixed, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,7 @@ export default function Pasajero() {
   const routeLayersRef = useRef<Record<number, L.Polyline>>({});
   const stopMarkersRef = useRef<L.Marker[]>([]);
   const socketRef = useRef<Socket | null>(null);
+  const userMarkerRef = useRef<L.Marker | null>(null);
   const queryClient = useQueryClient();
 
   const [selectedRutaId, setSelectedRutaId] = useState<number | null>(null);
@@ -50,6 +51,11 @@ export default function Pasajero() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sheetState, setSheetState] = useState<SheetState>("collapsed");
   const [busqueda, setBusqueda] = useState("");
+  const [locating, setLocating] = useState(false);
+  // Arrastre del bottom sheet (swipe). dragOffset = px en vivo durante el gesto.
+  const [dragOffset, setDragOffset] = useState<number | null>(null);
+  const dragRef = useRef<{ startY: number; startPx: number; moved: boolean } | null>(null);
+  const suppressClickRef = useRef(false);
   const user = getUser();
 
   const { data: rutas = [] } = useGetRutas({ query: { queryKey: ["rutas"], refetchInterval: 15000 } });
@@ -209,6 +215,72 @@ export default function Pasajero() {
   };
 
   const sheetTranslate = sheetState === "collapsed" ? "calc(100% - 64px)" : sheetState === "half" ? "45%" : "0%";
+
+  // ── Arrastre del bottom sheet (swipe up/down) ──────────────────────────────
+  const snapPx = (state: SheetState): number => {
+    const h = window.innerHeight;
+    if (state === "collapsed") return h - 64;
+    if (state === "half") return h * 0.45;
+    return 0;
+  };
+
+  const onSheetTouchStart = (e: React.TouchEvent) => {
+    suppressClickRef.current = false;
+    const t = e.touches[0]!;
+    dragRef.current = { startY: t.clientY, startPx: snapPx(sheetState), moved: false };
+  };
+  const onSheetTouchMove = (e: React.TouchEvent) => {
+    const d = dragRef.current;
+    if (!d) return;
+    const delta = e.touches[0]!.clientY - d.startY;
+    if (Math.abs(delta) > 4) d.moved = true;
+    const h = window.innerHeight;
+    setDragOffset(Math.min(h - 64, Math.max(0, d.startPx + delta)));
+  };
+  const onSheetTouchEnd = () => {
+    const d = dragRef.current;
+    dragRef.current = null;
+    if (!d) return;
+    if (!d.moved) { setDragOffset(null); return; } // tap puro → lo maneja onClick
+    suppressClickRef.current = true; // evita que el click posterior cicle el sheet
+    const h = window.innerHeight;
+    const current = dragOffset ?? d.startPx;
+    const points: [SheetState, number][] = [["full", 0], ["half", h * 0.45], ["collapsed", h - 64]];
+    let best = points[0]!;
+    for (const p of points) if (Math.abs(p[1] - current) < Math.abs(best[1] - current)) best = p;
+    setSheetState(best[0]);
+    setDragOffset(null);
+  };
+  const onHandleClick = () => {
+    if (suppressClickRef.current) { suppressClickRef.current = false; return; }
+    cycleSheet();
+  };
+
+  // ── Centrar el mapa en la ubicación del pasajero ───────────────────────────
+  const locateMe = () => {
+    if (!navigator.geolocation || !mapRef.current) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const map = mapRef.current;
+        if (!map) { setLocating(false); return; }
+        const icon = L.divIcon({
+          className: "",
+          html: `<div style="width:16px;height:16px;border-radius:50%;background:#1757C2;border:3px solid white;box-shadow:0 0 0 6px rgba(23,87,194,.25)"></div>`,
+          iconSize: [16, 16], iconAnchor: [8, 8],
+        });
+        if (userMarkerRef.current) userMarkerRef.current.setLatLng([latitude, longitude]);
+        else userMarkerRef.current = L.marker([latitude, longitude], { icon }).bindPopup("Estás aquí").addTo(map);
+        map.setView([latitude, longitude], 15);
+        setLocating(false);
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+    );
+  };
+
+  const sheetTransform = dragOffset !== null ? `translateY(${dragOffset}px)` : `translateY(${sheetTranslate})`;
 
   // ─── SIDEBAR DESKTOP ────────────────────────────────────────────────────────
   const DesktopSidebar = () => (
@@ -429,15 +501,22 @@ export default function Pasajero() {
   const MobileSheet = () => (
     <div
       className="md:hidden tp-bottom-sheet"
-      style={{ transform: `translateY(${sheetTranslate})`, height: "100dvh" }}
+      style={{
+        transform: sheetTransform,
+        height: "100dvh",
+        transition: dragOffset !== null ? "none" : undefined,
+      }}
     >
-      {/* Handle + quick stats */}
+      {/* Handle + quick stats (arrastrable) */}
       <button
-        onClick={cycleSheet}
-        className="w-full flex flex-col items-center pt-2 pb-3 px-4 shrink-0"
-        style={{ touchAction: "manipulation" }}
+        onClick={onHandleClick}
+        onTouchStart={onSheetTouchStart}
+        onTouchMove={onSheetTouchMove}
+        onTouchEnd={onSheetTouchEnd}
+        className="w-full flex flex-col items-center pt-2.5 pb-3 px-4 shrink-0"
+        style={{ touchAction: "none" }}
       >
-        <div className="w-10 h-1 rounded-full bg-border mb-3" />
+        <div className="w-12 h-1.5 rounded-full bg-muted-foreground/40 mb-3" />
         <div className="w-full flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
@@ -608,7 +687,7 @@ export default function Pasajero() {
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      <DesktopSidebar />
+      {DesktopSidebar()}
 
       {/* Mapa */}
       <div className="flex-1 relative">
@@ -688,6 +767,19 @@ export default function Pasajero() {
           </div>
         )}
 
+        {/* Botón "Mi ubicación" (GPS del pasajero) */}
+        <button
+          onClick={locateMe}
+          disabled={locating}
+          className="absolute bottom-36 md:bottom-20 left-3 z-[1000] flex items-center justify-center w-11 h-11 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg hover:bg-secondary active:scale-95 transition-all disabled:opacity-60"
+          title="Centrar en mi ubicación"
+          aria-label="Centrar en mi ubicación"
+        >
+          {locating
+            ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
+            : <LocateFixed className="w-5 h-5 text-primary" />}
+        </button>
+
         {/* Indicador en vivo */}
         <div className="absolute bottom-20 md:bottom-4 left-3 z-[1000] flex items-center gap-2 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-lg">
           <div className="relative">
@@ -717,7 +809,7 @@ export default function Pasajero() {
         </div>
       </div>
 
-      <MobileSheet />
+      {MobileSheet()}
     </div>
   );
 }
