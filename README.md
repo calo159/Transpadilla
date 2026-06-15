@@ -158,14 +158,10 @@ tres componentes con un solo clic:
    Render). Verifica que `.env` siga en `.gitignore`.
 2. En [Render](https://render.com): **New → Blueprint** → conecta tu repositorio →
    **Apply**. Render lee `render.yaml`, crea los 3 recursos y los enlaza
-   (la `DATABASE_URL` y los secretos `JWT_SECRET` / `DJANGO_SECRET_KEY` se generan
-   solos).
-3. **Único paso manual:** cuando el servicio `transpadilla-trafico` termine de
-   desplegarse, copia su URL pública (algo como
-   `https://transpadilla-trafico.onrender.com`) y pégala en la variable
-   **`TRAFICO_URL`** del servicio `transpadilla-web` (Environment → Save). El
-   servicio se reinicia y el tab de Tráfico queda conectado.
-4. Abre la URL de `transpadilla-web`. En el primer arranque, el servidor **crea las
+   automáticamente: la `DATABASE_URL`, los secretos `JWT_SECRET` /
+   `DJANGO_SECRET_KEY` y la `TRAFICO_URL` (que apunta del backend al microservicio
+   Django) se configuran **solos** — sin pasos manuales.
+3. Abre la URL de `transpadilla-web`. En el primer arranque, el servidor **crea las
    tablas y carga los datos demo automáticamente** (`SEED_ON_START=true`), así que
    ya puedes entrar con las cuentas demo de arriba.
 
