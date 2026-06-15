@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useGetBuses, useUpdateGps, useReportarNovedad, useFinalizarRecorrido, getGetBusesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { getUser, clearAuth } from "@/lib/auth";
+import { getUser, clearAuth, homeForRol } from "@/lib/auth";
 import { Bus, LogOut, Play, Square, AlertTriangle, Radio, Clock, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,13 +12,6 @@ import { io, type Socket } from "socket.io-client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useToast } from "@/hooks/use-toast";
-
-const SIM_PUNTOS: [number, number][] = [
-  [11.5444, -72.9072], [11.5430, -72.9090], [11.5410, -72.9100],
-  [11.5390, -72.9120], [11.5370, -72.9140], [11.5350, -72.9150],
-  [11.5360, -72.9130], [11.5380, -72.9110], [11.5400, -72.9090],
-  [11.5420, -72.9080], [11.5440, -72.9070],
-];
 
 const NOVEDAD_OPCIONES = [
   "Tráfico — demora estimada 10 min",
@@ -66,13 +59,9 @@ export default function Conductor() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const busMarkerRef = useRef<L.Marker | null>(null);
   const gpsWatchRef = useRef<number | null>(null);
-  const simIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const socketRef = useRef<Socket | null>(null);
-  const simIndexRef = useRef(0);
 
-  const [busId, setBusId] = useState<number | null>(null);
   const [activo, setActivo] = useState(false);
-  const [modoSim, setModoSim] = useState(false);
   const [gpsLat, setGpsLat] = useState<number | null>(null);
   const [gpsLng, setGpsLng] = useState<number | null>(null);
   const [gpsVel, setGpsVel] = useState<number>(0);
@@ -89,15 +78,15 @@ export default function Conductor() {
   const reportarNovedad = useReportarNovedad();
   const finalizarRecorrido = useFinalizarRecorrido();
 
-  const selectedBus = buses.find((b) => b.id === busId);
+  const selectedBus = buses.find((b) => b.conductor_id === (user?.id ?? -1));
+  const busId = selectedBus?.id ?? null;
 
+  // Guard de rol: solo un conductor puede ver este panel. Cualquier otro usuario
+  // es enviado a su propia página (admin → /admin, pasajero → /).
   useEffect(() => {
-    if (!user || (user.rol !== "conductor" && user.rol !== "admin")) setLocation("/");
+    if (!user) { setLocation("/login"); return; }
+    if (user.rol !== "conductor") setLocation(homeForRol(user.rol));
   }, [user, setLocation]);
-
-  useEffect(() => {
-    if (buses.length === 1 && busId === null && !activo) setBusId(buses[0]!.id);
-  }, [buses, busId, activo]);
 
   useEffect(() => {
     const socket = io({ path: "/socket.io", transports: ["websocket", "polling"] });
@@ -134,32 +123,21 @@ export default function Conductor() {
   }, [busId, updateGps, selectedBus, queryClient]);
 
   const iniciar = () => {
-    if (!busId) { toast({ title: "Selecciona un bus primero", variant: "destructive" }); return; }
-    setActivo(true); setGpsCount(0);
-    if (modoSim) {
-      simIndexRef.current = 0;
-      simIntervalRef.current = setInterval(() => {
-        const [lat, lng] = SIM_PUNTOS[simIndexRef.current % SIM_PUNTOS.length]!;
-        simIndexRef.current++;
-        sendGps(lat, lng, 30 + Math.random() * 20);
-      }, 4000);
-    } else {
-      if (!navigator.geolocation) {
-        toast({ title: "GPS no disponible. Activa el modo simulación.", variant: "destructive" });
-        setActivo(false); return;
-      }
-      gpsWatchRef.current = navigator.geolocation.watchPosition(
-        (pos) => sendGps(pos.coords.latitude, pos.coords.longitude, (pos.coords.speed ?? 0) * 3.6),
-        () => toast({ title: "Error de GPS — verifica los permisos", variant: "destructive" }),
-        { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
-      );
+    if (!busId) { toast({ title: "No tienes un bus asignado. Contacta al administrador.", variant: "destructive" }); return; }
+    if (!navigator.geolocation) {
+      toast({ title: "GPS no disponible en este dispositivo", variant: "destructive" }); return;
     }
+    setActivo(true); setGpsCount(0);
+    gpsWatchRef.current = navigator.geolocation.watchPosition(
+      (pos) => sendGps(pos.coords.latitude, pos.coords.longitude, (pos.coords.speed ?? 0) * 3.6),
+      () => toast({ title: "Error de GPS — verifica los permisos", variant: "destructive" }),
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
+    );
     toast({ title: "Recorrido iniciado", description: selectedBus ? `Bus ${selectedBus.placa}` : undefined });
   };
 
   const finalizar = async () => {
     if (gpsWatchRef.current !== null) { navigator.geolocation.clearWatch(gpsWatchRef.current); gpsWatchRef.current = null; }
-    if (simIntervalRef.current) { clearInterval(simIntervalRef.current); simIntervalRef.current = null; }
     if (busId) { await finalizarRecorrido.mutateAsync({ data: { bus_id: busId } }); queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() }); }
     setActivo(false); setGpsLat(null); setGpsLng(null); setGpsCount(0);
     busMarkerRef.current?.remove(); busMarkerRef.current = null;
@@ -176,6 +154,10 @@ export default function Conductor() {
     setNovedadCustom(""); setShowNovedad(false);
     toast({ title: "Alerta enviada a pasajeros" });
   };
+
+  // Evita que el panel del conductor se muestre a quien no es conductor;
+  // el useEffect de arriba ya lo está redirigiendo a su propia página.
+  if (!user || user.rol !== "conductor") return null;
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-background overflow-hidden">
@@ -236,50 +218,9 @@ export default function Conductor() {
                 <div><span className="text-muted-foreground">Lat </span><span className="text-foreground">{gpsLat.toFixed(5)}</span></div>
                 <div><span className="text-muted-foreground">Lng </span><span className="text-foreground">{gpsLng?.toFixed(5)}</span></div>
                 <div><span className="text-muted-foreground">Envíos </span><span className="text-foreground">{gpsCount}</span></div>
-                {modoSim && <div><span className="text-muted-foreground">Modo </span><span style={{ color: "var(--tp-amber)" }}>Simulación</span></div>}
               </div>
             )}
           </div>
-
-          {/* Bus selector */}
-          {!activo && (
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Seleccionar bus</p>
-              <Select value={busId?.toString() ?? ""} onValueChange={(v) => setBusId(parseInt(v, 10))}>
-                <SelectTrigger data-testid="select-bus" className="bg-card border-border h-12 text-base rounded-xl">
-                  <SelectValue placeholder="Elige tu bus" />
-                </SelectTrigger>
-                <SelectContent>
-                  {buses.map((b) => (
-                    <SelectItem key={b.id} value={b.id.toString()}>
-                      {b.placa} — {b.nombre_ruta ?? "Sin ruta"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {buses.length === 0 && <p className="text-xs text-muted-foreground mt-1">No hay buses registrados.</p>}
-            </div>
-          )}
-
-          {/* Simulation toggle */}
-          {!activo && (
-            <div className="bg-card border border-border rounded-xl px-3.5 py-3">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <div
-                  role="switch"
-                  aria-checked={modoSim}
-                  onClick={() => setModoSim((m) => !m)}
-                  className={`w-11 h-6 rounded-full transition-colors flex-shrink-0 relative ${modoSim ? "bg-primary" : "bg-muted"}`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${modoSim ? "translate-x-6" : "translate-x-1"}`} />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">Modo simulación</p>
-                  <p className="text-[11px] text-muted-foreground">Sin GPS físico — mueve el bus por Riohacha</p>
-                </div>
-              </label>
-            </div>
-          )}
 
           {/* Start / Stop buttons */}
           {!activo ? (
@@ -373,8 +314,8 @@ export default function Conductor() {
           <div className="absolute inset-0 flex items-center justify-center z-[500] pointer-events-none">
             <div className="bg-card/95 border border-border rounded-xl px-8 py-6 text-center shadow-2xl">
               <Bus className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm font-semibold text-foreground">Selecciona tu bus</p>
-              <p className="text-xs text-muted-foreground mt-1">Usa el panel para continuar</p>
+              <p className="text-sm font-semibold text-foreground">Sin bus asignado</p>
+              <p className="text-xs text-muted-foreground mt-1">El administrador debe asignarte un bus</p>
             </div>
           </div>
         )}

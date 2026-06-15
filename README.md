@@ -37,8 +37,8 @@ Guajira**, como herramienta para mejorar y supervisar el servicio.
    dibujadas sobre las calles reales y paradas, sin requerir inicio de sesión.
 2. **Autenticación por roles** (JWT) — pasajero, conductor y administrador, cada
    uno con su propia interfaz.
-3. **Panel del conductor** — GPS real o modo simulación, inicio/fin de recorrido y
-   reporte de novedades en vivo.
+3. **Panel del conductor** — transmisión de GPS real, inicio/fin de recorrido y
+   reporte de novedades en vivo. El bus lo asigna el administrador.
 4. **Panel de administración (CRUD)** — gestión de rutas, paradas y buses con
    persistencia en base de datos.
 5. **Monitoreo de tráfico (microservicio Python/Django)** — clasifica cada tramo
@@ -138,6 +138,47 @@ Luego abre **http://localhost:5173**.
 | Admin | admin@transpadilla.co | admin123 |
 | Conductor | conductor@transpadilla.co | conductor123 |
 | Pasajero | pasajero@transpadilla.co | pasajero123 |
+
+---
+
+## ☁️ Despliegue en Render (producción)
+
+El repo incluye un **Blueprint** ([`render.yaml`](render.yaml)) que despliega los
+tres componentes con un solo clic:
+
+| Recurso | Qué es |
+|---------|--------|
+| `transpadilla-web` | Node: API + Socket.IO **y** sirve el frontend React ya construido (un solo dominio con HTTPS). |
+| `transpadilla-trafico` | Django + Gunicorn: microservicio de tráfico. |
+| `transpadilla-db` | PostgreSQL gestionado, compartido por ambos. |
+
+### Pasos
+
+1. **Sube el repo a GitHub** (el `.env` no se sube; los secretos se configuran en
+   Render). Verifica que `.env` siga en `.gitignore`.
+2. En [Render](https://render.com): **New → Blueprint** → conecta tu repositorio →
+   **Apply**. Render lee `render.yaml`, crea los 3 recursos y los enlaza
+   (la `DATABASE_URL` y los secretos `JWT_SECRET` / `DJANGO_SECRET_KEY` se generan
+   solos).
+3. **Único paso manual:** cuando el servicio `transpadilla-trafico` termine de
+   desplegarse, copia su URL pública (algo como
+   `https://transpadilla-trafico.onrender.com`) y pégala en la variable
+   **`TRAFICO_URL`** del servicio `transpadilla-web` (Environment → Save). El
+   servicio se reinicia y el tab de Tráfico queda conectado.
+4. Abre la URL de `transpadilla-web`. En el primer arranque, el servidor **crea las
+   tablas y carga los datos demo automáticamente** (`SEED_ON_START=true`), así que
+   ya puedes entrar con las cuentas demo de arriba.
+
+> **Nota sobre el plan gratuito:** los servicios free de Render se "duermen" tras
+> unos minutos de inactividad (la primera petición tarda ~30 s en despertar) y la
+> base de datos gratuita tiene vigencia limitada. Para una demo o entrega es
+> suficiente; para uso real conviene un plan de pago.
+
+### Migraciones / esquema
+- Las tablas del backend Node se crean solas al arrancar (idempotente, ver
+  [`init-db.ts`](artifacts/api-server/src/lib/init-db.ts)) — **no** se usa
+  `drizzle-kit push` en producción para no interferir con las tablas de Django.
+- Las tablas de Django se crean en su `buildCommand` con `manage.py migrate`.
 
 ---
 

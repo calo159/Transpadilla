@@ -6,11 +6,25 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-yzz*_u3aw6pyakk12qa4b8@ej(t0@phyyb4mw_)r0u2!v*_$t&'
+# SECRET_KEY: en producción se inyecta vía DJANGO_SECRET_KEY (Render lo genera).
+# El valor por defecto es solo para desarrollo local.
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-yzz*_u3aw6pyakk12qa4b8@ej(t0@phyyb4mw_)r0u2!v*_$t&",
+)
 
-DEBUG = True
+# DEBUG: activo por defecto en local. En producción Render fija DJANGO_DEBUG=False.
+DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() == "true"
 
-ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS: lista separada por comas vía DJANGO_ALLOWED_HOSTS.
+# Por defecto '*' para no romper el desarrollo local.
+ALLOWED_HOSTS = [
+    h.strip() for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",") if h.strip()
+]
+
+# CSRF_TRUSTED_ORIGINS: necesario en producción si se usa el admin de Django.
+_csrf = os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "")
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf.split(",") if o.strip()]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -25,6 +39,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # WhiteNoise sirve los archivos estáticos en producción (admin de Django).
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -99,5 +115,18 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ── Seguridad en producción ──────────────────────────────────────────────────
+# Render termina TLS en su proxy; este header permite a Django saber que la
+# petición original llegó por HTTPS.
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
