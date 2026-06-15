@@ -148,7 +148,7 @@ tres componentes con un solo clic:
 
 | Recurso | Qué es |
 |---------|--------|
-| `transpadilla-web` | Node: API + Socket.IO **y** sirve el frontend React ya construido (un solo dominio con HTTPS). |
+| `transpadilla-web` | Node: API + Socket.IO **y** sirve el frontend React ya construido (un solo dominio con HTTPS). Render detecta pnpm por el `pnpm-lock.yaml` y el campo `packageManager`. |
 | `transpadilla-trafico` | Django + Gunicorn: microservicio de tráfico. |
 | `transpadilla-db` | PostgreSQL gestionado, compartido por ambos. |
 
