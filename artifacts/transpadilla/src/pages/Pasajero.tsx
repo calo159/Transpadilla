@@ -48,6 +48,9 @@ export default function Pasajero() {
 
   const [selectedRutaId, setSelectedRutaId] = useState<number | null>(null);
   const [etaPorParada, setEtaPorParada] = useState<Record<number, { eta: number; placa: string }>>({});
+  // "Seguir mi bus": el mapa hace pan automático al bus elegido cuando se mueve.
+  const [siguiendoBusId, setSiguiendoBusId] = useState<number | null>(null);
+  const siguiendoBusRef = useRef<number | null>(null);
   const [novedad, setNovedad] = useState<Novedad | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sheetState, setSheetState] = useState<SheetState>("collapsed");
@@ -186,6 +189,11 @@ export default function Pasajero() {
           <span style="color:#94a3b8;font-size:11px">Tarifa: ${TARIFA_COP} COP</span>
         </div>`;
 
+      // Si estamos siguiendo este bus, centrar el mapa en su nueva posición.
+      if (siguiendoBusRef.current === busId && mapRef.current) {
+        mapRef.current.panTo([lat, lng]);
+      }
+
       if (markersRef.current[busId]) {
         markersRef.current[busId]!.setLatLng([lat, lng]);
         markersRef.current[busId]!.setIcon(icon);
@@ -275,6 +283,20 @@ export default function Pasajero() {
     if (!vals.length) return null;
     return vals.reduce((a, b) => (b.eta < a.eta ? b : a));
   })();
+
+  // Mantener el ref sincronizado para el pan dentro de updateBusMarker.
+  useEffect(() => { siguiendoBusRef.current = siguiendoBusId; }, [siguiendoBusId]);
+
+  // Activar/desactivar el seguimiento de un bus; al activarlo centra el mapa.
+  const seguirBus = (busId: number) => {
+    const next = siguiendoBusId === busId ? null : busId;
+    setSiguiendoBusId(next);
+    if (next !== null) {
+      const b = buses.find((x) => x.id === next);
+      if (b?.lat && b?.lng && mapRef.current) mapRef.current.setView([b.lat, b.lng], 16);
+    }
+  };
+  const busSeguido = buses.find((b) => b.id === siguiendoBusId);
 
   const cycleSheet = () => {
     setSheetState((s) => s === "collapsed" ? "half" : s === "half" ? "full" : "collapsed");
@@ -689,12 +711,24 @@ export default function Pasajero() {
               </div>
             )}
             {buses.filter((b) => b.ruta_id === selectedRuta.id && b.estado !== "inactivo").map((b) => (
-              <div key={b.id} className="flex items-center justify-between py-1.5 border-t border-border/50 text-xs">
+              <div key={b.id} className="flex items-center gap-2 py-1.5 border-t border-border/50 text-xs">
                 <span className="font-mono font-bold text-foreground">{b.placa}</span>
                 <span className={`px-2 py-0.5 rounded-full font-bold ${b.estado === "activo" ? "bg-green-500/20 text-green-400" : "bg-amber-500/20 text-amber-400"}`}>
                   {b.estado}
                 </span>
                 {b.velocidad && b.velocidad > 0 && <span className="text-muted-foreground font-mono">{Math.round(b.velocidad)} km/h</span>}
+                {b.estado === "activo" && b.lat && b.lng && (
+                  <button
+                    onClick={() => seguirBus(b.id)}
+                    className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg font-semibold transition-colors"
+                    style={siguiendoBusId === b.id
+                      ? { background: "var(--tp-sky)", color: "#001018" }
+                      : { background: "rgba(75,169,216,0.15)", color: "var(--tp-sky)" }}
+                  >
+                    <LocateFixed className="w-3 h-3" />
+                    {siguiendoBusId === b.id ? "Siguiendo" : "Seguir"}
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -958,6 +992,20 @@ export default function Pasajero() {
             ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
             : <LocateFixed className="w-5 h-5 text-primary" />}
         </button>
+
+        {/* Chip "siguiendo bus" */}
+        {busSeguido && (
+          <div
+            className="absolute top-16 md:top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 rounded-xl px-3 py-2 shadow-lg"
+            style={{ background: "var(--tp-sky)", color: "#001018" }}
+          >
+            <LocateFixed className="w-4 h-4 animate-pulse" />
+            <span className="text-xs font-bold">Siguiendo {busSeguido.placa}</span>
+            <button onClick={() => setSiguiendoBusId(null)} className="ml-1 hover:opacity-70" aria-label="Dejar de seguir">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* Indicador en vivo */}
         <div className="absolute bottom-20 md:bottom-4 left-3 z-[1000] flex items-center gap-2 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-lg">
