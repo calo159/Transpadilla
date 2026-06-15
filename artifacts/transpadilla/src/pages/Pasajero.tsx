@@ -225,7 +225,7 @@ export default function Pasajero() {
     });
     socket.on("bus:novedad", (data: Novedad) => {
       setNovedad(data);
-      setTimeout(() => setNovedad(null), 12000);
+      setTimeout(() => setNovedad(null), 15000);
     });
     socket.on("bus:ocupacion", () => {
       queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
@@ -963,19 +963,27 @@ export default function Pasajero() {
           </div>
         )}
 
-        {/* Alerta de novedad */}
+        {/* Alerta de novedad — vistosa, con animación de entrada y botón de cerrar */}
         {novedad && (
-          <div className="absolute top-16 left-3 right-3 md:top-4 md:left-1/2 md:-translate-x-1/2 md:right-auto md:max-w-md z-[1000] backdrop-blur-sm border rounded-2xl px-4 py-3 flex items-start gap-3 shadow-2xl"
-            style={{ background: "rgba(245,194,0,0.12)", borderColor: "rgba(245,194,0,0.4)" }}>
-            <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "var(--tp-yellow)" }} />
-            <div className="flex-1">
-              <p className="text-sm font-bold" style={{ color: "var(--tp-yellow)" }}>
-                Alerta {novedad.placa ? `— Bus ${novedad.placa}` : "de conductor"}
+          <div
+            role="alert"
+            className="absolute top-16 left-3 right-3 md:top-4 md:left-1/2 md:-translate-x-1/2 md:right-auto md:max-w-md z-[1002] rounded-2xl px-4 py-3.5 flex items-start gap-3 animate-in slide-in-from-top-4 fade-in duration-300"
+            style={{ background: "var(--tp-yellow)", color: "#1a1300", boxShadow: "0 12px 40px rgba(245,194,0,0.55)" }}
+          >
+            <AlertTriangle className="w-6 h-6 flex-shrink-0 mt-0.5 animate-pulse" style={{ color: "#1a1300" }} />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-black uppercase tracking-wide">
+                Alerta {novedad.placa ? `— Bus ${novedad.placa}` : "de un conductor"}
               </p>
-              <p className="text-sm text-foreground/80 mt-0.5">{novedad.novedad}</p>
+              <p className="text-sm font-medium mt-0.5" style={{ color: "#2a2000" }}>{novedad.novedad}</p>
             </div>
-            <button onClick={() => setNovedad(null)} className="hover:opacity-70 transition-opacity">
-              <X className="w-4 h-4" style={{ color: "var(--tp-yellow)" }} />
+            <button
+              onClick={() => setNovedad(null)}
+              className="flex-shrink-0 -mr-1 -mt-0.5 w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-black/10 active:bg-black/20"
+              style={{ color: "#1a1300" }}
+              aria-label="Cerrar alerta"
+            >
+              <X className="w-5 h-5" />
             </button>
           </div>
         )}
