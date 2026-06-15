@@ -3,9 +3,8 @@ import { useLocation } from "wouter";
 import { useGetBuses, useUpdateGps, useReportarNovedad, useFinalizarRecorrido, getGetBusesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getUser, clearAuth, homeForRol, getToken } from "@/lib/auth";
-import { Bus, LogOut, Play, Square, AlertTriangle, Radio, Clock, ChevronLeft, Users, MapPin } from "lucide-react";
+import { Bus, LogOut, Play, Square, AlertTriangle, Radio, Clock, ChevronLeft, Users, MapPin, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { LogoTP } from "@/components/LogoTP";
 import { io, type Socket } from "socket.io-client";
@@ -13,11 +12,11 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useToast } from "@/hooks/use-toast";
 
-const NOVEDAD_OPCIONES = [
-  "Tráfico — demora estimada 10 min",
-  "Accidente en la vía — espera obligatoria",
-  "Problema mecánico — en espera de apoyo",
-  "Desvío por vía cerrada",
+const NOVEDAD_OPCIONES: { label: string; texto: string }[] = [
+  { label: "Tráfico", texto: "Tráfico — demora estimada" },
+  { label: "Accidente", texto: "Accidente en la vía — espera obligatoria" },
+  { label: "En reparación", texto: "Bus en reparación — demora" },
+  { label: "Desvío", texto: "Desvío por vía cerrada" },
 ];
 
 function useElapsedTime(running: boolean) {
@@ -66,10 +65,8 @@ export default function Conductor() {
   const [gpsLng, setGpsLng] = useState<number | null>(null);
   const [gpsVel, setGpsVel] = useState<number>(0);
   const [gpsCount, setGpsCount] = useState(0);
-  const [novedadTipo, setNovedadTipo] = useState<string>(NOVEDAD_OPCIONES[0]!);
   const [novedadCustom, setNovedadCustom] = useState("");
   const [showCustom, setShowCustom] = useState(false);
-  const [showNovedad, setShowNovedad] = useState(false);
   const [ocupacion, setOcupacion] = useState<string | null>(null);
   const [showMapa, setShowMapa] = useState(false);
 
@@ -152,7 +149,7 @@ export default function Conductor() {
     if (busId) { await finalizarRecorrido.mutateAsync({ data: { bus_id: busId } }); queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() }); }
     setActivo(false); setGpsLat(null); setGpsLng(null); setGpsCount(0);
     busMarkerRef.current?.remove(); busMarkerRef.current = null;
-    setShowNovedad(false); setOcupacion(null);
+    setShowCustom(false); setOcupacion(null);
     toast({ title: "Recorrido finalizado", description: `Duración: ${elapsed}` });
   };
 
@@ -174,14 +171,32 @@ export default function Conductor() {
     }
   };
 
-  const enviarNovedad = async () => {
+  const enviarNovedad = async (texto: string) => {
+    if (!busId || !texto.trim()) return;
+    try {
+      await reportarNovedad.mutateAsync({ data: { bus_id: busId, novedad: texto.trim() } });
+      queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
+      setNovedadCustom(""); setShowCustom(false);
+      toast({ title: "Reporte enviado a pasajeros" });
+    } catch {
+      toast({ title: "Error al enviar el reporte", variant: "destructive" });
+    }
+  };
+
+  const limpiarNovedad = async () => {
     if (!busId) return;
-    const texto = showCustom ? novedadCustom : novedadTipo;
-    if (!texto.trim()) { toast({ title: "Escribe la novedad", variant: "destructive" }); return; }
-    await reportarNovedad.mutateAsync({ data: { bus_id: busId, novedad: texto } });
-    queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
-    setNovedadCustom(""); setShowNovedad(false);
-    toast({ title: "Alerta enviada a pasajeros" });
+    try {
+      const res = await fetch("/api/buses/limpiar-novedad", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ bus_id: busId }),
+      });
+      if (!res.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
+      toast({ title: "Reporte retirado — bus en estado normal" });
+    } catch {
+      toast({ title: "Error al retirar el reporte", variant: "destructive" });
+    }
   };
 
   // Evita que el panel del conductor se muestre a quien no es conductor;
@@ -317,51 +332,69 @@ export default function Conductor() {
                 </div>
               </div>
 
-              {/* Novedad toggle */}
-              <button
-                onClick={() => setShowNovedad((v) => !v)}
-                className="w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-colors"
-                style={{ borderColor: "rgba(245,158,11,0.3)", background: showNovedad ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.05)" }}
-              >
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4" style={{ color: "var(--tp-amber)" }} />
-                  <span className="text-sm font-semibold" style={{ color: "var(--tp-amber)" }}>Reportar novedad</span>
-                </div>
-                <span className="text-xs text-muted-foreground">{showNovedad ? "▲" : "▼"}</span>
-              </button>
-
-              {showNovedad && (
-                <div className="bg-card border border-border rounded-xl p-3 space-y-2.5">
-                  <Select
-                    value={showCustom ? "custom" : novedadTipo}
-                    onValueChange={(v) => { if (v === "custom") { setShowCustom(true); } else { setShowCustom(false); setNovedadTipo(v); } }}
-                  >
-                    <SelectTrigger className="bg-background border-border h-11 text-sm rounded-xl" data-testid="select-novedad">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {NOVEDAD_OPCIONES.map((op) => <SelectItem key={op} value={op}>{op}</SelectItem>)}
-                      <SelectItem value="custom">Escribir novedad personalizada...</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {showCustom && (
-                    <Textarea
-                      data-testid="input-novedad-custom"
-                      placeholder="Describe la novedad..."
-                      value={novedadCustom}
-                      onChange={(e) => setNovedadCustom(e.target.value)}
-                      className="bg-background border-border text-sm h-20 resize-none rounded-xl"
-                    />
-                  )}
+              {/* Reporte de estado */}
+              {selectedBus?.novedad ? (
+                /* Reporte activo: se mantiene hasta que el conductor lo retire */
+                <div className="rounded-xl p-3.5 border" style={{ borderColor: "rgba(245,158,11,0.45)", background: "rgba(245,158,11,0.1)" }}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <AlertTriangle className="w-4 h-4" style={{ color: "var(--tp-amber)" }} />
+                    <span className="text-xs font-black uppercase tracking-wide" style={{ color: "var(--tp-amber)" }}>Reporte activo</span>
+                  </div>
+                  <p className="text-sm text-foreground mb-3">{selectedBus.novedad}</p>
                   <Button
-                    onClick={enviarNovedad}
-                    className="w-full h-11 text-sm font-semibold rounded-xl"
-                    style={{ background: "var(--tp-amber)", color: "#000" }}
-                    disabled={reportarNovedad.isPending}
-                    data-testid="button-novedad"
+                    onClick={limpiarNovedad}
+                    variant="outline"
+                    className="w-full h-11 rounded-xl font-semibold"
+                    data-testid="button-quitar-reporte"
                   >
-                    Enviar alerta a pasajeros
+                    <X className="w-4 h-4 mr-1.5" /> Quitar reporte (volver a normal)
                   </Button>
+                </div>
+              ) : (
+                /* Sin reporte: opciones rápidas (un toque = reportar) */
+                <div className="bg-card border border-border rounded-xl p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="w-4 h-4" style={{ color: "var(--tp-amber)" }} />
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Reportar novedad</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {NOVEDAD_OPCIONES.map((o) => (
+                      <button
+                        key={o.label}
+                        onClick={() => enviarNovedad(o.texto)}
+                        disabled={reportarNovedad.isPending}
+                        className="h-11 rounded-xl text-sm font-semibold border border-border bg-background hover:bg-secondary active:scale-95 transition-all disabled:opacity-50"
+                      >
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setShowCustom((v) => !v)}
+                    className="w-full mt-2 text-xs text-muted-foreground hover:text-foreground py-1.5"
+                  >
+                    {showCustom ? "Cancelar" : "Escribir otra novedad…"}
+                  </button>
+                  {showCustom && (
+                    <div className="space-y-2">
+                      <Textarea
+                        data-testid="input-novedad-custom"
+                        placeholder="Describe la novedad..."
+                        value={novedadCustom}
+                        onChange={(e) => setNovedadCustom(e.target.value)}
+                        className="bg-background border-border text-sm h-20 resize-none rounded-xl"
+                      />
+                      <Button
+                        onClick={() => enviarNovedad(novedadCustom)}
+                        disabled={!novedadCustom.trim() || reportarNovedad.isPending}
+                        className="w-full h-11 text-sm font-semibold rounded-xl"
+                        style={{ background: "var(--tp-amber)", color: "#000" }}
+                        data-testid="button-novedad"
+                      >
+                        Enviar reporte
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -35,6 +35,23 @@ function tiempoRelativo(isoDate: string | null | undefined): string {
 
 type SheetState = "collapsed" | "half" | "full";
 
+// Distancia en km entre dos coordenadas (Haversine).
+function distanciaKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const R = 6371;
+  const dLat = ((bLat - aLat) * Math.PI) / 180;
+  const dLng = ((bLng - aLng) * Math.PI) / 180;
+  const la1 = (aLat * Math.PI) / 180;
+  const la2 = (bLat * Math.PI) / 180;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+// Velocidad efectiva (km/h) para estimar el ETA: si el bus está detenido o sin
+// dato, usamos un promedio urbano para no dividir por cero.
+function velEfectiva(v: number | null | undefined): number {
+  return !v || v < 5 ? 18 : v;
+}
+
 export default function Pasajero() {
   const [, setLocation] = useLocation();
   const mapRef = useRef<L.Map | null>(null);
@@ -56,6 +73,7 @@ export default function Pasajero() {
   const [sheetState, setSheetState] = useState<SheetState>("collapsed");
   const [busqueda, setBusqueda] = useState("");
   const [locating, setLocating] = useState(false);
+  const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
   // Rutas favoritas del pasajero (se recuerdan en localStorage y van arriba).
   const [favoritos, setFavoritos] = useState<number[]>(() => {
     try { return JSON.parse(localStorage.getItem("tp_favoritos") ?? "[]") as number[]; }
@@ -224,8 +242,13 @@ export default function Pasajero() {
       queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
     });
     socket.on("bus:novedad", (data: Novedad) => {
-      setNovedad(data);
-      setTimeout(() => setNovedad(null), 15000);
+      // Refresca los buses para que el ⚠ aparezca/desaparezca en el marcador.
+      queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
+      // Solo muestra la alerta cuando hay novedad (no cuando el conductor la retira).
+      if (data.novedad) {
+        setNovedad(data);
+        setTimeout(() => setNovedad(null), 15000);
+      }
     });
     socket.on("bus:ocupacion", () => {
       queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
@@ -298,6 +321,17 @@ export default function Pasajero() {
   };
   const busSeguido = buses.find((b) => b.id === siguiendoBusId);
 
+  // Buses activos de la ruta seleccionada, ordenados del más cercano a mí, con
+  // la distancia y el tiempo estimado de llegada a MI ubicación.
+  const busesRutaSel = (selectedRuta ? buses : [])
+    .filter((b) => b.ruta_id === selectedRuta?.id && b.estado !== "inactivo" && b.lat != null && b.lng != null)
+    .map((b) => {
+      const distKm = userPos ? distanciaKm(userPos.lat, userPos.lng, b.lat!, b.lng!) : null;
+      const etaMin = distKm != null ? Math.max(0, Math.round((distKm / velEfectiva(b.velocidad)) * 60)) : null;
+      return { bus: b, distKm, etaMin };
+    })
+    .sort((a, b) => (a.distKm ?? Infinity) - (b.distKm ?? Infinity));
+
   const cycleSheet = () => {
     setSheetState((s) => s === "collapsed" ? "half" : s === "half" ? "full" : "collapsed");
   };
@@ -351,6 +385,7 @@ export default function Pasajero() {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
+        setUserPos({ lat: latitude, lng: longitude });
         const map = mapRef.current;
         if (!map) { setLocating(false); return; }
         const icon = L.divIcon({
@@ -509,33 +544,55 @@ export default function Pasajero() {
         })}
       </div>
 
-      {/* Buses en ruta seleccionada */}
-      {selectedRuta && (() => {
-        const rutaBuses = buses.filter((b) => b.ruta_id === selectedRuta.id);
-        if (!rutaBuses.length) return null;
-        return (
-          <div className="border-t border-border p-3 shrink-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Buses en ruta</p>
-            {rutaBuses.map((b) => (
-              <div key={b.id} className="bg-card border border-border rounded-lg p-2.5 mb-2 text-xs">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono font-bold text-foreground tracking-wide">{b.placa}</span>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${b.estado === "activo" ? "bg-green-500/20 text-green-400" : b.estado === "demora" ? "bg-amber-500/20 text-amber-400" : "bg-muted/20 text-muted-foreground"}`}>
-                    {b.estado}
-                  </span>
-                </div>
-                {b.velocidad && b.velocidad > 0 && <p className="text-muted-foreground font-mono">{Math.round(b.velocidad)} km/h</p>}
-                {b.actualizado && (
-                  <p className="text-muted-foreground flex items-center gap-1 mt-0.5">
-                    <Clock className="w-3 h-3" />{tiempoRelativo(b.actualizado)}
-                  </p>
-                )}
-                {b.novedad && <p className="mt-1" style={{ color: "var(--tp-yellow)" }}>⚠ {b.novedad}</p>}
-              </div>
-            ))}
+      {/* Buses en ruta seleccionada — ordenados del más cercano a mí, con ETA a mi ubicación */}
+      {selectedRuta && busesRutaSel.length > 0 && (
+        <div className="border-t border-border p-3 shrink-0">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {userPos ? "Buses — más cercano primero" : "Buses en ruta"}
+            </p>
+            {!userPos && (
+              <button onClick={locateMe} className="text-[10px] font-semibold flex items-center gap-1" style={{ color: "var(--tp-sky)" }}>
+                <LocateFixed className="w-3 h-3" /> Mi ubicación
+              </button>
+            )}
           </div>
-        );
-      })()}
+          {busesRutaSel.map(({ bus: b, distKm, etaMin }) => (
+            <div key={b.id} className="bg-card border border-border rounded-lg p-2.5 mb-2 text-xs">
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-mono font-bold text-foreground tracking-wide">{b.placa}</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${b.estado === "demora" ? "bg-amber-500/20 text-amber-400" : "bg-green-500/20 text-green-400"}`}>
+                  {b.estado}
+                </span>
+              </div>
+              {distKm != null ? (
+                <p className="text-foreground/80">
+                  A {distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${distKm.toFixed(1)} km`} de ti ·{" "}
+                  <span className="text-green-400 font-semibold">{etaMin === 0 ? "llegando" : `~${etaMin} min`}</span>
+                </p>
+              ) : (
+                <p className="text-muted-foreground/70">Activa tu ubicación para ver el tiempo de llegada</p>
+              )}
+              {b.actualizado && (
+                <p className="text-muted-foreground flex items-center gap-1 mt-0.5">
+                  <Clock className="w-3 h-3" />{tiempoRelativo(b.actualizado)}
+                </p>
+              )}
+              {b.novedad && <p className="mt-1" style={{ color: "var(--tp-yellow)" }}>⚠ {b.novedad}</p>}
+              <button
+                onClick={() => seguirBus(b.id)}
+                className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg font-semibold transition-colors"
+                style={siguiendoBusId === b.id
+                  ? { background: "var(--tp-sky)", color: "#001018" }
+                  : { background: "rgba(75,169,216,0.15)", color: "var(--tp-sky)" }}
+              >
+                <LocateFixed className="w-3.5 h-3.5" />
+                {siguiendoBusId === b.id ? "Siguiendo este bus" : "Seguir este bus"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Atención al cliente */}
       <div className="px-3 py-2.5 border-t border-border shrink-0 space-y-2">
@@ -710,27 +767,49 @@ export default function Pasajero() {
                 })}
               </div>
             )}
-            {buses.filter((b) => b.ruta_id === selectedRuta.id && b.estado !== "inactivo").map((b) => (
-              <div key={b.id} className="flex items-center gap-2 py-1.5 border-t border-border/50 text-xs">
-                <span className="font-mono font-bold text-foreground">{b.placa}</span>
-                <span className={`px-2 py-0.5 rounded-full font-bold ${b.estado === "activo" ? "bg-green-500/20 text-green-400" : "bg-amber-500/20 text-amber-400"}`}>
-                  {b.estado}
+            {/* Buses de la ruta — ordenados del más cercano a mí, con ETA a mi ubicación */}
+            <div className="mt-1 pt-2 border-t border-border/50">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  {userPos ? "Buses — el más cercano a ti primero" : "Buses en circulación"}
                 </span>
-                {b.velocidad && b.velocidad > 0 && <span className="text-muted-foreground font-mono">{Math.round(b.velocidad)} km/h</span>}
-                {b.estado === "activo" && b.lat && b.lng && (
-                  <button
-                    onClick={() => seguirBus(b.id)}
-                    className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg font-semibold transition-colors"
-                    style={siguiendoBusId === b.id
-                      ? { background: "var(--tp-sky)", color: "#001018" }
-                      : { background: "rgba(75,169,216,0.15)", color: "var(--tp-sky)" }}
-                  >
-                    <LocateFixed className="w-3 h-3" />
-                    {siguiendoBusId === b.id ? "Siguiendo" : "Seguir"}
+                {!userPos && (
+                  <button onClick={locateMe} className="text-[10px] font-semibold flex items-center gap-1" style={{ color: "var(--tp-sky)" }}>
+                    <LocateFixed className="w-3 h-3" /> Usar mi ubicación
                   </button>
                 )}
               </div>
-            ))}
+              {busesRutaSel.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-1">No hay buses en circulación ahora.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {busesRutaSel.map(({ bus: b, distKm, etaMin }) => (
+                    <div key={b.id} className="flex items-center gap-2 py-1 text-xs">
+                      <span className="font-mono font-bold text-foreground">{b.placa}</span>
+                      {b.estado === "demora" && <span className="px-1.5 py-0.5 rounded-full font-bold bg-amber-500/20 text-amber-400">demora</span>}
+                      {distKm != null ? (
+                        <span className="text-muted-foreground">
+                          a {distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${distKm.toFixed(1)} km`} ·{" "}
+                          <span className="text-green-400 font-semibold">{etaMin === 0 ? "llegando" : `~${etaMin} min`}</span>
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/60">activa tu ubicación</span>
+                      )}
+                      <button
+                        onClick={() => seguirBus(b.id)}
+                        className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg font-semibold transition-colors"
+                        style={siguiendoBusId === b.id
+                          ? { background: "var(--tp-sky)", color: "#001018" }
+                          : { background: "rgba(75,169,216,0.15)", color: "var(--tp-sky)" }}
+                      >
+                        <LocateFixed className="w-3 h-3" />
+                        {siguiendoBusId === b.id ? "Siguiendo" : "Seguir"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
