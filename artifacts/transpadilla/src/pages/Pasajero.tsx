@@ -58,7 +58,7 @@ export default function Pasajero() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<Record<number, L.Marker>>({});
   const routeLayersRef = useRef<Record<number, L.Polyline>>({});
-  const stopMarkersRef = useRef<L.Marker[]>([]);
+  const stopMarkersRef = useRef<Array<{ rutaId: number; marker: L.Marker }>>([]);
   const socketRef = useRef<Socket | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
   const queryClient = useQueryClient();
@@ -132,7 +132,7 @@ export default function Pasajero() {
 
     Object.values(routeLayersRef.current).forEach((l) => l.remove());
     routeLayersRef.current = {};
-    stopMarkersRef.current.forEach((m) => m.remove());
+    stopMarkersRef.current.forEach(({ marker }) => marker.remove());
     stopMarkersRef.current = [];
 
     rutas.forEach((ruta) => {
@@ -152,7 +152,7 @@ export default function Pasajero() {
               <span style="color:#64748b;font-size:11px">${ruta.nombre}</span>
             </div>`)
           .addTo(map);
-        stopMarkersRef.current.push(m);
+        stopMarkersRef.current.push({ rutaId: ruta.id, marker: m });
       });
 
       if (ruta.paradas.length < 2) return;
@@ -166,15 +166,23 @@ export default function Pasajero() {
     });
   }, [rutas]);
 
-  // Highlight/dim al seleccionar ruta
+  // Al seleccionar una ruta: mostrar SOLO esa ruta y SOLO sus paradas.
+  // Sin selección: se muestran todas.
   useEffect(() => {
     Object.entries(routeLayersRef.current).forEach(([idStr, polyline]) => {
       const id = Number(idStr);
-      if (selectedRutaId === null) polyline.setStyle({ opacity: 0.85, weight: 4 });
+      if (selectedRutaId === null) polyline.setStyle({ opacity: 0.85, weight: 5 });
       else if (id === selectedRutaId) { polyline.setStyle({ opacity: 1, weight: 7 }); polyline.bringToFront(); }
-      else polyline.setStyle({ opacity: 0.1, weight: 3 });
+      else polyline.setStyle({ opacity: 0, weight: 0 }); // oculta las demás rutas
     });
-  }, [selectedRutaId]);
+    stopMarkersRef.current.forEach(({ rutaId, marker }) => {
+      const visible = selectedRutaId === null || rutaId === selectedRutaId;
+      marker.setOpacity(visible ? 1 : 0);
+      // Evita que las paradas ocultas capturen clics
+      const el = marker.getElement();
+      if (el) el.style.pointerEvents = visible ? "auto" : "none";
+    });
+  }, [selectedRutaId, rutas]);
 
   const updateBusMarker = useCallback(
     (busId: number, lat: number, lng: number, color = "#1757C2", placa = "", rutaId?: number) => {
