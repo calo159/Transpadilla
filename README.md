@@ -225,7 +225,7 @@ django/             Microservicio de Tráfico (Python / Django + DRF)
 <!-- Completar con los nombres reales de TODOS los integrantes del grupo -->
 - James Sebastian Jaimes Beleño
 - Yerfreth Mejía Sierra
--
+- Eduis Guillermo Amaya Moscote
 -
 
 ---
