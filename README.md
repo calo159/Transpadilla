@@ -223,9 +223,10 @@ django/             Microservicio de Tráfico (Python / Django + DRF)
 ## 👥 Integrantes
 
 <!-- Completar con los nombres reales de TODOS los integrantes del grupo -->
-- Nombre Apellido — [usuario GitHub]
-- Nombre Apellido — [usuario GitHub]
-- _(2 a 4 integrantes)_
+- James Sebastian Jaimes Beleño
+- 
+-
+-
 
 ---
 
