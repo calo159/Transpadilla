@@ -65,6 +65,7 @@ export default function Admin() {
   const [asignarRutaId, setAsignarRutaId] = useState<string>("");
   const [asignarParadaId, setAsignarParadaId] = useState<string>("");
   const [asignarOrden, setAsignarOrden] = useState("0");
+  const [paradaQuery, setParadaQuery] = useState("");
 
   // Conductores
   const [conductores, setConductores] = useState<Conductor[]>([]);
@@ -184,7 +185,7 @@ export default function Admin() {
     try {
       await asignarParadaMutation.mutateAsync({ id: parseInt(asignarRutaId, 10), data: { parada_id: parseInt(asignarParadaId, 10), orden: parseInt(asignarOrden, 10) || 0 } });
       queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
-      setAsignarParadaId(""); setAsignarOrden("0");
+      setAsignarParadaId(""); setAsignarOrden("0"); setParadaQuery("");
       toast({ title: "Parada asignada a la ruta" });
     } catch {
       toast({ title: "Error al asignar la parada", variant: "destructive" });
@@ -797,10 +798,54 @@ export default function Admin() {
                       </div>
                       <div>
                         <Label className="text-xs mb-1.5">Parada</Label>
-                        <Select value={asignarParadaId} onValueChange={setAsignarParadaId}>
-                          <SelectTrigger className={selectTriggerCls} data-testid="select-asignar-parada"><SelectValue placeholder="Selecciona parada" /></SelectTrigger>
-                          <SelectContent>{paradas.map((p) => <SelectItem key={p.id} value={p.id.toString()}>{p.nombre} ({p.latitud.toFixed(3)}, {p.longitud.toFixed(3)})</SelectItem>)}</SelectContent>
-                        </Select>
+                        {(() => {
+                          // Paradas que NO están aún en la ruta elegida, filtradas por el buscador.
+                          const rutaSel = rutas.find((r) => r.id.toString() === asignarRutaId);
+                          const yaEnRuta = new Set((rutaSel?.paradas ?? []).map((p) => p.id));
+                          const disponibles = paradas
+                            .filter((p) => !yaEnRuta.has(p.id))
+                            .filter((p) => p.nombre.toLowerCase().includes(paradaQuery.toLowerCase()));
+                          return (
+                            <div>
+                              <div className="relative mb-2">
+                                <input
+                                  value={paradaQuery}
+                                  onChange={(e) => setParadaQuery(e.target.value)}
+                                  placeholder="Buscar parada por nombre..."
+                                  className="w-full h-10 pl-3 pr-3 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-ring"
+                                />
+                              </div>
+                              {!asignarRutaId ? (
+                                <p className="text-xs text-muted-foreground py-2">Primero selecciona una ruta.</p>
+                              ) : disponibles.length === 0 ? (
+                                <p className="text-xs text-muted-foreground py-2">
+                                  {paradaQuery ? "Sin resultados." : "Esta ruta ya tiene todas las paradas."}
+                                </p>
+                              ) : (
+                                <div className="max-h-52 overflow-y-auto space-y-1 pr-1">
+                                  {disponibles.map((p) => {
+                                    const sel = asignarParadaId === p.id.toString();
+                                    return (
+                                      <button
+                                        key={p.id}
+                                        onClick={() => setAsignarParadaId(p.id.toString())}
+                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-left transition-colors ${
+                                          sel ? "border-primary bg-primary/10" : "border-border bg-background hover:bg-secondary/50"
+                                        }`}
+                                      >
+                                        <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${sel ? "text-primary" : "text-sky-400"}`} />
+                                        <span className="flex-1 min-w-0 truncate text-sm text-foreground">{p.nombre}</span>
+                                        <span className="text-[10px] font-mono text-muted-foreground flex-shrink-0">
+                                          {p.latitud.toFixed(3)}, {p.longitud.toFixed(3)}
+                                        </span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                       <div>
                         <Label className="text-xs mb-1.5">Orden en la ruta</Label>
