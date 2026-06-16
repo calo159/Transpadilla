@@ -226,7 +226,7 @@ django/             Microservicio de Tráfico (Python / Django + DRF)
 - James Sebastian Jaimes Beleño
 - Yerfreth Mejía Sierra
 - Eduis Guillermo Amaya Moscote
--
+- Carlos David Sierra Tete
 
 ---
 
