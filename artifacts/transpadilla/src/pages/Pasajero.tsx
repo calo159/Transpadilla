@@ -157,7 +157,7 @@ export default function Pasajero() {
 
       if (ruta.paradas.length < 2) return;
       const fallback: L.LatLngExpression[] = ruta.paradas.map((p) => [p.latitud, p.longitud]);
-      const polyline = L.polyline(fallback, { color: ruta.color, weight: 4, opacity: 0.65, dashArray: "6 4" }).addTo(map);
+      const polyline = L.polyline(fallback, { color: ruta.color, weight: 5, opacity: 0.65, dashArray: "6 6", lineCap: "round", lineJoin: "round" }).addTo(map);
       routeLayersRef.current[ruta.id] = polyline;
       fetchStreetRoute(ruta.paradas).then((coords) => {
         polyline.setLatLngs(coords);
@@ -193,10 +193,18 @@ export default function Pasajero() {
         ? `<span style="color:${ocup.color};font-size:12px">● Ocupación: ${ocup.label}</span><br>`
         : "";
 
+      // Punto de estado: ámbar si tiene novedad, verde si va normal.
+      const dotColor = bus?.novedad ? "#F5C200" : "#22c55e";
+      const dotHtml = `<span style="width:7px;height:7px;border-radius:50%;background:${dotColor};display:inline-block;margin-left:3px;box-shadow:0 0 0 2px rgba(255,255,255,.55)"></span>`;
       const icon = L.divIcon({
         className: "",
-        html: `<div style="background:${color};color:white;padding:4px 9px;border-radius:8px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 3px 12px rgba(0,0,0,.6);font-family:'Inter',system-ui,sans-serif;letter-spacing:0.5px;border:2px solid rgba(255,255,255,0.3)">${placa || "BUS"}</div>`,
-        iconSize: [74, 26], iconAnchor: [37, 13],
+        html: `<div style="display:flex;flex-direction:column;align-items:center;font-family:'Inter',system-ui,sans-serif">
+            <div style="display:flex;align-items:center;gap:4px;background:${color};color:#fff;padding:3px 8px;border-radius:10px;font-size:11px;font-weight:800;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.45);border:2px solid rgba(255,255,255,.9);letter-spacing:.4px">
+              <span style="font-size:12px;line-height:1">🚌</span>${placa || "BUS"}${dotHtml}
+            </div>
+            <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid ${color};margin-top:-1px;filter:drop-shadow(0 2px 1px rgba(0,0,0,.3))"></div>
+          </div>`,
+        iconSize: [96, 38], iconAnchor: [48, 38],
       });
 
       const popupContent = `

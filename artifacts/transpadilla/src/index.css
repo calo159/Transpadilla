@@ -189,6 +189,8 @@
   font-size: 13px;
 }
 .leaflet-popup-tip { background: hsl(var(--card)); }
+/* Transición suave al resaltar/atenuar las rutas */
+.leaflet-interactive { transition: stroke-opacity 220ms ease, stroke-width 220ms ease; }
 .leaflet-popup-close-button { color: hsl(var(--muted-foreground)) !important; }
 .leaflet-control-zoom a {
   background: hsl(var(--card)) !important;
