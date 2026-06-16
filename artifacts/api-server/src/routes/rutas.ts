@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { rutas, paradas, ruta_paradas } from "@workspace/db";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, and } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
 
 const router = Router();
@@ -75,10 +75,53 @@ router.patch(
   },
 );
 
+// Renombrar / cambiar color de una ruta (sin borrarla)
+router.patch(
+  "/rutas/:id",
+  authMiddleware,
+  requireRol("admin"),
+  async (req, res) => {
+    const { nombre, color } = req.body as { nombre?: string; color?: string };
+    const cambios: { nombre?: string; color?: string } = {};
+    if (nombre?.trim()) cambios.nombre = nombre.trim();
+    if (color?.trim()) cambios.color = color.trim();
+    if (Object.keys(cambios).length === 0) {
+      res.status(400).json({ error: "Nada que actualizar" });
+      return;
+    }
+    await db.update(rutas).set(cambios).where(eq(rutas.id, parseInt(String(req.params["id"]))));
+    res.json({ mensaje: "Ruta actualizada" });
+  },
+);
+
 router.get("/rutas/paradas/todas", async (_req, res) => {
   const all = await db.select().from(paradas).orderBy(paradas.nombre);
   res.json(all);
 });
+
+// Renombrar / reubicar una parada (sin borrarla)
+router.patch(
+  "/rutas/paradas/:id",
+  authMiddleware,
+  requireRol("admin"),
+  async (req, res) => {
+    const { nombre, latitud, longitud } = req.body as {
+      nombre?: string;
+      latitud?: number;
+      longitud?: number;
+    };
+    const cambios: { nombre?: string; latitud?: number; longitud?: number } = {};
+    if (nombre?.trim()) cambios.nombre = nombre.trim();
+    if (typeof latitud === "number" && !Number.isNaN(latitud)) cambios.latitud = latitud;
+    if (typeof longitud === "number" && !Number.isNaN(longitud)) cambios.longitud = longitud;
+    if (Object.keys(cambios).length === 0) {
+      res.status(400).json({ error: "Nada que actualizar" });
+      return;
+    }
+    await db.update(paradas).set(cambios).where(eq(paradas.id, parseInt(String(req.params["id"]))));
+    res.json({ mensaje: "Parada actualizada" });
+  },
+);
 
 router.post(
   "/rutas/paradas/nueva",
@@ -141,6 +184,22 @@ router.post(
       .insert(ruta_paradas)
       .values({ ruta_id: rutaId, parada_id, orden });
     res.status(201).json({ mensaje: "Parada asignada" });
+  },
+);
+
+// Quitar una parada de una ruta (desasignar) — la parada NO se borra, solo se
+// elimina la relación en ruta_paradas.
+router.delete(
+  "/rutas/:rutaId/paradas/:paradaId",
+  authMiddleware,
+  requireRol("admin"),
+  async (req, res) => {
+    const rutaId = parseInt(String(req.params["rutaId"]));
+    const paradaId = parseInt(String(req.params["paradaId"]));
+    await db
+      .delete(ruta_paradas)
+      .where(and(eq(ruta_paradas.ruta_id, rutaId), eq(ruta_paradas.parada_id, paradaId)));
+    res.json({ mensaje: "Parada quitada de la ruta" });
   },
 );
 

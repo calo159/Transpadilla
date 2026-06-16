@@ -11,7 +11,7 @@ import { getUser, clearAuth, getToken, homeForRol } from "@/lib/auth";
 import {
   Bus, LogOut, Map, MapPin, BarChart3, Plus, Trash2,
   RefreshCw, Users, Activity, AlertTriangle, Route,
-  Clock, Radio, TrafficCone, ChevronLeft, UserCheck, Eye, EyeOff,
+  Clock, Radio, TrafficCone, ChevronLeft, UserCheck, Eye, EyeOff, Pencil, X,
 } from "lucide-react";
 import TraficoTab from "./TraficoTab";
 import { Button } from "@/components/ui/button";
@@ -201,6 +201,56 @@ export default function Admin() {
       toast({ title: `Parada "${nombre}" eliminada` });
     } catch {
       toast({ title: "Error al eliminar la parada", variant: "destructive" });
+    }
+  };
+
+  // Editar/eliminar relaciones via fetch directo (mismo patrón que conductores).
+  const apiPatch = async (url: string, body: unknown) =>
+    fetch(url, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify(body),
+    });
+
+  const handleRenombrarRuta = async (id: number, actual: string) => {
+    const nombre = window.prompt("Nuevo nombre de la ruta:", actual);
+    if (nombre === null || !nombre.trim() || nombre.trim() === actual) return;
+    try {
+      const res = await apiPatch(`/api/rutas/${id}`, { nombre: nombre.trim() });
+      if (!res.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
+      toast({ title: "Ruta renombrada" });
+    } catch {
+      toast({ title: "Error al renombrar la ruta", variant: "destructive" });
+    }
+  };
+
+  const handleRenombrarParada = async (id: number, actual: string) => {
+    const nombre = window.prompt("Nuevo nombre de la parada:", actual);
+    if (nombre === null || !nombre.trim() || nombre.trim() === actual) return;
+    try {
+      const res = await apiPatch(`/api/rutas/paradas/${id}`, { nombre: nombre.trim() });
+      if (!res.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: getGetTodasParadasQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
+      toast({ title: "Parada renombrada" });
+    } catch {
+      toast({ title: "Error al renombrar la parada", variant: "destructive" });
+    }
+  };
+
+  const handleQuitarParadaDeRuta = async (rutaId: number, paradaId: number, paradaNombre: string) => {
+    if (!confirm(`¿Quitar la parada "${paradaNombre}" de esta ruta? (no se borra la parada)`)) return;
+    try {
+      const res = await fetch(`/api/rutas/${rutaId}/paradas/${paradaId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (!res.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
+      toast({ title: "Parada quitada de la ruta" });
+    } catch {
+      toast({ title: "Error al quitar la parada", variant: "destructive" });
     }
   };
 
@@ -599,17 +649,40 @@ export default function Admin() {
                 ) : rutas.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">No hay rutas. Crea la primera.</p>
                 ) : (
-                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
                     {rutas.map((ruta) => (
-                      <div key={ruta.id} className="flex items-center gap-3 p-3 bg-secondary/30 border border-border rounded-xl">
-                        <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: ruta.color }} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-foreground truncate">{ruta.nombre}</p>
-                          <p className="text-xs text-muted-foreground">{ruta.paradas.length} paradas</p>
+                      <div key={ruta.id} className="p-3 bg-secondary/30 border border-border rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: ruta.color }} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-foreground truncate">{ruta.nombre}</p>
+                            <p className="text-xs text-muted-foreground">{ruta.paradas.length} paradas</p>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => handleRenombrarRuta(ruta.id, ruta.nombre)} className="h-9 w-9 p-0 text-muted-foreground hover:text-primary" title="Renombrar ruta">
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteRuta(ruta.id, ruta.nombre)} className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive" data-testid={`delete-ruta-${ruta.id}`} title="Eliminar ruta">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => handleDeleteRuta(ruta.id, ruta.nombre)} className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive" data-testid={`delete-ruta-${ruta.id}`}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        {/* Paradas de la ruta — quitar cada una sin borrarla */}
+                        {ruta.paradas.length > 0 && (
+                          <div className="mt-2 pl-7 space-y-1">
+                            {ruta.paradas.map((p) => (
+                              <div key={p.id} className="flex items-center gap-2 text-xs">
+                                <MapPin className="w-3 h-3 text-sky-400 flex-shrink-0" />
+                                <span className="flex-1 truncate text-muted-foreground">{p.nombre}</span>
+                                <button
+                                  onClick={() => handleQuitarParadaDeRuta(ruta.id, p.id, p.nombre)}
+                                  className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                  title="Quitar de la ruta"
+                                >
+                                  <X className="w-3 h-3" /> Quitar
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -757,12 +830,20 @@ export default function Admin() {
                           <p className="text-sm font-medium text-foreground">{p.nombre}</p>
                           <p className="text-xs font-mono text-muted-foreground mt-0.5">{p.latitud.toFixed(5)}, {p.longitud.toFixed(5)}</p>
                         </div>
-                        <span className="text-[10px] text-muted-foreground font-mono flex-shrink-0 mt-0.5">#{p.id}</span>
+                        <Button
+                          variant="ghost" size="sm"
+                          onClick={() => handleRenombrarParada(p.id, p.nombre)}
+                          className="h-9 w-9 p-0 text-muted-foreground hover:text-primary flex-shrink-0"
+                          title="Renombrar parada"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
                         <Button
                           variant="ghost" size="sm"
                           onClick={() => handleDeleteParada(p.id, p.nombre)}
                           className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
                           data-testid={`delete-parada-${p.id}`}
+                          title="Eliminar parada"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
