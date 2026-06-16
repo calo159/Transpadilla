@@ -802,8 +802,9 @@ export default function Admin() {
                           // Paradas que NO están aún en la ruta elegida, filtradas por el buscador.
                           const rutaSel = rutas.find((r) => r.id.toString() === asignarRutaId);
                           const yaEnRuta = new Set((rutaSel?.paradas ?? []).map((p) => p.id));
+                          // Se muestran TODAS las paradas (se puede volver a poner una que ya
+                          // está en la ruta); solo se marca cuál ya está incluida.
                           const disponibles = paradas
-                            .filter((p) => !yaEnRuta.has(p.id))
                             .filter((p) => p.nombre.toLowerCase().includes(paradaQuery.toLowerCase()));
                           return (
                             <div>
@@ -818,13 +819,12 @@ export default function Admin() {
                               {!asignarRutaId ? (
                                 <p className="text-xs text-muted-foreground py-2">Primero selecciona una ruta.</p>
                               ) : disponibles.length === 0 ? (
-                                <p className="text-xs text-muted-foreground py-2">
-                                  {paradaQuery ? "Sin resultados." : "Esta ruta ya tiene todas las paradas."}
-                                </p>
+                                <p className="text-xs text-muted-foreground py-2">Sin resultados.</p>
                               ) : (
                                 <div className="max-h-52 overflow-y-auto space-y-1 pr-1">
                                   {disponibles.map((p) => {
                                     const sel = asignarParadaId === p.id.toString();
+                                    const incluida = yaEnRuta.has(p.id);
                                     return (
                                       <button
                                         key={p.id}
@@ -835,6 +835,9 @@ export default function Admin() {
                                       >
                                         <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${sel ? "text-primary" : "text-sky-400"}`} />
                                         <span className="flex-1 min-w-0 truncate text-sm text-foreground">{p.nombre}</span>
+                                        {incluida && (
+                                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-400 flex-shrink-0">ya en ruta</span>
+                                        )}
                                         <span className="text-[10px] font-mono text-muted-foreground flex-shrink-0">
                                           {p.latitud.toFixed(3)}, {p.longitud.toFixed(3)}
                                         </span>
