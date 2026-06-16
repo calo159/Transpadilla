@@ -673,7 +673,7 @@ export default function Pasajero() {
   // ─── MOBILE BOTTOM SHEET ─────────────────────────────────────────────────────
   const MobileSheet = () => (
     <div
-      className="md:hidden tp-bottom-sheet"
+      className="md:hidden flex flex-col tp-bottom-sheet"
       style={{
         transform: sheetTransform,
         height: "100dvh",

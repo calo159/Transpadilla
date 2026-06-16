@@ -216,14 +216,14 @@
 ::selection { background: rgba(var(--tp-sky-rgb), 0.30); color: #fff; }
 
 /* Bottom sheet for mobile map view */
+/* display:flex se aplica con clases Tailwind (flex flex-col) en el elemento,
+   NO aquí, para no pisar `md:hidden` y que el panel solo exista en móvil. */
 .tp-bottom-sheet {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 1000;
-  display: flex;
-  flex-direction: column;
   background: hsl(var(--sidebar));
   border-top: 1px solid hsl(var(--border));
   border-radius: 20px 20px 0 0;
