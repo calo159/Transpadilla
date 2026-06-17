@@ -557,20 +557,23 @@ export default function Admin() {
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                   {[
-                    { label: "Total Buses",  value: stats?.totalBuses ?? 0,     icon: <Bus className="w-5 h-5 text-primary" />,        color: "text-primary" },
-                    { label: "Activos",      value: stats?.busesActivos ?? 0,   icon: <Activity className="w-5 h-5 text-green-400" />, color: "text-green-400" },
-                    { label: "Con Demora",   value: stats?.busesConDemora ?? 0, icon: <Clock className="w-5 h-5" style={{ color: "var(--tp-yellow)" }} />, color: "" },
-                    { label: "Rutas",        value: stats?.totalRutas ?? 0,     icon: <Map className="w-5 h-5 text-purple-400" />,     color: "text-purple-400" },
-                    { label: "Paradas",      value: stats?.totalParadas ?? 0,   icon: <MapPin className="w-5 h-5 text-sky-400" />,     color: "text-sky-400" },
-                  ].map((stat, i) => (
-                    <div key={stat.label} className="bg-card border border-border rounded-xl p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-medium text-muted-foreground leading-tight">{stat.label}</span>
+                    { label: "Total Buses",  value: stats?.totalBuses ?? 0,     icon: <Bus className="w-5 h-5" />,      tint: "#4BA9D8" },
+                    { label: "Activos",      value: stats?.busesActivos ?? 0,   icon: <Activity className="w-5 h-5" />, tint: "#22c55e" },
+                    { label: "Con Demora",   value: stats?.busesConDemora ?? 0, icon: <Clock className="w-5 h-5" />,    tint: "#F5C200" },
+                    { label: "Rutas",        value: stats?.totalRutas ?? 0,     icon: <Map className="w-5 h-5" />,      tint: "#a78bfa" },
+                    { label: "Paradas",      value: stats?.totalParadas ?? 0,   icon: <MapPin className="w-5 h-5" />,   tint: "#38bdf8" },
+                  ].map((stat) => (
+                    <div key={stat.label} className="bg-card border border-border rounded-xl p-4 transition-colors hover:border-primary/40">
+                      <div
+                        className="w-9 h-9 rounded-lg flex items-center justify-center mb-3"
+                        style={{ background: `${stat.tint}1f`, color: stat.tint }}
+                      >
                         {stat.icon}
                       </div>
-                      <p className={`text-2xl md:text-3xl font-black ${stat.color}`} style={i === 2 ? { color: "var(--tp-yellow)" } : {}}>
+                      <p className="text-2xl md:text-3xl font-black leading-none" style={{ color: stat.tint }}>
                         {stat.value}
                       </p>
+                      <span className="text-xs font-medium text-muted-foreground mt-1.5 block">{stat.label}</span>
                     </div>
                   ))}
                 </div>
