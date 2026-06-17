@@ -7,6 +7,7 @@ import { Bus, LogOut, Play, Square, AlertTriangle, Radio, Clock, ChevronLeft, Us
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { LogoTP } from "@/components/LogoTP";
+import { ConfirmDialog, type ConfirmOpts } from "@/components/ConfirmDialog";
 import { io, type Socket } from "socket.io-client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -69,6 +70,7 @@ export default function Conductor() {
   const [showCustom, setShowCustom] = useState(false);
   const [ocupacion, setOcupacion] = useState<string | null>(null);
   const [showMapa, setShowMapa] = useState(false);
+  const [confirmar, setConfirmar] = useState<ConfirmOpts | null>(null);
 
   const elapsed = useElapsedTime(activo);
 
@@ -290,7 +292,13 @@ export default function Conductor() {
           ) : (
             <div className="space-y-2">
               <Button
-                onClick={finalizar}
+                onClick={() => setConfirmar({
+                  titulo: "Finalizar recorrido",
+                  descripcion: "¿Seguro que quieres finalizar el recorrido? Dejarás de transmitir tu ubicación.",
+                  textoConfirmar: "Finalizar",
+                  destructivo: true,
+                  accion: finalizar,
+                })}
                 variant="destructive"
                 className="w-full font-bold text-base rounded-xl"
                 style={{ height: "56px", fontSize: "16px" }}
@@ -423,6 +431,8 @@ export default function Conductor() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog opts={confirmar} onClose={() => setConfirmar(null)} />
     </div>
   );
 }

@@ -20,6 +20,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { LogoTP } from "@/components/LogoTP";
+import { ConfirmDialog, type ConfirmOpts } from "@/components/ConfirmDialog";
+import { PromptDialog, type PromptOpts } from "@/components/PromptDialog";
 
 type Tab = "dashboard" | "rutas" | "buses" | "paradas" | "conductores" | "trafico";
 
@@ -66,6 +68,9 @@ export default function Admin() {
   const [asignarParadaId, setAsignarParadaId] = useState<string>("");
   const [asignarOrden, setAsignarOrden] = useState("0");
   const [paradaQuery, setParadaQuery] = useState("");
+  // Diálogos in-app (reemplazan a window.confirm / window.prompt)
+  const [confirmar, setConfirmar] = useState<ConfirmOpts | null>(null);
+  const [renombrar, setRenombrar] = useState<PromptOpts | null>(null);
 
   // Conductores
   const [conductores, setConductores] = useState<Conductor[]>([]);
@@ -127,16 +132,23 @@ export default function Admin() {
     }
   };
 
-  const handleDeleteRuta = async (id: number, nombre: string) => {
-    if (!confirm(`¿Eliminar la ruta "${nombre}"? Esta acción no se puede deshacer.`)) return;
-    try {
-      await deleteRuta.mutateAsync({ id });
-      queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
-      queryClient.invalidateQueries({ queryKey: ["stats"] });
-      toast({ title: `Ruta "${nombre}" eliminada` });
-    } catch {
-      toast({ title: "Error al eliminar la ruta", variant: "destructive" });
-    }
+  const handleDeleteRuta = (id: number, nombre: string) => {
+    setConfirmar({
+      titulo: "Eliminar ruta",
+      descripcion: `¿Eliminar la ruta "${nombre}"? Esta acción no se puede deshacer.`,
+      textoConfirmar: "Eliminar",
+      destructivo: true,
+      accion: async () => {
+        try {
+          await deleteRuta.mutateAsync({ id });
+          queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
+          queryClient.invalidateQueries({ queryKey: ["stats"] });
+          toast({ title: `Ruta "${nombre}" eliminada` });
+        } catch {
+          toast({ title: "Error al eliminar la ruta", variant: "destructive" });
+        }
+      },
+    });
   };
 
   const handleCreateBus = async () => {
@@ -153,8 +165,13 @@ export default function Admin() {
     }
   };
 
-  const handleDeleteBus = async (id: number, placa: string) => {
-    if (!confirm(`¿Eliminar el bus "${placa}"?`)) return;
+  const handleDeleteBus = (id: number, placa: string) => {
+    setConfirmar({
+      titulo: "Eliminar bus",
+      descripcion: `¿Eliminar el bus "${placa}"?`,
+      textoConfirmar: "Eliminar",
+      destructivo: true,
+      accion: async () => {
     try {
       await deleteBus.mutateAsync({ id });
       queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
@@ -163,6 +180,8 @@ export default function Admin() {
     } catch {
       toast({ title: "Error al eliminar el bus", variant: "destructive" });
     }
+      },
+    });
   };
 
   const handleCrearParada = async () => {
@@ -192,17 +211,24 @@ export default function Admin() {
     }
   };
 
-  const handleDeleteParada = async (id: number, nombre: string) => {
-    if (!confirm(`¿Eliminar la parada "${nombre}"? Se quitará de todas las rutas.`)) return;
-    try {
-      await deleteParada.mutateAsync({ id });
-      queryClient.invalidateQueries({ queryKey: getGetTodasParadasQueryKey() });
-      queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
-      queryClient.invalidateQueries({ queryKey: ["stats"] });
-      toast({ title: `Parada "${nombre}" eliminada` });
-    } catch {
-      toast({ title: "Error al eliminar la parada", variant: "destructive" });
-    }
+  const handleDeleteParada = (id: number, nombre: string) => {
+    setConfirmar({
+      titulo: "Eliminar parada",
+      descripcion: `¿Eliminar la parada "${nombre}"? Se quitará de todas las rutas.`,
+      textoConfirmar: "Eliminar",
+      destructivo: true,
+      accion: async () => {
+        try {
+          await deleteParada.mutateAsync({ id });
+          queryClient.invalidateQueries({ queryKey: getGetTodasParadasQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
+          queryClient.invalidateQueries({ queryKey: ["stats"] });
+          toast({ title: `Parada "${nombre}" eliminada` });
+        } catch {
+          toast({ title: "Error al eliminar la parada", variant: "destructive" });
+        }
+      },
+    });
   };
 
   // Editar/eliminar relaciones via fetch directo (mismo patrón que conductores).
@@ -213,46 +239,64 @@ export default function Admin() {
       body: JSON.stringify(body),
     });
 
-  const handleRenombrarRuta = async (id: number, actual: string) => {
-    const nombre = window.prompt("Nuevo nombre de la ruta:", actual);
-    if (nombre === null || !nombre.trim() || nombre.trim() === actual) return;
-    try {
-      const res = await apiPatch(`/api/rutas/${id}`, { nombre: nombre.trim() });
-      if (!res.ok) throw new Error();
-      queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
-      toast({ title: "Ruta renombrada" });
-    } catch {
-      toast({ title: "Error al renombrar la ruta", variant: "destructive" });
-    }
+  const handleRenombrarRuta = (id: number, actual: string) => {
+    setRenombrar({
+      titulo: "Renombrar ruta",
+      etiqueta: "Nuevo nombre de la ruta",
+      valorInicial: actual,
+      onGuardar: async (nombre) => {
+        if (nombre === actual) return;
+        try {
+          const res = await apiPatch(`/api/rutas/${id}`, { nombre });
+          if (!res.ok) throw new Error();
+          queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
+          toast({ title: "Ruta renombrada" });
+        } catch {
+          toast({ title: "Error al renombrar la ruta", variant: "destructive" });
+        }
+      },
+    });
   };
 
-  const handleRenombrarParada = async (id: number, actual: string) => {
-    const nombre = window.prompt("Nuevo nombre de la parada:", actual);
-    if (nombre === null || !nombre.trim() || nombre.trim() === actual) return;
-    try {
-      const res = await apiPatch(`/api/rutas/paradas/${id}`, { nombre: nombre.trim() });
-      if (!res.ok) throw new Error();
-      queryClient.invalidateQueries({ queryKey: getGetTodasParadasQueryKey() });
-      queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
-      toast({ title: "Parada renombrada" });
-    } catch {
-      toast({ title: "Error al renombrar la parada", variant: "destructive" });
-    }
+  const handleRenombrarParada = (id: number, actual: string) => {
+    setRenombrar({
+      titulo: "Renombrar parada",
+      etiqueta: "Nuevo nombre de la parada",
+      valorInicial: actual,
+      onGuardar: async (nombre) => {
+        if (nombre === actual) return;
+        try {
+          const res = await apiPatch(`/api/rutas/paradas/${id}`, { nombre });
+          if (!res.ok) throw new Error();
+          queryClient.invalidateQueries({ queryKey: getGetTodasParadasQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
+          toast({ title: "Parada renombrada" });
+        } catch {
+          toast({ title: "Error al renombrar la parada", variant: "destructive" });
+        }
+      },
+    });
   };
 
-  const handleQuitarParadaDeRuta = async (rutaId: number, paradaId: number, paradaNombre: string) => {
-    if (!confirm(`¿Quitar la parada "${paradaNombre}" de esta ruta? (no se borra la parada)`)) return;
-    try {
-      const res = await fetch(`/api/rutas/${rutaId}/paradas/${paradaId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${getToken()}` },
-      });
-      if (!res.ok) throw new Error();
-      queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
-      toast({ title: "Parada quitada de la ruta" });
-    } catch {
-      toast({ title: "Error al quitar la parada", variant: "destructive" });
-    }
+  const handleQuitarParadaDeRuta = (rutaId: number, paradaId: number, paradaNombre: string) => {
+    setConfirmar({
+      titulo: "Quitar parada de la ruta",
+      descripcion: `¿Quitar la parada "${paradaNombre}" de esta ruta? La parada NO se borra.`,
+      textoConfirmar: "Quitar",
+      accion: async () => {
+        try {
+          const res = await fetch(`/api/rutas/${rutaId}/paradas/${paradaId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${getToken()}` },
+          });
+          if (!res.ok) throw new Error();
+          queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
+          toast({ title: "Parada quitada de la ruta" });
+        } catch {
+          toast({ title: "Error al quitar la parada", variant: "destructive" });
+        }
+      },
+    });
   };
 
   const handleRegistrarConductor = async () => {
@@ -280,19 +324,26 @@ export default function Admin() {
     }
   };
 
-  const handleDeleteConductor = async (id: number, nombre: string) => {
-    if (!confirm(`¿Eliminar al conductor "${nombre}"? Perderá acceso al sistema.`)) return;
-    try {
-      const res = await fetch(`/api/conductores/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${getToken()}` },
-      });
-      if (!res.ok) throw new Error();
-      toast({ title: `Conductor "${nombre}" eliminado` });
-      setConductores((prev) => prev.filter((c) => c.id !== id));
-    } catch {
-      toast({ title: "Error al eliminar conductor", variant: "destructive" });
-    }
+  const handleDeleteConductor = (id: number, nombre: string) => {
+    setConfirmar({
+      titulo: "Eliminar conductor",
+      descripcion: `¿Eliminar al conductor "${nombre}"? Perderá acceso al sistema.`,
+      textoConfirmar: "Eliminar",
+      destructivo: true,
+      accion: async () => {
+        try {
+          const res = await fetch(`/api/conductores/${id}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${getToken()}` },
+          });
+          if (!res.ok) throw new Error();
+          toast({ title: `Conductor "${nombre}" eliminado` });
+          setConductores((prev) => prev.filter((c) => c.id !== id));
+        } catch {
+          toast({ title: "Error al eliminar conductor", variant: "destructive" });
+        }
+      },
+    });
   };
 
   const handleAsignarBusConductor = async (conductorId: number, newBusId: number | null, prevBusId: number | null) => {
@@ -1053,6 +1104,10 @@ export default function Admin() {
           {tab === "trafico" && <TraficoTab />}
         </div>
       </div>
+
+      {/* Diálogos in-app (confirmar / renombrar) */}
+      <ConfirmDialog opts={confirmar} onClose={() => setConfirmar(null)} />
+      <PromptDialog opts={renombrar} onClose={() => setRenombrar(null)} />
     </div>
   );
 }
