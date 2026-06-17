@@ -105,6 +105,11 @@ export default function Pasajero() {
   const { data: rutas = [] } = useGetRutas({ query: { queryKey: ["rutas"], refetchInterval: 15000 } });
   const { data: buses = [] } = useGetBuses({ query: { queryKey: getGetBusesQueryKey(), refetchInterval: 10000 } });
 
+  // Espejo de `buses` en un ref: permite que el socket y los marcadores lean el
+  // estado actual sin recrear/reconectar el efecto en cada refetch.
+  const busesRef = useRef(buses);
+  useEffect(() => { busesRef.current = buses; }, [buses]);
+
   const rutasFiltradas = rutas
     .filter((r) => r.nombre.toLowerCase().includes(busqueda.toLowerCase()))
     .sort((a, b) => (favoritos.includes(b.id) ? 1 : 0) - (favoritos.includes(a.id) ? 1 : 0));
@@ -187,7 +192,7 @@ export default function Pasajero() {
   const updateBusMarker = useCallback(
     (busId: number, lat: number, lng: number, color = "#1757C2", placa = "", rutaId?: number) => {
       if (!mapRef.current) return;
-      const bus = buses.find((b) => b.id === busId);
+      const bus = busesRef.current.find((b) => b.id === busId);
       const routeName = bus?.nombre_ruta ?? "";
       const vel = bus?.velocidad ?? 0;
       const novText = bus?.novedad ? `<span style="color:var(--tp-yellow,#F5C200)">⚠ ${bus.novedad}</span><br>` : "";
@@ -240,22 +245,35 @@ export default function Pasajero() {
         markersRef.current[busId] = marker;
       }
     },
-    [buses]
+    []
   );
 
+  // Sincroniza los marcadores con los buses: dibuja los activos con coordenadas y
+  // ELIMINA los que ya no están en circulación (evita "buses fantasma" en el mapa).
   useEffect(() => {
+    const vivos = new Set<number>();
     buses.forEach((b) => {
-      if (b.lat && b.lng)
+      if (b.lat != null && b.lng != null && b.estado !== "inactivo") {
+        vivos.add(b.id);
         updateBusMarker(b.id, b.lat, b.lng, b.color_ruta ?? "#1757C2", b.placa, b.ruta_id ?? undefined);
+      }
+    });
+    Object.keys(markersRef.current).forEach((idStr) => {
+      const id = Number(idStr);
+      if (!vivos.has(id)) {
+        markersRef.current[id]?.remove();
+        delete markersRef.current[id];
+        if (siguiendoBusRef.current === id) setSiguiendoBusId(null);
+      }
     });
   }, [buses, updateBusMarker]);
 
-  // Socket.IO
+  // Socket.IO — se conecta UNA sola vez (lee busesRef para datos actuales).
   useEffect(() => {
     const socket = io({ path: "/socket.io", transports: ["websocket", "polling"] });
     socketRef.current = socket;
     socket.on("bus:ubicacion", (data: BusLocation) => {
-      const bus = buses.find((b) => b.id === data.busId);
+      const bus = busesRef.current.find((b) => b.id === data.busId);
       updateBusMarker(data.busId, data.lat, data.lng, bus?.color_ruta ?? "#1757C2", bus?.placa ?? "BUS", data.rutaId);
       queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
     });
@@ -272,7 +290,7 @@ export default function Pasajero() {
       queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
     });
     return () => { socket.disconnect(); };
-  }, [buses, updateBusMarker, queryClient]);
+  }, [updateBusMarker, queryClient]);
 
   const handleSelectRuta = (rutaId: number) => {
     const next = selectedRutaId === rutaId ? null : rutaId;
@@ -497,10 +515,13 @@ export default function Pasajero() {
           const dimmed = selectedRutaId !== null && !isSelected;
           const rutaBuses = buses.filter((b) => b.ruta_id === ruta.id && b.estado !== "inactivo");
           return (
-            <button
+            <div
               key={ruta.id}
+              role="button"
+              tabIndex={0}
               onClick={() => handleSelectRuta(ruta.id)}
-              className={`w-full text-left px-4 py-3.5 transition-all border-l-[3px] ${isSelected ? "bg-primary/8 border-primary" : "border-transparent hover:bg-secondary/50"}`}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelectRuta(ruta.id); } }}
+              className={`w-full text-left px-4 py-3.5 transition-all border-l-[3px] cursor-pointer ${isSelected ? "bg-primary/8 border-primary" : "border-transparent hover:bg-secondary/50"}`}
               style={{ opacity: dimmed ? 0.3 : 1 }}
             >
               <div className="flex items-center gap-2.5">
@@ -519,9 +540,8 @@ export default function Pasajero() {
                       {rutaBuses.length} en vivo
                     </span>
                   )}
-                  <span
-                    role="button"
-                    tabIndex={0}
+                  <button
+                    type="button"
                     onClick={(e) => { e.stopPropagation(); toggleFavorito(ruta.id); }}
                     className="p-0.5"
                     aria-label="Marcar como favorita"
@@ -532,7 +552,7 @@ export default function Pasajero() {
                         ? { color: "var(--tp-yellow)", fill: "var(--tp-yellow)" }
                         : { color: "var(--muted-foreground, #94a3b8)" }}
                     />
-                  </span>
+                  </button>
                 </div>
               </div>
               {isSelected && ruta.paradas.length > 0 && (
@@ -557,7 +577,7 @@ export default function Pasajero() {
                   })}
                 </div>
               )}
-            </button>
+            </div>
           );
         })}
       </div>
@@ -844,10 +864,13 @@ export default function Pasajero() {
             const rutaBuses = buses.filter((b) => b.ruta_id === ruta.id && b.estado !== "inactivo");
             const enVivo = rutaBuses.length > 0;
             return (
-              <button
+              <div
                 key={ruta.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => handleSelectRuta(ruta.id)}
-                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl bg-card border border-border hover:border-primary/30 active:bg-primary/5 transition-all text-left active:scale-[0.98]"
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelectRuta(ruta.id); } }}
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl bg-card border border-border hover:border-primary/30 active:bg-primary/5 transition-all text-left active:scale-[0.98] cursor-pointer"
               >
                 {/* Indicador de color de la ruta */}
                 <div
@@ -870,9 +893,8 @@ export default function Pasajero() {
                     )}
                   </div>
                 </div>
-                <span
-                  role="button"
-                  tabIndex={0}
+                <button
+                  type="button"
                   onClick={(e) => { e.stopPropagation(); toggleFavorito(ruta.id); }}
                   className="p-1 flex-shrink-0"
                   aria-label="Marcar como favorita"
@@ -883,9 +905,9 @@ export default function Pasajero() {
                       ? { color: "var(--tp-yellow)", fill: "var(--tp-yellow)" }
                       : { color: "var(--muted-foreground, #94a3b8)" }}
                   />
-                </span>
+                </button>
                 <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              </button>
+              </div>
             );
           })}
         </div>
