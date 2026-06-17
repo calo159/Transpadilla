@@ -3,16 +3,34 @@ import { db } from "@workspace/db";
 import { usuarios, rutas, paradas, ruta_paradas, buses } from "@workspace/db";
 
 /**
- * Inserta datos de demostración (usuarios, rutas, paradas y buses) solo si la
- * base de datos está vacía. Es idempotente: si ya hay usuarios, no hace nada.
+ * Prepara la base de datos en su primer arranque (solo si está vacía):
  *
- * Se usa tanto desde el endpoint POST /api/seed como desde el arranque del
- * servidor (ver lib/init-db.ts), para que un despliegue nuevo quede listo para
- * usar sin pasos manuales.
+ * - SEED_DEMO !== "false" (por defecto): carga datos DEMO completos (usuarios de
+ *   prueba, rutas, paradas y buses) — útil para demostraciones.
+ * - SEED_DEMO === "false" (producción real, p.ej. la Alcaldía): NO crea datos
+ *   demo; crea ÚNICAMENTE un administrador a partir de ADMIN_EMAIL / ADMIN_PASSWORD.
+ *   Así el sistema arranca limpio, sin buses ni cuentas de prueba.
+ *
+ * Es idempotente: si ya hay usuarios, no hace nada.
  */
 export async function seedIfEmpty(): Promise<{ seeded: boolean }> {
   const [yaExiste] = await db.select().from(usuarios).limit(1);
   if (yaExiste) return { seeded: false };
+
+  // Modo producción: solo el admin configurado por entorno, sin datos demo.
+  if (process.env["SEED_DEMO"] === "false") {
+    const email = process.env["ADMIN_EMAIL"]?.trim().toLowerCase();
+    const pass = process.env["ADMIN_PASSWORD"];
+    if (!email || !pass) return { seeded: false };
+    const hash = await bcrypt.hash(pass, 10);
+    await db.insert(usuarios).values({
+      nombre: "Administrador",
+      correo: email,
+      password: hash,
+      rol: "admin",
+    });
+    return { seeded: true };
+  }
 
   const adminHash = await bcrypt.hash("admin123", 10);
   const conductorHash = await bcrypt.hash("conductor123", 10);
