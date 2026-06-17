@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import path from "node:path";
 import fs from "node:fs";
@@ -8,6 +8,11 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
+const isProd = process.env["NODE_ENV"] === "production";
+
+// Detrás del proxy de Render: permite obtener la IP real del cliente (rate-limit)
+// y respetar X-Forwarded-Proto (HTTPS).
+app.set("trust proxy", 1);
 
 // Destino del microservicio de tráfico (Django). En local es localhost:8000;
 // en producción (Render) se inyecta vía TRAFICO_URL. Acepta valores con o sin
@@ -39,7 +44,35 @@ app.use(
     },
   }),
 );
-app.use(cors());
+// ── Cabeceras de seguridad (helmet-lite, sin dependencias) ───────────────────
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("X-DNS-Prefetch-Control", "off");
+  res.setHeader("Permissions-Policy", "geolocation=(self)");
+  if (isProd) {
+    res.setHeader("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
+  }
+  next();
+});
+
+// ── CORS ─────────────────────────────────────────────────────────────────────
+// En producción el frontend es del mismo origen, así que se restringe a la lista
+// de CORS_ORIGIN (separada por comas) si se define; en desarrollo se permite todo.
+const corsOrigins = (process.env["CORS_ORIGIN"] ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+app.use(
+  cors(
+    isProd && corsOrigins.length > 0
+      ? { origin: corsOrigins, credentials: true }
+      : isProd
+        ? { origin: false } // same-origin: no se necesitan cabeceras CORS
+        : {}, // desarrollo: permitir todo
+  ),
+);
 
 // Proxy /api/trafico/* -> Django traffic microservice.
 // Must be registered BEFORE express.json() so the body is streamed through untouched.
@@ -56,6 +89,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+// 404 JSON para rutas de API no encontradas (en vez de caer al SPA o a HTML).
+app.use("/api", (_req, res) => {
+  res.status(404).json({ error: "Recurso no encontrado" });
+});
 
 // ─── Frontend (producción) ──────────────────────────────────────────────────
 // En producción, el mismo servidor Express sirve la app de React ya construida,
@@ -85,5 +123,15 @@ if (process.env["NODE_ENV"] === "production") {
     );
   }
 }
+
+// ── Manejo global de errores ─────────────────────────────────────────────────
+// Cualquier error no controlado (incluidos los de handlers async en Express 5)
+// llega aquí y responde JSON, en vez de una página HTML de error por defecto.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
+  req.log?.error({ err }, "Unhandled error");
+  if (res.headersSent) return;
+  res.status(500).json({ error: "Error interno del servidor" });
+});
 
 export default app;
