@@ -1,8 +1,15 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
+// En producción el JWT_SECRET es obligatorio: si falta, abortamos el arranque
+// (fail-fast) en vez de usar un secreto por defecto inseguro.
+if (process.env["NODE_ENV"] === "production" && !process.env["JWT_SECRET"]) {
+  throw new Error(
+    "FATAL: JWT_SECRET es obligatorio en producción. Configúralo en las variables de entorno.",
+  );
+}
 const JWT_SECRET =
-  process.env["JWT_SECRET"] ?? "transpadilla_clave_secreta_2026_guajira";
+  process.env["JWT_SECRET"] ?? "transpadilla_dev_secret_solo_para_desarrollo_local";
 
 export interface AuthPayload {
   id: number;

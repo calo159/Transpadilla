@@ -4,6 +4,7 @@ import { buses, rutas, usuarios } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
 import { getIO } from "../lib/socket";
+import { validarBody, requerido, texto, numeroEnRango } from "../middleware/validate";
 
 const router = Router();
 
@@ -38,15 +39,16 @@ router.get("/buses", async (_req, res) => {
   );
 });
 
-router.post("/buses", authMiddleware, requireRol("admin"), async (req, res) => {
+router.post(
+  "/buses",
+  authMiddleware,
+  requireRol("admin"),
+  validarBody(requerido("placa"), texto("placa", 3, 20)),
+  async (req, res) => {
   const { placa, ruta_id } = req.body as {
     placa: string;
     ruta_id?: number | null;
   };
-  if (!placa?.trim()) {
-    res.status(400).json({ error: "Placa requerida" });
-    return;
-  }
   const [bus] = await db
     .insert(buses)
     .values({ placa: placa.toUpperCase(), ruta_id: ruta_id ?? null })
@@ -68,6 +70,11 @@ router.post(
   "/buses/gps",
   authMiddleware,
   requireRol("conductor", "admin"),
+  validarBody(
+    requerido("bus_id"),
+    requerido("lat"), numeroEnRango("lat", -90, 90),
+    requerido("lng"), numeroEnRango("lng", -180, 180),
+  ),
   async (req, res) => {
     const { bus_id, lat, lng, velocidad } = req.body as {
       bus_id: number;

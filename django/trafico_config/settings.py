@@ -6,15 +6,17 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECRET_KEY: en producción se inyecta vía DJANGO_SECRET_KEY (Render lo genera).
-# El valor por defecto es solo para desarrollo local.
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-yzz*_u3aw6pyakk12qa4b8@ej(t0@phyyb4mw_)r0u2!v*_$t&",
-)
-
 # DEBUG: activo por defecto en local. En producción Render fija DJANGO_DEBUG=False.
 DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() == "true"
+
+# SECRET_KEY: en producción (DEBUG=False) es OBLIGATORIO vía DJANGO_SECRET_KEY; si
+# falta, se aborta el arranque. En desarrollo se usa un valor por defecto inseguro.
+_secret = os.environ.get("DJANGO_SECRET_KEY")
+if not DEBUG and not _secret:
+    raise RuntimeError(
+        "DJANGO_SECRET_KEY es obligatorio en producción (DEBUG=False)."
+    )
+SECRET_KEY = _secret or "django-insecure-solo-para-desarrollo-local-no-usar-en-produccion"
 
 # ALLOWED_HOSTS: lista separada por comas vía DJANGO_ALLOWED_HOSTS.
 # Por defecto '*' para no romper el desarrollo local.

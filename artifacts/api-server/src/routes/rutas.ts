@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { rutas, paradas, ruta_paradas } from "@workspace/db";
 import { eq, asc, and } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
+import { validarBody, requerido, texto, numeroEnRango } from "../middleware/validate";
 
 const router = Router();
 
@@ -34,15 +35,12 @@ router.post(
   "/rutas",
   authMiddleware,
   requireRol("admin"),
+  validarBody(requerido("nombre"), texto("nombre", 2, 100)),
   async (req, res) => {
     const { nombre, color = "#3498db" } = req.body as {
       nombre: string;
       color?: string;
     };
-    if (!nombre?.trim()) {
-      res.status(400).json({ error: "Nombre requerido" });
-      return;
-    }
     const [ruta] = await db
       .insert(rutas)
       .values({ nombre, color })
@@ -127,6 +125,11 @@ router.post(
   "/rutas/paradas/nueva",
   authMiddleware,
   requireRol("admin"),
+  validarBody(
+    requerido("nombre"), texto("nombre", 2, 100),
+    requerido("latitud"), numeroEnRango("latitud", -90, 90),
+    requerido("longitud"), numeroEnRango("longitud", -180, 180),
+  ),
   async (req, res) => {
     const { nombre, latitud, longitud } = req.body as {
       nombre: string;
