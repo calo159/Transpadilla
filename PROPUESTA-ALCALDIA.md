@@ -40,6 +40,8 @@ apto para una entidad pública:
   de prueba) para el entorno de la Alcaldía.
 - **Flexibilidad de proveedores**: el mapa y el cálculo de rutas se pueden cambiar a
   un proveedor con garantía **sin reprogramar** (solo configuración).
+- **GPS del conductor**: la pantalla se **mantiene encendida** durante el recorrido
+  (Wake Lock) y el GPS se reactiva al volver a la app, para no cortar la transmisión.
 - **Operación**: archivos de **Docker** y guía de despliegue para hospedar todo en un
   solo servidor económico, con respaldos y monitoreo.
 
@@ -66,15 +68,36 @@ para uso intensivo.
 | Cálculo de rutas | OSRM propio en el mismo VPS | **US$0** (incluido) |
 
 ### 3.3 GPS de los buses — el rubro principal 🚍
-Es la decisión más importante: **cómo reporta su posición cada bus**.
+Es la decisión más importante: **cómo reporta su posición cada bus**. El reto técnico
+es la **transmisión continua**, sobre todo con la pantalla apagada o el teléfono en
+segundo plano.
 
-| Opción | Inversión inicial | Mensual por bus |
-|---|---|---|
-| **A) Celular del conductor** (app web) | Smartphone (si no tienen) | Plan de datos US$5–10 (~$20.000–40.000 COP) |
-| **B) Rastreador GPS dedicado** (recomendado) | Equipo US$30–80 (~$120.000–320.000 COP) por bus, una vez | SIM datos US$3–8 (~$12.000–32.000 COP) |
+> Nota técnica: una **app web** (la actual) **no puede** transmitir con la pantalla
+> totalmente apagada — es un límite de los navegadores. Ya se implementó (sin costo)
+> que **la pantalla se mantenga encendida** durante el recorrido (Wake Lock), lo que
+> cubre el caso común. Para transmisión 100% en segundo plano se requiere app nativa
+> o rastreador dedicado.
 
-> Ejemplo flota de **20 buses** con rastreadores: **inicial ~US$600–1.600**
-> (~$2.4M–6.4M COP) + **mensual ~US$60–160** (~$240.000–640.000 COP).
+**Tres caminos (de menor a mayor confiabilidad):**
+
+| Opción | Confiabilidad | Inversión inicial | Mensual por bus | Depende del conductor |
+|---|---|---|---|---|
+| **A) Web actual + Wake Lock** (ya hecho) | Media (pantalla encendida) | Smartphone (si no tienen) | Datos US$5–10 | Sí (debe dejar la app abierta) |
+| **B) App nativa Android** (Capacitor) | Alta (GPS en segundo plano) | ~US$25 cuenta Google Play (una vez) + desarrollo + plugin opcional ~US$300 | Datos US$5–10 | Sí (debe llevar el teléfono) |
+| **C) Rastreador GPS dedicado** (recomendado) | **Máxima** | Equipo US$30–80 por bus (una vez) | SIM datos US$3–8 | **No** (transmite solo) |
+
+> Notas:
+> - **Solo el conductor** necesitaría app nativa; pasajeros y administración siguen
+>   funcionando como web. El alcance de la app nativa es acotado (reusa el código actual
+>   vía Capacitor, no se reescribe).
+> - **Android es suficiente** (los conductores usan Android) → se evita el costo de
+>   Apple (US$99/año + Mac).
+> - Ejemplo flota de **20 buses** con **rastreadores**: inicial ~US$600–1.600
+>   (~$2.4M–6.4M COP) + mensual ~US$60–160 (~$240.000–640.000 COP).
+>
+> **Recomendación:** para una operación institucional 24/7, el **rastreador dedicado**
+> es lo más confiable (no depende de que cada conductor cargue/abra el teléfono). La
+> **app nativa** es un buen intermedio si se quiere evitar comprar hardware.
 
 ### 3.4 Confiabilidad y operación — RECOMENDADO
 
