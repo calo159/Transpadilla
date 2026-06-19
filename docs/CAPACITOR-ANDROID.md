@@ -17,7 +17,7 @@ código web actual (no se reescribe nada). Pensada sobre todo para el **conducto
 
 ## Fase 1 — APK instalable (shell del sitio desplegado)
 La forma más rápida de tener un APK: la app abre el sitio ya desplegado dentro de un
-contenedor nativo. La config ya está en [`capacitor.config.ts`](artifacts/transpadilla/capacitor.config.ts).
+contenedor nativo. La config ya está en [`capacitor.config.ts`](../artifacts/transpadilla/capacitor.config.ts).
 
 ```bash
 cd artifacts/transpadilla

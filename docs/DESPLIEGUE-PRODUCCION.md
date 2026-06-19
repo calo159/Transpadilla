@@ -6,7 +6,7 @@ Hay dos caminos; elige según presupuesto y capacidad técnica.
 ---
 
 ## Opción A — Render (la más simple)
-Ya está soportada con [`render.yaml`](render.yaml). Para uso real:
+Ya está soportada con [`render.yaml`](../render.yaml). Para uso real:
 1. Subir a planes **de pago** (los gratuitos se duermen). Ver costos en
    [`PROPUESTA-ALCALDIA.md`](PROPUESTA-ALCALDIA.md).
 2. En el servicio `transpadilla-web`, para arrancar sin datos demo:
