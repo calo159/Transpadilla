@@ -1,0 +1,66 @@
+# ============================================================================
+#  TransPadilla — Auto-hospedaje en un solo servidor (VPS) con Docker Compose
+#  Alternativa económica a los 3 servicios de pago de Render: todo corre en un
+#  único VPS (~US$6–12/mes). Levanta base de datos + Django + web (Node).
+#
+#  Uso:
+#    1. Copia .env.example a .env y completa los valores (¡secretos fuertes!).
+#    2. docker compose up -d --build
+#    3. Apunta tu dominio al VPS y pon un proxy con HTTPS (Caddy/Nginx) delante.
+# ============================================================================
+
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${POSTGRES_DB:-transpadilla}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  trafico:
+    build:
+      context: .
+      dockerfile: django/Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-transpadilla}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?define DJANGO_SECRET_KEY en .env}
+      DJANGO_DEBUG: "False"
+      DJANGO_ALLOWED_HOSTS: "*"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "8080"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-transpadilla}
+      JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET en .env}
+      TRAFICO_URL: http://trafico:8000
+      # Producción real (Alcaldía): descomenta para arrancar sin datos demo.
+      # SEED_DEMO: "false"
+      # ADMIN_EMAIL: ${ADMIN_EMAIL}
+      # ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      trafico:
+        condition: service_started
+
+volumes:
+  pgdata:

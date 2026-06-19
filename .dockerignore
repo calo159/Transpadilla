@@ -1,0 +1,11 @@
+node_modules
+**/node_modules
+**/dist
+**/.tsbuildinfo
+django/venv
+django/staticfiles
+**/__pycache__
+.git
+.env
+*.zip
+attached_assets
