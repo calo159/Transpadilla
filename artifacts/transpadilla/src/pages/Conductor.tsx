@@ -61,6 +61,7 @@ export default function Conductor() {
   const busMarkerRef = useRef<L.Marker | null>(null);
   const gpsWatchRef = useRef<number | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   const [activo, setActivo] = useState(false);
   const [gpsLat, setGpsLat] = useState<number | null>(null);
@@ -133,22 +134,61 @@ export default function Conductor() {
     queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
   }, [busId, updateGps, selectedBus, queryClient]);
 
+  // Inicia (o reinicia) el seguimiento GPS. Se reutiliza al volver a la app por
+  // si el navegador suspendió el watch en segundo plano.
+  const iniciarWatch = useCallback(() => {
+    if (!navigator.geolocation) return;
+    if (gpsWatchRef.current !== null) navigator.geolocation.clearWatch(gpsWatchRef.current);
+    gpsWatchRef.current = navigator.geolocation.watchPosition(
+      (pos) => sendGps(pos.coords.latitude, pos.coords.longitude, (pos.coords.speed ?? 0) * 3.6),
+      () => toast({ title: "Error de GPS — verifica los permisos", variant: "destructive" }),
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
+    );
+  }, [sendGps, toast]);
+
+  // Mantiene la PANTALLA ENCENDIDA durante el recorrido (Wake Lock API), para que
+  // no se apague sola y el GPS siga transmitiendo. Una app web no puede transmitir
+  // con la pantalla totalmente apagada; esto evita justo ese apagado automático.
+  const pedirWakeLock = useCallback(async () => {
+    try {
+      if ("wakeLock" in navigator) {
+        wakeLockRef.current = await navigator.wakeLock.request("screen");
+      }
+    } catch { /* el navegador puede rechazarlo si la pestaña no está visible */ }
+  }, []);
+
+  const liberarWakeLock = useCallback(async () => {
+    try { await wakeLockRef.current?.release(); } catch { /* ignore */ }
+    wakeLockRef.current = null;
+  }, []);
+
   const iniciar = () => {
     if (!busId) { toast({ title: "No tienes un bus asignado. Contacta al administrador.", variant: "destructive" }); return; }
     if (!navigator.geolocation) {
       toast({ title: "GPS no disponible en este dispositivo", variant: "destructive" }); return;
     }
     setActivo(true); setGpsCount(0);
-    gpsWatchRef.current = navigator.geolocation.watchPosition(
-      (pos) => sendGps(pos.coords.latitude, pos.coords.longitude, (pos.coords.speed ?? 0) * 3.6),
-      () => toast({ title: "Error de GPS — verifica los permisos", variant: "destructive" }),
-      { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
-    );
-    toast({ title: "Recorrido iniciado", description: selectedBus ? `Bus ${selectedBus.placa}` : undefined });
+    iniciarWatch();
+    pedirWakeLock();
+    toast({ title: "Recorrido iniciado", description: "Mantén la app abierta; la pantalla quedará encendida." });
   };
+
+  // Al volver a la app (desbloquear/cambiar de pestaña): el sistema libera el
+  // wake lock y puede haber pausado el GPS, así que los reactivamos.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && activo) {
+        pedirWakeLock();
+        iniciarWatch();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [activo, pedirWakeLock, iniciarWatch]);
 
   const finalizar = async () => {
     if (gpsWatchRef.current !== null) { navigator.geolocation.clearWatch(gpsWatchRef.current); gpsWatchRef.current = null; }
+    liberarWakeLock();
     if (busId) { await finalizarRecorrido.mutateAsync({ data: { bus_id: busId } }); queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() }); }
     setActivo(false); setGpsLat(null); setGpsLng(null); setGpsCount(0);
     busMarkerRef.current?.remove(); busMarkerRef.current = null;
