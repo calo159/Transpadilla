@@ -12,6 +12,7 @@ import { io, type Socket } from "socket.io-client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useToast } from "@/hooks/use-toast";
+import { TILES_URL, TILES_ATTRIBUTION } from "@/lib/mapConfig";
 
 const NOVEDAD_OPCIONES: { label: string; texto: string }[] = [
   { label: "Tráfico", texto: "Tráfico — demora estimada" },
@@ -98,7 +99,7 @@ export default function Conductor() {
   useEffect(() => {
     if (mapContainerRef.current && !mapRef.current) {
       const map = L.map(mapContainerRef.current, { zoomControl: false }).setView([11.5444, -72.9072], 14);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OSM" }).addTo(map);
+      L.tileLayer(TILES_URL, { attribution: TILES_ATTRIBUTION }).addTo(map);
       L.control.zoom({ position: "bottomright" }).addTo(map);
       mapRef.current = map;
     }

@@ -15,6 +15,7 @@ import { io, type Socket } from "socket.io-client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { fetchStreetRoute } from "@/lib/routing";
+import { TILES_URL, TILES_ATTRIBUTION } from "@/lib/mapConfig";
 
 // ─── Constantes de contacto TransPadilla ─────────────────────────────────────
 // Actualiza este número con el real de WhatsApp de la empresa
@@ -121,9 +122,7 @@ export default function Pasajero() {
   useEffect(() => {
     if (mapContainerRef.current && !mapRef.current) {
       const map = L.map(mapContainerRef.current, { zoomControl: false }).setView([11.5444, -72.9072], 13);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
-      }).addTo(map);
+      L.tileLayer(TILES_URL, { attribution: TILES_ATTRIBUTION }).addTo(map);
       L.control.zoom({ position: "bottomright" }).addTo(map);
       mapRef.current = map;
     }
