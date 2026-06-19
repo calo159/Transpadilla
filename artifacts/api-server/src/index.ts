@@ -27,6 +27,17 @@ async function main(): Promise<void> {
   httpServer.listen(port, () => {
     logger.info({ port }, "Server listening");
   });
+
+  // Apagado ordenado: cuando la plataforma reinicia/actualiza la instancia
+  // (24/7), cerramos el servidor sin cortar peticiones en curso de golpe.
+  const apagar = (señal: string) => {
+    logger.info({ señal }, "Shutting down gracefully");
+    httpServer.close(() => process.exit(0));
+    // Tope de seguridad por si una conexión queda colgada.
+    setTimeout(() => process.exit(0), 10_000).unref();
+  };
+  process.on("SIGTERM", () => apagar("SIGTERM"));
+  process.on("SIGINT", () => apagar("SIGINT"));
 }
 
 main().catch((err) => {

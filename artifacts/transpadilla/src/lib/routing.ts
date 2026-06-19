@@ -1,3 +1,5 @@
+import { OSRM_URL } from "./mapConfig";
+
 interface StopCoord {
   latitud: number;
   longitud: number;
@@ -13,7 +15,7 @@ export async function fetchStreetRoute(
     const coords = paradas
       .map((p) => `${p.longitud},${p.latitud}`)
       .join(";");
-    const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+    const url = `${OSRM_URL}/route/v1/driving/${coords}?overview=full&geometries=geojson`;
     const res = await fetch(url);
     if (!res.ok) throw new Error("OSRM error");
     const data = (await res.json()) as {

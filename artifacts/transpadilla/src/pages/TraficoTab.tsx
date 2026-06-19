@@ -6,6 +6,7 @@ import { useGetRutas, useGetBuses, getGetBusesQueryKey } from "@workspace/api-cl
 import { RefreshCw, AlertTriangle, Activity, Gauge, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fetchStreetRoute } from "@/lib/routing";
+import { TILES_URL, TILES_ATTRIBUTION } from "@/lib/mapConfig";
 
 interface TramoTrafico {
   id: number;
@@ -64,7 +65,7 @@ export default function TraficoTab() {
   useEffect(() => {
     if (mapContainerRef.current && !mapRef.current) {
       const map = L.map(mapContainerRef.current, { zoomControl: true }).setView([11.5444, -72.9072], 13);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(map);
+      L.tileLayer(TILES_URL, { attribution: TILES_ATTRIBUTION }).addTo(map);
       mapRef.current = map;
     }
     return () => { mapRef.current?.remove(); mapRef.current = null; };
