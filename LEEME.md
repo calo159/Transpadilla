@@ -82,6 +82,10 @@ lib/
   db/             → Esquema de base de datos (Drizzle ORM)
   api-client-react/, api-zod/, api-spec/  → Cliente y tipos generados
 django/           → Microservicio de tráfico (opcional, no requerido)
+docs/
+  PROPUESTA-ALCALDIA.md       → Presupuesto y propuesta para la Alcaldía
+  DESPLIEGUE-PRODUCCION.md    → Guía para despliegue 24/7 (VPS / Render)
+  CAPACITOR-ANDROID.md        → App nativa Android (APK conductor)
 ```
 
 ---

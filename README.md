@@ -216,6 +216,10 @@ django/             Microservicio de Tráfico (Python / Django + DRF)
   trafico/          App Django: models, views, traffic_service, migrations
   trafico_config/   Configuración del proyecto Django
   requirements.txt  Dependencias de Python
+docs/
+  PROPUESTA-ALCALDIA.md       Presupuesto y propuesta para la Alcaldía
+  DESPLIEGUE-PRODUCCION.md    Guía de despliegue 24/7 (VPS / Render)
+  CAPACITOR-ANDROID.md        App nativa Android para el conductor
 ```
 
 ---
