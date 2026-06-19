@@ -174,33 +174,14 @@ tres componentes con un solo clic:
 
 > **Nota sobre el plan gratuito:** los servicios free de Render se "duermen" tras
 > unos minutos de inactividad (la primera petición tarda ~30 s en despertar) y la
-> base de datos gratuita tiene vigencia limitada. Para una demo o entrega es
-> suficiente; para uso real conviene un plan de pago.
+> base de datos gratuita tiene vigencia limitada. Para una demostración es
+> suficiente; para uso institucional 24/7 se recomienda el plan de pago o un VPS.
 
 ### Migraciones / esquema
 - Las tablas del backend Node se crean solas al arrancar (idempotente, ver
   [`init-db.ts`](artifacts/api-server/src/lib/init-db.ts)) — **no** se usa
   `drizzle-kit push` en producción para no interferir con las tablas de Django.
 - Las tablas de Django se crean en su `buildCommand` con `manage.py migrate`.
-
----
-
-## 🤖 Uso de IA
-
-Durante el desarrollo se utilizó **Claude (Anthropic), mediante Claude Code**, como
-asistente de programación en estas tareas:
-
-- Configuración del entorno local en Windows (Node, Python, PostgreSQL).
-- Implementación del módulo de tráfico en Django: modelos `managed = False` que
-  leen las tablas de la base, la función `sincronizar_tramos()` que genera los
-  tramos desde las rutas, y el algoritmo de distancia punto-a-segmento para asignar
-  buses a cada tramo.
-- Ajustes de diseño responsive, branding y la configuración de los scripts de
-  arranque.
-
-Todo el código fue revisado y es comprendido por el equipo. La IA se usó como
-herramienta de apoyo y aceleración, no como reemplazo del entendimiento del
-proyecto.
 
 ---
 
@@ -224,14 +205,8 @@ docs/
 
 ---
 
-## 👥 Integrantes
+## 📬 Contacto
 
-<!-- Completar con los nombres reales de TODOS los integrantes del grupo -->
-- James Sebastian Jaimes Beleño
-- Yerfreth Mejía Sierra
-- Eduis Guillermo Amaya Moscote
-- Carlos David Sierra Tete
-
----
-
-_Programación Avanzada · Universidad de La Guajira · 2026-I_
+Para cotizaciones, demos o soporte institucional, escríbenos al
+[WhatsApp de TransPadilla](https://wa.me/573144167656) o por Instagram
+[@transpadilla.co](https://www.instagram.com/transpadilla.co).
