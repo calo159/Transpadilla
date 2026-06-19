@@ -65,6 +65,9 @@ django/staticfiles/
 # Respaldos comprimidos
 *.zip
 
+# Documentos generados (no son fuente)
+*.docx
+
 # Capacitor (proyectos nativos generados localmente)
 artifacts/transpadilla/android/
 artifacts/transpadilla/ios/
