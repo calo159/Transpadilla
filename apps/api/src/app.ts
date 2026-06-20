@@ -100,9 +100,12 @@ app.use("/api", (_req, res) => {
 // de modo que todo el sistema vive en un solo servicio (un único dominio/HTTPS).
 // En desarrollo esto se omite: el frontend lo sirve Vite con su propio proxy.
 if (process.env["NODE_ENV"] === "production") {
+  // El bundle del API corre desde apps/api/dist, así que el frontend construido
+  // queda en apps/web/dist/public (../../web/dist/public). Se puede sobreescribir
+  // con FRONTEND_DIST.
   const frontendDist = process.env["FRONTEND_DIST"]
     ? path.resolve(process.env["FRONTEND_DIST"])
-    : path.resolve(__dirname, "../../transpadilla/dist/public");
+    : path.resolve(__dirname, "../../web/dist/public");
 
   if (fs.existsSync(frontendDist)) {
     app.use(express.static(frontendDist));

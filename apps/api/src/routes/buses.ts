@@ -1,12 +1,37 @@
-import { Router } from "express";
+import { Router, type Request } from "express";
+import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
 import { buses, rutas, usuarios } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
 import { getIO } from "../lib/socket";
-import { validarBody, requerido, texto, numeroEnRango } from "../middleware/validate";
+import { validarBody, requerido, texto, numeroEnRango, correoValido } from "../middleware/validate";
 
 const router = Router();
+
+/**
+ * Resuelve QUÉ bus puede operar el usuario autenticado, en el BACKEND (nunca se
+ * confía en el `bus_id` que mande el cliente para un conductor):
+ *  - conductor → SOLO su propio bus (el que tiene asignado `conductor_id`).
+ *    Se ignora cualquier `bus_id` del body: así un conductor no puede mover,
+ *    reportar ni finalizar el bus de otro conductor (evita IDOR/suplantación).
+ *  - admin     → el `bus_id` que indique en el body (puede operar cualquiera).
+ * Devuelve el id del bus autorizado o `null` si no hay ninguno válido.
+ */
+async function busAutorizado(req: Request): Promise<number | null> {
+  const usuario = req.usuario;
+  if (!usuario) return null;
+  if (usuario.rol === "admin") {
+    const id = Number((req.body as { bus_id?: unknown }).bus_id);
+    return Number.isInteger(id) && id > 0 ? id : null;
+  }
+  // Conductor: su bus se determina por su identidad (JWT), no por el cliente.
+  const [propio] = await db
+    .select({ id: buses.id })
+    .from(buses)
+    .where(eq(buses.conductor_id, usuario.id));
+  return propio?.id ?? null;
+}
 
 router.get("/buses", async (_req, res) => {
   const rows = await db
@@ -71,17 +96,20 @@ router.post(
   authMiddleware,
   requireRol("conductor", "admin"),
   validarBody(
-    requerido("bus_id"),
     requerido("lat"), numeroEnRango("lat", -90, 90),
     requerido("lng"), numeroEnRango("lng", -180, 180),
   ),
   async (req, res) => {
-    const { bus_id, lat, lng, velocidad } = req.body as {
-      bus_id: number;
+    const { lat, lng, velocidad } = req.body as {
       lat: number;
       lng: number;
       velocidad?: number;
     };
+    const bus_id = await busAutorizado(req);
+    if (!bus_id) {
+      res.status(403).json({ error: "No tienes un bus asignado" });
+      return;
+    }
     // Conserva el reporte activo: si el bus tiene una novedad, se mantiene en
     // "demora" hasta que el conductor la retire; no se borra al moverse.
     const [actual] = await db
@@ -113,11 +141,14 @@ router.post(
   "/buses/novedad",
   authMiddleware,
   requireRol("conductor", "admin"),
+  validarBody(requerido("novedad"), texto("novedad", 1, 200)),
   async (req, res) => {
-    const { bus_id, novedad } = req.body as {
-      bus_id: number;
-      novedad: string;
-    };
+    const { novedad } = req.body as { novedad: string };
+    const bus_id = await busAutorizado(req);
+    if (!bus_id) {
+      res.status(403).json({ error: "No tienes un bus asignado" });
+      return;
+    }
     const [busRow] = await db
       .select()
       .from(buses)
@@ -146,7 +177,11 @@ router.post(
   authMiddleware,
   requireRol("conductor", "admin"),
   async (req, res) => {
-    const { bus_id } = req.body as { bus_id: number };
+    const bus_id = await busAutorizado(req);
+    if (!bus_id) {
+      res.status(403).json({ error: "No tienes un bus asignado" });
+      return;
+    }
     const [busRow] = await db.select().from(buses).where(eq(buses.id, bus_id));
     await db
       .update(buses)
@@ -168,13 +203,15 @@ router.post(
   authMiddleware,
   requireRol("conductor", "admin"),
   async (req, res) => {
-    const { bus_id, ocupacion } = req.body as {
-      bus_id: number;
-      ocupacion: string;
-    };
+    const { ocupacion } = req.body as { ocupacion: string };
     const niveles = ["vacio", "medio", "lleno"];
     if (!niveles.includes(ocupacion)) {
       res.status(400).json({ error: "Nivel de ocupación inválido" });
+      return;
+    }
+    const bus_id = await busAutorizado(req);
+    if (!bus_id) {
+      res.status(403).json({ error: "No tienes un bus asignado" });
       return;
     }
     await db
@@ -197,7 +234,11 @@ router.post(
   authMiddleware,
   requireRol("conductor", "admin"),
   async (req, res) => {
-    const { bus_id } = req.body as { bus_id: number };
+    const bus_id = await busAutorizado(req);
+    if (!bus_id) {
+      res.status(403).json({ error: "No tienes un bus asignado" });
+      return;
+    }
     await db
       .update(buses)
       .set({
@@ -230,6 +271,50 @@ router.get(
       .from(usuarios)
       .where(eq(usuarios.rol, "conductor"));
     res.json(rows);
+  },
+);
+
+// Alta de conductores: SOLO un administrador autenticado puede crearlos. El rol
+// "conductor" se fija en el servidor (no se acepta del cliente), de modo que la
+// asignación de privilegios es siempre una decisión del backend.
+router.post(
+  "/conductores",
+  authMiddleware,
+  requireRol("admin"),
+  validarBody(
+    requerido("nombre"), texto("nombre", 2, 100),
+    requerido("correo"), correoValido("correo"),
+    requerido("password"), texto("password", 6, 200),
+    requerido("identificacion"), texto("identificacion", 3, 30),
+  ),
+  async (req, res) => {
+    const { nombre, correo, password, identificacion } = req.body as {
+      nombre: string;
+      correo: string;
+      password: string;
+      identificacion: string;
+    };
+    const correoNorm = correo.trim().toLowerCase();
+    const [existing] = await db
+      .select({ id: usuarios.id })
+      .from(usuarios)
+      .where(eq(usuarios.correo, correoNorm));
+    if (existing) {
+      res.status(409).json({ error: "Ese correo ya está registrado" });
+      return;
+    }
+    const hash = await bcrypt.hash(password, 10);
+    const [nuevo] = await db
+      .insert(usuarios)
+      .values({
+        nombre: nombre.trim(),
+        correo: correoNorm,
+        password: hash,
+        rol: "conductor",
+        identificacion: identificacion.trim(),
+      })
+      .returning({ id: usuarios.id, nombre: usuarios.nombre, correo: usuarios.correo, rol: usuarios.rol });
+    res.status(201).json(nuevo);
   },
 );
 

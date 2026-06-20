@@ -77,8 +77,17 @@ cd services/trafico && python manage.py check
 - Django no gestiona su propia base — lee las tablas de Node con `managed = False`.
 - Los hooks React (`api-client`) se generan desde el OpenAPI spec con orval; no se
   escriben a mano.
-- Seguridad en producción: JWT_SECRET obligatorio (falla el arranque si no está),
-  rate-limit en login, helmet, validación de entradas propia (sin zod en el servidor).
+- **Toda la autorización vive en el backend** (el frontend solo decide qué mostrar):
+  - JWT_SECRET obligatorio en prod (falla el arranque si no está); rate-limit en
+    login y registro; cabeceras de seguridad (helmet-lite); validación de entradas propia.
+  - El registro público SIEMPRE crea rol `pasajero` (el `rol` del cliente se ignora):
+    nadie puede auto-otorgarse permisos. Los conductores solo los crea un admin
+    autenticado vía `POST /conductores`.
+  - Un conductor solo puede operar SU bus: el `bus_id` de GPS/novedad/ocupación/
+    finalizar se resuelve en el servidor desde su JWT (`busAutorizado`), nunca se
+    confía en el `bus_id` que mande el cliente. Evita IDOR/suplantación entre buses.
+  - Las mutaciones de rutas/paradas/buses requieren `requireRol("admin")`; las
+    lecturas del mapa (buses, rutas, stats) son públicas a propósito.
 - PWA con auto-update + Wake Lock en el conductor para GPS continuo sin pantalla apagada.
 
 ---

@@ -5,15 +5,15 @@ import { db } from "@workspace/db";
 import { usuarios } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { JWT_SECRET } from "../middleware/auth";
-import { validarBody, requerido, correoValido, texto, enLista } from "../middleware/validate";
+import { validarBody, requerido, correoValido, texto } from "../middleware/validate";
 import { rateLimit } from "../middleware/rate-limit";
 
 const router = Router();
 
-const ROLES = ["pasajero", "conductor", "admin"] as const;
-
 // Frena fuerza bruta: máx. 10 intentos de login por IP cada 5 minutos.
 const loginLimiter = rateLimit({ ventanaMs: 5 * 60_000, max: 10 });
+// El registro también se limita: evita que un bot cree cuentas en masa.
+const registerLimiter = rateLimit({ ventanaMs: 60 * 60_000, max: 20 });
 
 router.post(
   "/auth/login",
@@ -53,21 +53,23 @@ router.post(
   });
 });
 
+// Registro PÚBLICO. Por seguridad SIEMPRE crea un usuario con rol "pasajero":
+// el `rol` que venga en el body se ignora a propósito, de modo que nadie pueda
+// auto-otorgarse permisos de conductor o administrador desde el cliente. Las
+// cuentas de conductor las crea un administrador autenticado (POST /conductores).
 router.post(
   "/auth/register",
+  registerLimiter,
   validarBody(
     requerido("nombre"), texto("nombre", 2, 100),
     requerido("correo"), correoValido("correo"),
     requerido("password"), texto("password", 6, 200),
-    enLista("rol", ROLES),
   ),
   async (req, res) => {
-  const { nombre, correo, password, rol = "pasajero", identificacion } = req.body as {
+  const { nombre, correo, password } = req.body as {
     nombre: string;
     correo: string;
     password: string;
-    rol?: string;
-    identificacion?: string;
   };
   const correoNorm = correo.trim().toLowerCase();
   const [existing] = await db
@@ -81,7 +83,7 @@ router.post(
   const hash = await bcrypt.hash(password, 10);
   const [nuevo] = await db
     .insert(usuarios)
-    .values({ nombre: nombre.trim(), correo: correoNorm, password: hash, rol, identificacion: identificacion?.trim() || null })
+    .values({ nombre: nombre.trim(), correo: correoNorm, password: hash, rol: "pasajero" })
     .returning({ id: usuarios.id, rol: usuarios.rol });
   res.status(201).json(nuevo);
 });
