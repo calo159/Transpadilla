@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useGetBuses, useUpdateGps, useReportarNovedad, useFinalizarRecorrido, getGetBusesQueryKey } from "@workspace/api-client";
 import { useQueryClient } from "@tanstack/react-query";
-import { getUser, clearAuth, homeForRol, getToken } from "@/lib/auth";
+import { getUser, clearAuth, homeForRol } from "@/lib/auth";
+import { apiFetch } from "@/lib/api";
 import { Bus, LogOut, Play, Square, AlertTriangle, Radio, Clock, ChevronLeft, Users, MapPin, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -151,9 +152,8 @@ export default function Conductor() {
     if (!busId) return;
     setOcupacion(nivel);
     try {
-      const res = await fetch("/api/buses/ocupacion", {
+      const res = await apiFetch("/api/buses/ocupacion", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ bus_id: busId, ocupacion: nivel }),
       });
       if (!res.ok) throw new Error();
@@ -180,9 +180,8 @@ export default function Conductor() {
   const limpiarNovedad = async () => {
     if (!busId) return;
     try {
-      const res = await fetch("/api/buses/limpiar-novedad", {
+      const res = await apiFetch("/api/buses/limpiar-novedad", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ bus_id: busId }),
       });
       if (!res.ok) throw new Error();
