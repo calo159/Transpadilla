@@ -3,6 +3,8 @@ Genera PROPUESTA-ALCALDIA.docx — propuesta profesional extensa para la Alcald�
 Uso: python generar-propuesta-word.py
 """
 
+import os
+
 from docx import Document
 from docx.shared import Pt, Cm, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -1040,7 +1042,8 @@ def build():
     r.bold = True; r.font.color.rgb = AZUL_OSCURO
 
     # ── Guardar ───────────────────────────────────────────────────────────────
-    out = "PROPUESTA-ALCALDIA.docx"
+    # Guarda junto a este script (en docs/), sin importar desde dónde se ejecute.
+    out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "PROPUESTA-ALCALDIA.docx")
     doc.save(out)
     print(f"OK Documento generado: {out}")
 
