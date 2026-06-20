@@ -15,48 +15,18 @@ import { io, type Socket } from "socket.io-client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { fetchStreetRoute } from "@/lib/routing";
-import { TILES_URL, TILES_ATTRIBUTION } from "@/lib/mapConfig";
-
-// ─── Constantes de contacto TransPadilla ─────────────────────────────────────
-// Actualiza este número con el real de WhatsApp de la empresa
-const WHATSAPP_NUMERO = "3144167656";
-const INSTAGRAM_URL   = "https://www.instagram.com/transpadilla.co";
-const TARIFA_COP      = "$3.000";
-
-interface BusLocation { busId: number; lat: number; lng: number; velocidad?: number; rutaId?: number; }
-interface Novedad { busId: number; novedad: string; placa?: string; }
-
-function tiempoRelativo(isoDate: string | null | undefined): string {
-  if (!isoDate) return "sin datos";
-  const diff = (Date.now() - new Date(isoDate).getTime()) / 1000;
-  if (diff < 60) return `hace ${Math.round(diff)}s`;
-  if (diff < 3600) return `hace ${Math.round(diff / 60)} min`;
-  return `hace ${Math.round(diff / 3600)} h`;
-}
+import { useLeafletMap } from "@/hooks/useLeafletMap";
+import { WHATSAPP_NUMERO, INSTAGRAM_URL, TARIFA_COP } from "@/lib/constants";
+import type { BusLocation, Novedad } from "@/lib/types";
+import { tiempoRelativo } from "@/lib/format";
+import { distanciaKm, velEfectiva } from "@/lib/geo";
 
 type SheetState = "collapsed" | "half" | "full";
 
-// Distancia en km entre dos coordenadas (Haversine).
-function distanciaKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
-  const R = 6371;
-  const dLat = ((bLat - aLat) * Math.PI) / 180;
-  const dLng = ((bLng - aLng) * Math.PI) / 180;
-  const la1 = (aLat * Math.PI) / 180;
-  const la2 = (bLat * Math.PI) / 180;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
-
-// Velocidad efectiva (km/h) para estimar el ETA: si el bus está detenido o sin
-// dato, usamos un promedio urbano para no dividir por cero.
-function velEfectiva(v: number | null | undefined): number {
-  return !v || v < 5 ? 18 : v;
-}
-
 export default function Pasajero() {
   const [, setLocation] = useLocation();
-  const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useLeafletMap(mapContainerRef, { zoom: 13 });
   const markersRef = useRef<Record<number, L.Marker>>({});
   const routeLayersRef = useRef<Record<number, L.Polyline>>({});
   const stopMarkersRef = useRef<Array<{ rutaId: number; marker: L.Marker }>>([]);
@@ -118,16 +88,7 @@ export default function Pasajero() {
   const activeBuses = buses.filter((b) => b.estado === "activo");
   const demorasBuses = buses.filter((b) => b.estado === "demora");
 
-  // Init mapa
-  useEffect(() => {
-    if (mapContainerRef.current && !mapRef.current) {
-      const map = L.map(mapContainerRef.current, { zoomControl: false }).setView([11.5444, -72.9072], 13);
-      L.tileLayer(TILES_URL, { attribution: TILES_ATTRIBUTION }).addTo(map);
-      L.control.zoom({ position: "bottomright" }).addTo(map);
-      mapRef.current = map;
-    }
-    return () => { mapRef.current?.remove(); mapRef.current = null; };
-  }, []);
+  // El mapa lo crea y destruye useLeafletMap (ver declaración de mapRef arriba).
 
   // Dibujar rutas y paradas
   useEffect(() => {

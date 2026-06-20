@@ -12,43 +12,9 @@ import { io, type Socket } from "socket.io-client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useToast } from "@/hooks/use-toast";
-import { TILES_URL, TILES_ATTRIBUTION } from "@/lib/mapConfig";
-
-const NOVEDAD_OPCIONES: { label: string; texto: string }[] = [
-  { label: "Tráfico", texto: "Tráfico — demora estimada" },
-  { label: "Accidente", texto: "Accidente en la vía — espera obligatoria" },
-  { label: "En reparación", texto: "Bus en reparación — demora" },
-  { label: "Desvío", texto: "Desvío por vía cerrada" },
-];
-
-function useElapsedTime(running: boolean) {
-  const [seconds, setSeconds] = useState(0);
-  const startRef = useRef<number | null>(null);
-  const rafRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (running) {
-      startRef.current = Date.now() - seconds * 1000;
-      const tick = () => {
-        setSeconds(Math.floor((Date.now() - startRef.current!) / 1000));
-        rafRef.current = requestAnimationFrame(tick);
-      };
-      rafRef.current = requestAnimationFrame(tick);
-    } else {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      setSeconds(0);
-    }
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running]);
-
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  return h > 0
-    ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
-    : `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
+import { useElapsedTime } from "@/hooks/useElapsedTime";
+import { useLeafletMap } from "@/hooks/useLeafletMap";
+import { NOVEDAD_OPCIONES } from "@/lib/constants";
 
 export default function Conductor() {
   const [, setLocation] = useLocation();
@@ -56,8 +22,8 @@ export default function Conductor() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useLeafletMap(mapContainerRef, { zoom: 14 });
   const busMarkerRef = useRef<L.Marker | null>(null);
   const gpsWatchRef = useRef<number | null>(null);
   const socketRef = useRef<Socket | null>(null);
@@ -97,15 +63,7 @@ export default function Conductor() {
     return () => { socket.disconnect(); };
   }, []);
 
-  useEffect(() => {
-    if (mapContainerRef.current && !mapRef.current) {
-      const map = L.map(mapContainerRef.current, { zoomControl: false }).setView([11.5444, -72.9072], 14);
-      L.tileLayer(TILES_URL, { attribution: TILES_ATTRIBUTION }).addTo(map);
-      L.control.zoom({ position: "bottomright" }).addTo(map);
-      mapRef.current = map;
-    }
-    return () => { mapRef.current?.remove(); mapRef.current = null; };
-  }, []);
+  // El mapa lo crea y destruye useLeafletMap (ver declaración de mapRef arriba).
 
   // El mapa está oculto por defecto; al mostrarlo hay que recalcular su tamaño.
   useEffect(() => {
