@@ -45,17 +45,20 @@ services:
         generateValue: true
       - key: SEED_ON_START
         value: "true"
-      # ── Modo de datos iniciales ──
-      # Por defecto se siembran datos DEMO (rutas/paradas/buses + cuentas de prueba).
-      # Para uso REAL de la Alcaldía: en el dashboard de Render cambia SEED_DEMO a
-      # "false" y define ADMIN_EMAIL / ADMIN_PASSWORD, y la base arrancará limpia
-      # con solo ese administrador (sin buses ni cuentas demo).
+      # ── Modo de datos iniciales (SEGURO POR DEFECTO) ──
+      # SEED_DEMO="false": la base arranca LIMPIA, sin datos demo ni cuentas de
+      # prueba. Se crea ÚNICAMENTE el administrador definido en ADMIN_EMAIL /
+      # ADMIN_PASSWORD. Esto evita publicar un admin con contraseña conocida
+      # (admin123) en el sitio en producción.
+      # Para una demo desechable con datos de ejemplo, cambia SEED_DEMO a "true".
       - key: SEED_DEMO
-        value: "true"
-      # - key: ADMIN_EMAIL
-      #   sync: false
-      # - key: ADMIN_PASSWORD
-      #   sync: false
+        value: "false"
+      # Render te pedirá estos valores al desplegar (sync:false = no van en el repo).
+      # Usa una contraseña larga y única para el administrador.
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
       # URL publica del microservicio Django. Nota: fromService 'property: host'
       # devuelve solo el nombre corto ("transpadilla-trafico"), no resoluble; por
       # eso usamos la URL publica completa, que el proxy alcanza por HTTPS.
