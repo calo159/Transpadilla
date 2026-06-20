@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { LogoTP } from "@/components/LogoTP";
 import { ConfirmDialog, type ConfirmOpts } from "@/components/ConfirmDialog";
-import { io, type Socket } from "socket.io-client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useToast } from "@/hooks/use-toast";
@@ -26,7 +25,6 @@ export default function Conductor() {
   const mapRef = useLeafletMap(mapContainerRef, { zoom: 14 });
   const busMarkerRef = useRef<L.Marker | null>(null);
   const gpsWatchRef = useRef<number | null>(null);
-  const socketRef = useRef<Socket | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   const [activo, setActivo] = useState(false);
@@ -57,12 +55,6 @@ export default function Conductor() {
     if (user.rol !== "conductor") setLocation(homeForRol(user.rol));
   }, [user, setLocation]);
 
-  useEffect(() => {
-    const socket = io({ path: "/socket.io", transports: ["websocket", "polling"] });
-    socketRef.current = socket;
-    return () => { socket.disconnect(); };
-  }, []);
-
   // El mapa lo crea y destruye useLeafletMap (ver declaración de mapRef arriba).
 
   // El mapa está oculto por defecto; al mostrarlo hay que recalcular su tamaño.
@@ -87,10 +79,11 @@ export default function Conductor() {
       else busMarkerRef.current = L.marker([lat, lng], { icon }).addTo(mapRef.current);
       mapRef.current.panTo([lat, lng]);
     }
+    // El backend (POST /buses/gps) persiste y emite "bus:ubicacion" a los
+    // pasajeros; no usamos el socket para enviar la posición (no es de confianza).
     updateGps.mutate({ data: { bus_id: busId, lat, lng, velocidad: vel } });
-    socketRef.current?.emit("gps_update", { busId, lat, lng, rutaId: selectedBus?.ruta_id });
     queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
-  }, [busId, updateGps, selectedBus, queryClient]);
+  }, [busId, updateGps, queryClient]);
 
   // Inicia (o reinicia) el seguimiento GPS. Se reutiliza al volver a la app por
   // si el navegador suspendió el watch en segundo plano.
