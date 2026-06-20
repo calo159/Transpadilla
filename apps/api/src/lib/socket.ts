@@ -3,27 +3,32 @@ import type { Server as HttpServer } from "http";
 
 let io: Server | null = null;
 
+// Orígenes permitidos para el socket: en producción, mismo origen (o la lista
+// CORS_ORIGIN si se define); en desarrollo, cualquiera para no estorbar.
+function corsOrigin(): string[] | boolean {
+  if (process.env["NODE_ENV"] !== "production") return true;
+  const lista = (process.env["CORS_ORIGIN"] ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return lista.length > 0 ? lista : false;
+}
+
 export function initSocketIO(httpServer: HttpServer): Server {
   io = new Server(httpServer, {
     path: "/socket.io",
-    cors: { origin: "*", methods: ["GET", "POST"] },
+    cors: { origin: corsOrigin(), methods: ["GET", "POST"] },
   });
 
+  // El socket es SOLO de difusión servidor→cliente para datos públicos del mapa.
+  // Las posiciones de los buses NO se aceptan por aquí: el conductor las envía por
+  // el endpoint REST autenticado (POST /buses/gps), que valida identidad y bus, y
+  // ese handler es el único que emite "bus:ubicacion". Así un cliente no puede
+  // falsear la ubicación de un bus conectándose al socket.
   io.on("connection", (socket) => {
     socket.on("subscribe_ruta", ({ rutaId }: { rutaId: number }) => {
       socket.join(`ruta_${rutaId}`);
     });
-
-    socket.on(
-      "gps_update",
-      (data: { busId: number; lat: number; lng: number; rutaId?: number }) => {
-        io!.emit("bus:ubicacion", {
-          busId: data.busId,
-          lat: data.lat,
-          lng: data.lng,
-        });
-      }
-    );
   });
 
   return io;
