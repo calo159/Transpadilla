@@ -6,10 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { setAuth, getUser } from "@/lib/auth";
 import { LogoTP } from "@/components/LogoTP";
-
-// Actualiza con el número real de WhatsApp de TransPadilla
-const WHATSAPP_NUMERO = "3144167656";
-const INSTAGRAM_URL   = "https://www.instagram.com/transpadilla.co";
+import { WHATSAPP_URL, INSTAGRAM_URL } from "@/lib/constants";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -95,7 +92,7 @@ export default function Login() {
       {/* Links de contacto arriba derecha */}
       <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
         <a
-          href={`https://wa.me/${WHATSAPP_NUMERO}`}
+          href={WHATSAPP_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"

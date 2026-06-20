@@ -22,26 +22,10 @@ import { useToast } from "@/hooks/use-toast";
 import { LogoTP } from "@/components/LogoTP";
 import { ConfirmDialog, type ConfirmOpts } from "@/components/ConfirmDialog";
 import { PromptDialog, type PromptOpts } from "@/components/PromptDialog";
+import { COLORES } from "@/lib/constants";
+import type { Conductor } from "@/lib/types";
 
 type Tab = "dashboard" | "rutas" | "buses" | "paradas" | "conductores" | "trafico";
-
-interface Conductor {
-  id: number;
-  nombre: string;
-  correo: string;
-  identificacion: string | null;
-}
-
-const COLORES = [
-  { label: "Azul TransPadilla", value: "#1757C2" },
-  { label: "Rojo",    value: "#e74c3c" },
-  { label: "Verde",   value: "#2ecc71" },
-  { label: "Naranja", value: "#f39c12" },
-  { label: "Púrpura", value: "#9b59b6" },
-  { label: "Cian",    value: "#1abc9c" },
-  { label: "Rosa",    value: "#e91e63" },
-  { label: "Amarillo TransPadilla", value: "#F5C200" },
-];
 
 export default function Admin() {
   const [, setLocation] = useLocation();

@@ -33,3 +33,16 @@ export function getIO(): Server {
   if (!io) throw new Error("Socket.IO not initialized");
   return io;
 }
+
+/**
+ * Emite un evento a todos los clientes sin reventar si Socket.IO aún no está
+ * inicializado (p. ej. en tests o durante el arranque). Centraliza el patrón
+ * try/catch que de otro modo se repetiría en cada handler que notifica cambios.
+ */
+export function emitirSeguro(evento: string, payload: unknown): void {
+  try {
+    getIO().emit(evento, payload);
+  } catch {
+    // Socket.IO todavía no está listo: la emisión es best-effort, se ignora.
+  }
+}
