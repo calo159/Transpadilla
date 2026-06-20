@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   useGetRutas, useGetBuses, useGetStats, useGetTodasParadas,
@@ -12,10 +12,12 @@ import { apiFetch } from "@/lib/api";
 import {
   Bus, LogOut, Map, MapPin, BarChart3, Plus, Trash2,
   RefreshCw, Users, Route,
-  Radio, TrafficCone, ChevronLeft, UserCheck, Eye, EyeOff, Pencil, X,
+  Radio, TrafficCone, ChevronLeft, UserCheck, Pencil, X,
 } from "lucide-react";
 import TraficoTab from "./TraficoTab";
 import DashboardTab from "./admin/DashboardTab";
+import ConductoresTab from "./admin/ConductoresTab";
+import { inputCls } from "./admin/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +27,6 @@ import { LogoTP } from "@/components/LogoTP";
 import { ConfirmDialog, type ConfirmOpts } from "@/components/ConfirmDialog";
 import { PromptDialog, type PromptOpts } from "@/components/PromptDialog";
 import { COLORES } from "@/lib/constants";
-import type { Conductor } from "@/lib/types";
 
 type Tab = "dashboard" | "rutas" | "buses" | "paradas" | "conductores" | "trafico";
 
@@ -57,30 +58,6 @@ export default function Admin() {
   // Diálogos in-app (reemplazan a window.confirm / window.prompt)
   const [confirmar, setConfirmar] = useState<ConfirmOpts | null>(null);
   const [renombrar, setRenombrar] = useState<PromptOpts | null>(null);
-
-  // Conductores
-  const [conductores, setConductores] = useState<Conductor[]>([]);
-  const [conductoresLoading, setConductoresLoading] = useState(false);
-  const [condNombre, setCondNombre] = useState("");
-  const [condIdentificacion, setCondIdentificacion] = useState("");
-  const [condCorreo, setCondCorreo] = useState("");
-  const [condPassword, setCondPassword] = useState("");
-  const [condShowPass, setCondShowPass] = useState(false);
-  const [condPending, setCondPending] = useState(false);
-
-  const fetchConductores = useCallback(async () => {
-    setConductoresLoading(true);
-    try {
-      const res = await apiFetch("/api/conductores");
-      if (res.ok) setConductores(await res.json() as Conductor[]);
-    } finally {
-      setConductoresLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (tab === "conductores") fetchConductores();
-  }, [tab, fetchConductores]);
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useGetStats({
     query: { queryKey: ["stats"], refetchInterval: 15000 },
@@ -278,70 +255,6 @@ export default function Admin() {
     });
   };
 
-  const handleRegistrarConductor = async () => {
-    if (!condNombre.trim() || !condIdentificacion.trim() || !condCorreo.trim() || !condPassword.trim()) {
-      toast({ title: "Completa todos los campos", variant: "destructive" }); return;
-    }
-    setCondPending(true);
-    try {
-      const res = await apiFetch("/api/conductores", {
-        method: "POST",
-        body: JSON.stringify({ nombre: condNombre.trim(), correo: condCorreo.trim(), password: condPassword, identificacion: condIdentificacion.trim() }),
-      });
-      if (!res.ok) {
-        const err = await res.json() as { error?: string };
-        toast({ title: err.error ?? "Error al registrar conductor", variant: "destructive" }); return;
-      }
-      toast({ title: `Conductor "${condNombre.trim()}" registrado` });
-      setCondNombre(""); setCondIdentificacion(""); setCondCorreo(""); setCondPassword("");
-      fetchConductores();
-    } catch {
-      toast({ title: "Error de conexión", variant: "destructive" });
-    } finally {
-      setCondPending(false);
-    }
-  };
-
-  const handleDeleteConductor = (id: number, nombre: string) => {
-    setConfirmar({
-      titulo: "Eliminar conductor",
-      descripcion: `¿Eliminar al conductor "${nombre}"? Perderá acceso al sistema.`,
-      textoConfirmar: "Eliminar",
-      destructivo: true,
-      accion: async () => {
-        try {
-          const res = await apiFetch(`/api/conductores/${id}`, { method: "DELETE" });
-          if (!res.ok) throw new Error();
-          toast({ title: `Conductor "${nombre}" eliminado` });
-          setConductores((prev) => prev.filter((c) => c.id !== id));
-        } catch {
-          toast({ title: "Error al eliminar conductor", variant: "destructive" });
-        }
-      },
-    });
-  };
-
-  const handleAsignarBusConductor = async (conductorId: number, newBusId: number | null, prevBusId: number | null) => {
-    const patch = async (busId: number, cId: number | null) => {
-      const r = await apiFetch(`/api/buses/${busId}/conductor`, {
-        method: "PATCH",
-        body: JSON.stringify({ conductor_id: cId }),
-      });
-      if (!r.ok) {
-        const body = await r.json().catch(() => ({})) as { error?: string };
-        throw new Error(body.error ?? `HTTP ${r.status}`);
-      }
-    };
-    try {
-      if (prevBusId && prevBusId !== newBusId) await patch(prevBusId, null);
-      if (newBusId) await patch(newBusId, conductorId);
-      await queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
-      toast({ title: newBusId ? "Bus asignado al conductor" : "Bus desasignado" });
-    } catch (err) {
-      toast({ title: `Error al asignar bus: ${String(err)}`, variant: "destructive" });
-    }
-  };
-
   const navItems = [
     { id: "dashboard"   as Tab, label: "Dashboard",   icon: <BarChart3 className="w-4 h-4" /> },
     { id: "rutas"       as Tab, label: "Rutas",       icon: <Route className="w-4 h-4" /> },
@@ -361,7 +274,6 @@ export default function Admin() {
     trafico:     "Monitoreo de Tráfico",
   };
 
-  const inputCls = "bg-background border-border h-11 text-base rounded-xl md:h-9 md:text-sm md:rounded-lg";
   const selectTriggerCls = "bg-background border-border h-11 text-base rounded-xl md:h-9 md:text-sm md:rounded-lg";
 
   // Evita que el panel admin se muestre (aunque sea un instante) a quien no es admin;
@@ -823,149 +735,7 @@ export default function Admin() {
 
           {/* CONDUCTORES */}
           {tab === "conductores" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {/* Formulario de registro */}
-              <div className="bg-card border border-border rounded-xl p-4 md:p-5 h-fit">
-                <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <UserCheck className="w-4 h-4 text-primary" /> Registrar conductor
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-xs mb-1.5">Nombre completo</Label>
-                    <Input
-                      value={condNombre}
-                      onChange={(e) => setCondNombre(e.target.value)}
-                      placeholder="Ej: Carlos Rodríguez"
-                      className={inputCls}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs mb-1.5">Número de identificación (CC / CE)</Label>
-                    <Input
-                      value={condIdentificacion}
-                      onChange={(e) => setCondIdentificacion(e.target.value)}
-                      placeholder="Ej: 1234567890"
-                      className={`${inputCls} font-mono`}
-                      inputMode="numeric"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs mb-1.5">Correo (usuario para iniciar sesión)</Label>
-                    <Input
-                      value={condCorreo}
-                      onChange={(e) => setCondCorreo(e.target.value)}
-                      placeholder="conductor@transpadilla.co"
-                      className={inputCls}
-                      type="email"
-                      inputMode="email"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs mb-1.5">Contraseña</Label>
-                    <div className="relative">
-                      <Input
-                        value={condPassword}
-                        onChange={(e) => setCondPassword(e.target.value)}
-                        placeholder="Mínimo 6 caracteres"
-                        className={`${inputCls} pr-11`}
-                        type={condShowPass ? "text" : "password"}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setCondShowPass((v) => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {condShowPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      El conductor usará este correo y contraseña para entrar al sistema.
-                    </p>
-                  </div>
-                  <Button
-                    onClick={handleRegistrarConductor}
-                    disabled={condPending}
-                    className="w-full h-11 rounded-xl"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    {condPending ? "Registrando..." : "Registrar conductor"}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Lista de conductores */}
-              <div className="bg-card border border-border rounded-xl p-4 md:p-5">
-                <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-primary" /> Conductores registrados
-                  </span>
-                  <button onClick={fetchConductores} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-                    <RefreshCw className="w-3 h-3" /> Actualizar
-                  </button>
-                </h3>
-                {conductoresLoading ? (
-                  <div className="space-y-2">
-                    {[1, 2, 3].map((i) => <div key={i} className="h-16 bg-muted/40 rounded-xl animate-pulse" />)}
-                  </div>
-                ) : conductores.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    No hay conductores registrados. Crea el primero.
-                  </p>
-                ) : (
-                  <div className="space-y-2 max-h-[500px] overflow-y-auto">
-                    {conductores.map((c) => {
-                      const assignedBus = buses.find((b) => b.conductor_id === c.id);
-                      return (
-                        <div key={c.id} className="p-3 bg-secondary/30 border border-border rounded-xl space-y-2">
-                          <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold" style={{ background: "rgba(23,87,194,0.2)", color: "var(--tp-sky)" }}>
-                              {c.nombre.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-foreground truncate">{c.nombre}</p>
-                              <p className="text-xs text-muted-foreground truncate">{c.correo}</p>
-                              {c.identificacion && (
-                                <p className="text-xs font-mono mt-0.5" style={{ color: "var(--tp-sky)" }}>
-                                  CC {c.identificacion}
-                                </p>
-                              )}
-                            </div>
-                            <Button
-                              variant="ghost" size="sm"
-                              onClick={() => handleDeleteConductor(c.id, c.nombre)}
-                              className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Bus asignado</p>
-                            <Select
-                              value={assignedBus?.id.toString() ?? "none"}
-                              onValueChange={(v) =>
-                                handleAsignarBusConductor(c.id, v === "none" ? null : parseInt(v, 10), assignedBus?.id ?? null)
-                              }
-                            >
-                              <SelectTrigger className="h-8 text-xs rounded-lg bg-background border-border">
-                                <SelectValue placeholder="Sin bus" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">Sin bus asignado</SelectItem>
-                                {buses.map((b) => (
-                                  <SelectItem key={b.id} value={b.id.toString()}>
-                                    {b.placa}{b.nombre_ruta ? ` — ${b.nombre_ruta}` : ""}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
+            <ConductoresTab buses={buses} setConfirmar={setConfirmar} />
           )}
 
           {tab === "trafico" && <TraficoTab />}
