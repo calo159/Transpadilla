@@ -7,7 +7,8 @@ import {
   getGetRutasQueryKey, getGetBusesQueryKey, getGetTodasParadasQueryKey,
 } from "@workspace/api-client";
 import { useQueryClient } from "@tanstack/react-query";
-import { getUser, clearAuth, getToken, homeForRol } from "@/lib/auth";
+import { getUser, clearAuth, homeForRol } from "@/lib/auth";
+import { apiFetch } from "@/lib/api";
 import {
   Bus, LogOut, Map, MapPin, BarChart3, Plus, Trash2,
   RefreshCw, Users, Activity, AlertTriangle, Route,
@@ -69,9 +70,7 @@ export default function Admin() {
   const fetchConductores = useCallback(async () => {
     setConductoresLoading(true);
     try {
-      const res = await fetch("/api/conductores", {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      });
+      const res = await apiFetch("/api/conductores");
       if (res.ok) setConductores(await res.json() as Conductor[]);
     } finally {
       setConductoresLoading(false);
@@ -215,13 +214,9 @@ export default function Admin() {
     });
   };
 
-  // Editar/eliminar relaciones via fetch directo (mismo patrón que conductores).
-  const apiPatch = async (url: string, body: unknown) =>
-    fetch(url, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-      body: JSON.stringify(body),
-    });
+  // Atajo para los PATCH de renombrado (delega en apiFetch, que pone la auth).
+  const apiPatch = (url: string, body: unknown) =>
+    apiFetch(url, { method: "PATCH", body: JSON.stringify(body) });
 
   const handleRenombrarRuta = (id: number, actual: string) => {
     setRenombrar({
@@ -269,9 +264,8 @@ export default function Admin() {
       textoConfirmar: "Quitar",
       accion: async () => {
         try {
-          const res = await fetch(`/api/rutas/${rutaId}/paradas/${paradaId}`, {
+          const res = await apiFetch(`/api/rutas/${rutaId}/paradas/${paradaId}`, {
             method: "DELETE",
-            headers: { Authorization: `Bearer ${getToken()}` },
           });
           if (!res.ok) throw new Error();
           queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
@@ -289,9 +283,8 @@ export default function Admin() {
     }
     setCondPending(true);
     try {
-      const res = await fetch("/api/conductores", {
+      const res = await apiFetch("/api/conductores", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ nombre: condNombre.trim(), correo: condCorreo.trim(), password: condPassword, identificacion: condIdentificacion.trim() }),
       });
       if (!res.ok) {
@@ -316,10 +309,7 @@ export default function Admin() {
       destructivo: true,
       accion: async () => {
         try {
-          const res = await fetch(`/api/conductores/${id}`, {
-            method: "DELETE",
-            headers: { Authorization: `Bearer ${getToken()}` },
-          });
+          const res = await apiFetch(`/api/conductores/${id}`, { method: "DELETE" });
           if (!res.ok) throw new Error();
           toast({ title: `Conductor "${nombre}" eliminado` });
           setConductores((prev) => prev.filter((c) => c.id !== id));
@@ -332,9 +322,8 @@ export default function Admin() {
 
   const handleAsignarBusConductor = async (conductorId: number, newBusId: number | null, prevBusId: number | null) => {
     const patch = async (busId: number, cId: number | null) => {
-      const r = await fetch(`/api/buses/${busId}/conductor`, {
+      const r = await apiFetch(`/api/buses/${busId}/conductor`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ conductor_id: cId }),
       });
       if (!r.ok) {
