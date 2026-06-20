@@ -55,12 +55,12 @@ Thumbs.db
 
 # Python / Django
 venv/
-django/venv/
+services/trafico/venv/
 __pycache__/
 *.py[cod]
 *.sqlite3
-django/static/
-django/staticfiles/
+services/trafico/static/
+services/trafico/staticfiles/
 
 # Respaldos comprimidos
 *.zip
@@ -69,5 +69,5 @@ django/staticfiles/
 *.docx
 
 # Capacitor (proyectos nativos generados localmente)
-artifacts/transpadilla/android/
-artifacts/transpadilla/ios/
+apps/web/android/
+apps/web/ios/

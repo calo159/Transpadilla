@@ -36,7 +36,7 @@ Para detener: cierra las dos ventanas de PowerShell.
 - **Node.js 24** + **pnpm** — entorno de ejecución
 - **PostgreSQL 17** — base de datos (servicio automático de Windows)
   - Usuario: `postgres` · Contraseña: `postgres` · Base: `transpadilla`
-- **Python 3.12** + **Django 5** — microservicio de tráfico (`django/venv`)
+- **Python 3.12** + **Django 5** — microservicio de tráfico (`services/trafico/venv`)
 - Dependencias del proyecto (`node_modules`) — ya instaladas
 - Tablas de la base de datos — ya creadas
 - Datos demo (3 rutas, 7 paradas, 3 buses) — ya cargados
@@ -63,25 +63,28 @@ La configuración está en el archivo **`.env`** (no lo subas a internet).
 | Acción | Comando |
 |--------|---------|
 | Arrancar todo | `./iniciar.ps1` |
-| Solo el API | `pnpm --filter @workspace/api-server run dev` |
-| Solo el frontend | `pnpm --filter @workspace/transpadilla run dev` |
+| Solo el API | `pnpm --filter @workspace/api run dev` |
+| Solo el frontend | `pnpm --filter @workspace/web run dev` |
 | Recrear tablas | `pnpm --filter @workspace/db push` |
 | Recargar datos demo | `Invoke-RestMethod -Method Post http://localhost:8080/api/seed` |
 | Configurar tráfico (1 vez) | `./configurar-trafico.ps1` |
-| Build de producción | `pnpm --filter @workspace/transpadilla run build` |
+| Build de producción | `pnpm --filter @workspace/web run build` |
 
 ---
 
 ## 🗺 Estructura
 
 ```
-artifacts/
-  transpadilla/   → Frontend React (mapa, login, conductor, admin)
-  api-server/     → Backend Express + Socket.IO (puerto 8080)
-lib/
+apps/
+  web/            → Frontend React (mapa, login, conductor, admin)
+  api/            → Backend Express + Socket.IO (puerto 8080)
+packages/
   db/             → Esquema de base de datos (Drizzle ORM)
-  api-client-react/, api-zod/, api-spec/  → Cliente y tipos generados
-django/           → Microservicio de tráfico (opcional, no requerido)
+  api-client/     → Hooks React generados (TanStack Query)
+  api-types/      → Tipos Zod generados
+  api-spec/       → Especificación OpenAPI + orval
+services/
+  trafico/        → Microservicio de tráfico Python/Django
 docs/
   PROPUESTA-ALCALDIA.md       → Presupuesto y propuesta para la Alcaldía
   DESPLIEGUE-PRODUCCION.md    → Guía para despliegue 24/7 (VPS / Render)
@@ -97,4 +100,4 @@ docs/
 - Tarifa: $3.000 COP
 
 > Para cambiar el número de WhatsApp, edita la constante `WHATSAPP_NUMERO`
-> en `artifacts/transpadilla/src/pages/Pasajero.tsx` y `Login.tsx`.
+> en `apps/web/src/pages/Pasajero.tsx` y `Login.tsx`.

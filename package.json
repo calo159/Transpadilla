@@ -6,10 +6,10 @@
   "scripts": {
     "preinstall": "node -e \"var a=process.env.npm_config_user_agent||'';if(!a.startsWith('pnpm')){process.stderr.write('Error: use pnpm, not npm/yarn\\n');process.exit(1)}\"",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
-    "build:prod": "pnpm --filter @workspace/transpadilla run build && pnpm --filter @workspace/api-server run build",
-    "start": "pnpm --filter @workspace/api-server run start",
+    "build:prod": "pnpm --filter @workspace/web run build && pnpm --filter @workspace/api run build",
+    "start": "pnpm --filter @workspace/api run start",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./apps/**\" --filter \"./scripts\" --if-present run typecheck"
   },
   "private": true,
   "devDependencies": {

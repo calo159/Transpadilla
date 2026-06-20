@@ -1,5 +1,5 @@
 {
-  "name": "@workspace/transpadilla",
+  "name": "@workspace/web",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -47,7 +47,7 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-react": "catalog:",
-    "@workspace/api-client-react": "workspace:*",
+    "@workspace/api-client": "workspace:*",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
     "cmdk": "^1.1.1",

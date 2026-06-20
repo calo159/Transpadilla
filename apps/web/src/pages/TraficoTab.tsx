@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { io, type Socket } from "socket.io-client";
-import { useGetRutas, useGetBuses, getGetBusesQueryKey } from "@workspace/api-client-react";
+import { useGetRutas, useGetBuses, getGetBusesQueryKey } from "@workspace/api-client";
 import { RefreshCw, AlertTriangle, Activity, Gauge, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fetchStreetRoute } from "@/lib/routing";

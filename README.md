@@ -81,7 +81,7 @@ El destinatario real es la **empresa TransPadilla**, como herramienta para mejor
 
 > El componente **Python/Django** es responsable de todo el módulo de tráfico:
 > modelos, migraciones, servicio de clasificación y API REST. Ver
-> [`django/trafico/`](django/trafico/).
+> [`services/trafico/`](services/trafico/).
 
 ---
 
@@ -123,7 +123,7 @@ curl -X POST http://localhost:8080/api/seed
 
 ### 4. Microservicio de Tráfico (Python/Django)
 ```bash
-cd django
+cd services/trafico
 python -m venv venv
 venv\Scripts\activate        # Windows   (source venv/bin/activate en Linux/Mac)
 pip install -r requirements.txt
@@ -179,7 +179,7 @@ tres componentes con un solo clic:
 
 ### Migraciones / esquema
 - Las tablas del backend Node se crean solas al arrancar (idempotente, ver
-  [`init-db.ts`](artifacts/api-server/src/lib/init-db.ts)) — **no** se usa
+  [`init-db.ts`](apps/api/src/lib/init-db.ts)) — **no** se usa
   `drizzle-kit push` en producción para no interferir con las tablas de Django.
 - Las tablas de Django se crean en su `buildCommand` con `manage.py migrate`.
 
@@ -188,15 +188,16 @@ tres componentes con un solo clic:
 ## 📁 Estructura del proyecto
 
 ```
-artifacts/
-  transpadilla/     Frontend React (mapa, login, conductor, admin, tráfico)
-  api-server/       API Node.js (Express + Socket.IO + Drizzle)
-lib/
+apps/
+  web/              Frontend React (mapa, login, conductor, admin, tráfico)
+  api/              API Node.js (Express + Socket.IO + Drizzle)
+packages/
   db/               Esquema de base de datos (Drizzle ORM)
-django/             Microservicio de Tráfico (Python / Django + DRF)
-  trafico/          App Django: models, views, traffic_service, migrations
-  trafico_config/   Configuración del proyecto Django
-  requirements.txt  Dependencias de Python
+  api-client/       Hooks React generados (TanStack Query)
+  api-types/        Tipos Zod generados
+  api-spec/         Especificación OpenAPI + orval
+services/
+  trafico/          Microservicio Python/Django (tráfico + ETA)
 docs/
   PROPUESTA-ALCALDIA.md       Presupuesto y propuesta para la Alcaldía
   DESPLIEGUE-PRODUCCION.md    Guía de despliegue 24/7 (VPS / Render)

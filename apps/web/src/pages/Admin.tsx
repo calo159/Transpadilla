@@ -5,7 +5,7 @@ import {
   useCreateRuta, useDeleteRuta, useCreateBus, useDeleteBus,
   useCrearParada, useAsignarParada, useDeleteParada,
   getGetRutasQueryKey, getGetBusesQueryKey, getGetTodasParadasQueryKey,
-} from "@workspace/api-client-react";
+} from "@workspace/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 import { getUser, clearAuth, getToken, homeForRol } from "@/lib/auth";
 import {
