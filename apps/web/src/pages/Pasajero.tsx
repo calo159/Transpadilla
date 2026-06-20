@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useLocation } from "wouter";
-import { useGetRutas, useGetBuses, getGetBusesQueryKey } from "@workspace/api-client-react";
+import { useGetRutas, useGetBuses, getGetBusesQueryKey } from "@workspace/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 import { clearAuth, getUser } from "@/lib/auth";
 import {

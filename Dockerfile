@@ -5,7 +5,7 @@
 FROM node:22-slim AS build
 WORKDIR /app
 RUN corepack enable
-# Copiamos todo el monorepo (el build necesita lib/* y artifacts/*).
+# Copiamos todo el monorepo (el build necesita packages/* y apps/*).
 COPY . .
 RUN pnpm install --no-frozen-lockfile --prod=false
 RUN pnpm run build:prod
@@ -19,4 +19,4 @@ COPY --from=build /app ./
 EXPOSE 8080
 # El servidor crea las tablas y arranca. DATABASE_URL, JWT_SECRET y TRAFICO_URL
 # se inyectan por entorno (ver docker-compose.yml).
-CMD ["pnpm", "--filter", "@workspace/api-server", "start"]
+CMD ["pnpm", "--filter", "@workspace/api", "start"]

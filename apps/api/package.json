@@ -1,5 +1,5 @@
 {
-  "name": "@workspace/api-server",
+  "name": "@workspace/api",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@workspace/api-zod": "workspace:*",
+    "@workspace/api-types": "workspace:*",
     "@workspace/db": "workspace:*",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",

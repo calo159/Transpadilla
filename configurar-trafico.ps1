@@ -9,7 +9,7 @@
 
 $ErrorActionPreference = "Stop"
 $raiz = $PSScriptRoot
-$dj = Join-Path $raiz "django"
+$dj = Join-Path $raiz "services\trafico"
 
 Write-Host ""
 Write-Host "  TransPadilla - Configurando modulo de Trafico (Python/Django)" -ForegroundColor Cyan

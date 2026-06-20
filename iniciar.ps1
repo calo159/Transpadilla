@@ -39,19 +39,19 @@ if (-not $pg) {
 
 # Arrancar API server en ventana nueva
 Write-Host "  -> Servidor API     http://localhost:8080" -ForegroundColor Green
-Start-Process powershell -ArgumentList "-NoExit","-Command","cd '$raiz'; pnpm --filter @workspace/api-server run dev"
+Start-Process powershell -ArgumentList "-NoExit","-Command","cd '$raiz'; pnpm --filter @workspace/api run dev"
 
 Start-Sleep -Seconds 2
 
 # Arrancar frontend en ventana nueva
 Write-Host "  -> Frontend (app)   http://localhost:5173" -ForegroundColor Green
-Start-Process powershell -ArgumentList "-NoExit","-Command","cd '$raiz'; pnpm --filter @workspace/transpadilla run dev"
+Start-Process powershell -ArgumentList "-NoExit","-Command","cd '$raiz'; pnpm --filter @workspace/web run dev"
 
 # Arrancar microservicio de Trafico (Django) si esta configurado
-$venvPy = Join-Path $raiz "django\venv\Scripts\python.exe"
+$venvPy = Join-Path $raiz "services\trafico\venv\Scripts\python.exe"
 if (Test-Path $venvPy) {
     Write-Host "  -> Trafico (Django) http://localhost:8000 (interno)" -ForegroundColor Green
-    Start-Process powershell -ArgumentList "-NoExit","-Command","cd '$raiz\django'; .\venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000"
+    Start-Process powershell -ArgumentList "-NoExit","-Command","cd '$raiz\services\trafico'; .\venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000"
 } else {
     Write-Host "  -> Trafico: sin configurar (ejecuta 'configurar-trafico.ps1' una vez)" -ForegroundColor DarkYellow
 }

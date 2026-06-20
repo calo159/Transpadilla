@@ -32,7 +32,7 @@ services:
     # --prod=false fuerza instalar tambien las devDependencies (vite, esbuild…),
     # que NODE_ENV=production omitiria; se necesitan para construir frontend+API.
     buildCommand: pnpm install --no-frozen-lockfile --prod=false && pnpm run build:prod
-    startCommand: pnpm --filter @workspace/api-server start
+    startCommand: pnpm --filter @workspace/api start
     healthCheckPath: /api/healthz
     envVars:
       - key: NODE_ENV
@@ -70,7 +70,7 @@ services:
     runtime: python
     plan: free
     region: oregon
-    rootDir: django
+    rootDir: services/trafico
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
     startCommand: gunicorn trafico_config.wsgi:application --bind 0.0.0.0:$PORT
     envVars:
