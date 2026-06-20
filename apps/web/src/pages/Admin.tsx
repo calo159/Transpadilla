@@ -305,10 +305,10 @@ export default function Admin() {
     }
     setCondPending(true);
     try {
-      const res = await fetch("/api/auth/register", {
+      const res = await fetch("/api/conductores", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ nombre: condNombre.trim(), correo: condCorreo.trim(), password: condPassword, rol: "conductor", identificacion: condIdentificacion.trim() }),
+        body: JSON.stringify({ nombre: condNombre.trim(), correo: condCorreo.trim(), password: condPassword, identificacion: condIdentificacion.trim() }),
       });
       if (!res.ok) {
         const err = await res.json() as { error?: string };
