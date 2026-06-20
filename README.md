@@ -113,8 +113,8 @@ PORT=8080
 ```bash
 pnpm install
 pnpm --filter @workspace/db push          # crea las tablas
-pnpm --filter @workspace/api-server run dev   # API en :8080
-pnpm --filter @workspace/transpadilla run dev # frontend en :5173
+pnpm --filter @workspace/api run dev   # API en :8080
+pnpm --filter @workspace/web run dev   # frontend en :5173
 ```
 Cargar datos demo (con el API corriendo):
 ```bash
@@ -200,9 +200,14 @@ services/
   trafico/          Microservicio Python/Django (tráfico + ETA)
 docs/
   PROPUESTA-ALCALDIA.md       Presupuesto y propuesta para la Alcaldía
+  generar-propuesta-word.py   Genera la propuesta en formato Word (.docx)
   DESPLIEGUE-PRODUCCION.md    Guía de despliegue 24/7 (VPS / Render)
   CAPACITOR-ANDROID.md        App nativa Android para el conductor
 ```
+
+> Los scripts `.ps1` de la raíz (`iniciar.ps1`, `iniciar-https.ps1`,
+> `configurar-trafico.ps1`, `habilitar-celular.ps1`) son lanzadores de Windows
+> pensados para ejecutarse desde la raíz; por eso se dejan ahí a propósito.
 
 ---
 
