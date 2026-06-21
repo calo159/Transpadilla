@@ -499,29 +499,34 @@ export default function Pasajero() {
               tabIndex={0}
               onClick={() => handleSelectRuta(ruta.id)}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelectRuta(ruta.id); } }}
-              className={`w-full text-left px-4 py-3.5 transition-all border-l-[3px] cursor-pointer ${isSelected ? "bg-primary/8 border-primary" : "border-transparent hover:bg-secondary/50"}`}
-              style={{ opacity: dimmed ? 0.3 : 1 }}
+              className={`mx-3 mb-2 rounded-xl border text-left transition-all cursor-pointer ${isSelected ? "border-primary bg-primary/5 ring-1 ring-primary/40" : "border-border bg-card hover:border-primary/40"}`}
+              style={{ opacity: dimmed ? 0.45 : 1 }}
             >
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-3 p-3">
                 <div
-                  className="w-3.5 h-3.5 rounded-full flex-shrink-0 transition-all"
-                  style={{ background: ruta.color, boxShadow: isSelected ? `0 0 8px ${ruta.color}` : "none" }}
-                />
+                  className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center"
+                  style={{ background: ruta.color + "22" }}
+                >
+                  <Bus style={{ color: ruta.color, width: 20, height: 20 }} />
+                </div>
                 <div className="flex-1 min-w-0">
                   <span className="text-sm font-semibold text-foreground truncate block">{ruta.nombre}</span>
-                  <span className="text-[11px] text-muted-foreground">{ruta.paradas.length} paradas</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[11px] text-muted-foreground">{ruta.paradas.length} paradas</span>
+                    {rutaBuses.length > 0 ? (
+                      <span className="flex items-center gap-1 text-[11px] font-semibold text-green-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />{rutaBuses.length} en vivo
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground/50">sin buses ahora</span>
+                    )}
+                  </div>
                 </div>
-                <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
-                  {rutaBuses.length > 0 && (
-                    <span className="flex items-center gap-1 text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-bold">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                      {rutaBuses.length} en vivo
-                    </span>
-                  )}
+                <div className="ml-auto flex items-center flex-shrink-0">
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); toggleFavorito(ruta.id); }}
-                    className="p-0.5"
+                    className="p-1"
                     aria-label="Marcar como favorita"
                   >
                     <Star
@@ -534,7 +539,7 @@ export default function Pasajero() {
                 </div>
               </div>
               {isSelected && (
-                <div className="mt-2.5 pl-6 space-y-2">
+                <div className="px-3 pb-3 space-y-2">
                   {/* Hero: tiempo de llegada del próximo bus */}
                   {proximoBus && (
                     <div className="flex items-end justify-between px-2.5 py-2 rounded-lg" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
