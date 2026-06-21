@@ -22,6 +22,13 @@ async function main(): Promise<void> {
   }
 
   const httpServer = http.createServer(app);
+
+  // Mitiga slow-loris (clientes que mantienen la conexión abierta enviando datos
+  // muy lento para agotar los sockets del servidor): tiempos máximos por petición.
+  httpServer.headersTimeout = 20_000;   // recibir cabeceras completas
+  httpServer.requestTimeout = 30_000;   // recibir la petición completa
+  httpServer.keepAliveTimeout = 65_000; // alinear con proxies/keep-alive
+
   initSocketIO(httpServer);
 
   httpServer.listen(port, () => {
