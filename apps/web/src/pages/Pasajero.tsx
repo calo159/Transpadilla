@@ -624,6 +624,11 @@ export default function Pasajero() {
             <div>
               <p className="text-xs font-bold text-foreground">Elige tu ruta para empezar</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">Haz clic en una ruta y verás el bus en vivo y en cuántos minutos llega.</p>
+              {activeBuses.length === 0 && (
+                <p className="text-[11px] mt-1.5" style={{ color: "var(--tp-yellow)" }}>
+                  Aún no hay buses en ruta — aparecerán en el mapa apenas un conductor inicie su recorrido.
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -1049,6 +1054,11 @@ export default function Pasajero() {
             <div>
               <p className="text-sm font-bold text-foreground">Elige tu ruta para empezar</p>
               <p className="text-xs text-muted-foreground mt-0.5">Toca una ruta y verás el bus en vivo y en cuántos minutos llega.</p>
+              {activeBuses.length === 0 && (
+                <p className="text-xs mt-1.5" style={{ color: "var(--tp-yellow)" }}>
+                  Aún no hay buses en ruta — aparecerán en el mapa apenas un conductor inicie su recorrido.
+                </p>
+              )}
             </div>
           </div>
         )}
