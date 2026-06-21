@@ -6,7 +6,7 @@ import { clearAuth, getUser } from "@/lib/auth";
 import {
   Bus, MapPin, LogOut, Radio, AlertTriangle, X,
   Search, Clock, LogIn, Shield, ChevronRight, ChevronUp,
-  Menu, MessageCircle, Instagram, Phone, LocateFixed, Loader2, Star, HelpCircle, Navigation,
+  Menu, MessageCircle, Instagram, LocateFixed, Loader2, Star, HelpCircle, Navigation,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1467,19 +1467,17 @@ export default function Pasajero() {
           <span className="text-xs text-muted-foreground font-medium">{conectado ? "En vivo" : "Reconectando…"}</span>
         </div>
 
-        {/* Botón WhatsApp flotante */}
+        {/* FAB de soporte por WhatsApp (compacto, no compite con el mapa) */}
         <a
           href={`https://wa.me/${WHATSAPP_NUMERO}?text=Hola%20TransPadilla%2C%20necesito%20informaci%C3%B3n%20sobre%20el%20servicio`}
           target="_blank"
           rel="noopener noreferrer"
-          className="absolute bottom-20 md:bottom-4 right-3 z-[1000] flex items-center gap-2 shadow-xl rounded-xl px-3 py-2 text-xs font-bold transition-opacity hover:opacity-90"
+          className="absolute bottom-20 md:bottom-4 right-3 z-[1000] flex items-center justify-center w-12 h-12 rounded-full shadow-xl transition-transform active:scale-95 hover:scale-105"
           style={{ background: "#25D366", color: "white" }}
           title="Atención al cliente por WhatsApp"
           aria-label="Atención al cliente por WhatsApp"
         >
-          <MessageCircle className="w-4 h-4" />
-          <span className="hidden md:inline">Atención al cliente</span>
-          <Phone className="w-3.5 h-3.5 md:hidden" />
+          <MessageCircle className="w-6 h-6" />
         </a>
 
         {/* Watermark */}
