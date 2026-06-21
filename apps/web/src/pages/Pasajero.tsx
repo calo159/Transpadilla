@@ -99,9 +99,19 @@ export default function Pasajero() {
   const busesRef = useRef(buses);
   useEffect(() => { busesRef.current = buses; }, [buses]);
 
+  // Ruta con buses circulando ahora (lo más accionable para el pasajero).
+  const rutaTieneVivos = (id: number) => buses.some((b) => b.ruta_id === id && b.estado !== "inactivo");
+  // Orden de la lista (más fácil de usar): favoritas → con buses en vivo → resto,
+  // y dentro de cada grupo, alfabético.
   const rutasFiltradas = rutas
     .filter((r) => r.nombre.toLowerCase().includes(busqueda.toLowerCase()))
-    .sort((a, b) => (favoritos.includes(b.id) ? 1 : 0) - (favoritos.includes(a.id) ? 1 : 0));
+    .sort((a, b) => {
+      const fa = favoritos.includes(a.id), fb = favoritos.includes(b.id);
+      if (fa !== fb) return fa ? -1 : 1;
+      const la = rutaTieneVivos(a.id), lb = rutaTieneVivos(b.id);
+      if (la !== lb) return la ? -1 : 1;
+      return a.nombre.localeCompare(b.nombre);
+    });
   const selectedRuta = rutas.find((r) => r.id === selectedRutaId);
   const activeBuses = buses.filter((b) => b.estado === "activo");
   const demorasBuses = buses.filter((b) => b.estado === "demora");
@@ -1383,8 +1393,9 @@ export default function Pasajero() {
                 {/* Funciones */}
                 <div className="space-y-3">
                   {[
+                    { icon: <Navigation className="w-4 h-4" />, t: "¿A dónde vas?", d: "Pulsa “Elegir destino” y toca tu destino en el mapa: te decimos qué ruta tomar y cuál es el bus más cercano de esa ruta." },
                     { icon: <Search className="w-4 h-4" />, t: "Buscar ruta", d: "Escribe el nombre de tu ruta para encontrarla al instante." },
-                    { icon: <MapPin className="w-4 h-4" />, t: "Seleccionar ruta", d: "Toca una ruta para resaltarla en el mapa y ver sus paradas y buses." },
+                    { icon: <MapPin className="w-4 h-4" />, t: "Seleccionar ruta", d: "Toca una ruta para resaltarla en el mapa y ver sus paradas y buses. Aparecen primero tus favoritas y las que tienen buses en vivo." },
                     { icon: <LocateFixed className="w-4 h-4" />, t: "Mi ubicación", d: "Centra el mapa en ti. Así los buses se ordenan del más cercano y ves cuánto tardan en llegar a ti." },
                     { icon: <Clock className="w-4 h-4" />, t: "Tiempo de llegada (ETA)", d: "Minutos estimados que falta para que el bus llegue a tu ubicación o parada." },
                     { icon: <LocateFixed className="w-4 h-4" />, t: "Seguir un bus", d: "Elige un bus y el mapa lo seguirá automáticamente mientras se mueve." },
