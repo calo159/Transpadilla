@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useCrearParada, useAsignarParada, useDeleteParada,
@@ -6,11 +6,14 @@ import {
   type Ruta, type Parada,
 } from "@workspace/api-client";
 import { Plus, Route, MapPin, Pencil, Trash2 } from "lucide-react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useLeafletMap } from "@/hooks/useLeafletMap";
 import { apiFetch } from "@/lib/api";
 import type { ConfirmOpts } from "@/components/ConfirmDialog";
 import type { PromptOpts } from "@/components/PromptDialog";
@@ -39,15 +42,63 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
   const [asignarOrden, setAsignarOrden] = useState("0");
   const [query, setQuery] = useState("");
 
+  // ── Mini-mapa selector: el admin toca un punto y esa es la ubicación de la parada ──
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useLeafletMap(mapContainerRef, { zoom: 13 });
+  const nuevoMarkerRef = useRef<L.Marker | null>(null);
+  const paradasLayerRef = useRef<L.LayerGroup | null>(null);
+
+  // Clic en el mapa → fija la ubicación de la nueva parada.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const t = setTimeout(() => map.invalidateSize(), 80); // el tab acaba de montarse
+    const onClick = (e: L.LeafletMouseEvent) => {
+      setLat(e.latlng.lat.toFixed(6));
+      setLng(e.latlng.lng.toFixed(6));
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="font-size:26px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))">📍</div>`,
+        iconSize: [26, 26], iconAnchor: [13, 26],
+      });
+      if (nuevoMarkerRef.current) nuevoMarkerRef.current.setLatLng(e.latlng);
+      else nuevoMarkerRef.current = L.marker(e.latlng, { icon }).addTo(map);
+      map.panTo(e.latlng);
+    };
+    map.on("click", onClick);
+    return () => { clearTimeout(t); map.off("click", onClick); };
+  }, [mapRef]);
+
+  // Dibuja las paradas existentes como referencia (puntos pequeños, no interactivos).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    paradasLayerRef.current?.remove();
+    const grupo = L.layerGroup();
+    paradas.forEach((p) => {
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="width:10px;height:10px;border-radius:50%;background:#4BA9D8;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>`,
+        iconSize: [10, 10], iconAnchor: [5, 5],
+      });
+      L.marker([p.latitud, p.longitud], { icon, interactive: false }).bindTooltip(p.nombre).addTo(grupo);
+    });
+    grupo.addTo(map);
+    paradasLayerRef.current = grupo;
+    return () => { grupo.remove(); };
+  }, [paradas, mapRef]);
+
   const crear = async () => {
-    if (!nombre.trim() || !lat || !lng) { toast({ title: "Completa todos los campos", variant: "destructive" }); return; }
+    if (!nombre.trim()) { toast({ title: "Escribe el nombre de la parada", variant: "destructive" }); return; }
+    if (!lat || !lng) { toast({ title: "Toca el mapa para ubicar la parada", variant: "destructive" }); return; }
     const latNum = parseFloat(lat); const lngNum = parseFloat(lng);
-    if (isNaN(latNum) || isNaN(lngNum)) { toast({ title: "Latitud y longitud deben ser números", variant: "destructive" }); return; }
+    if (isNaN(latNum) || isNaN(lngNum)) { toast({ title: "Ubicación inválida; vuelve a tocar el mapa", variant: "destructive" }); return; }
     try {
       await crearParada.mutateAsync({ data: { nombre: nombre.trim(), latitud: latNum, longitud: lngNum } });
       queryClient.invalidateQueries({ queryKey: getGetTodasParadasQueryKey() });
       queryClient.invalidateQueries({ queryKey: ["stats"] });
       setNombre(""); setLat(""); setLng("");
+      nuevoMarkerRef.current?.remove(); nuevoMarkerRef.current = null;
       toast({ title: "Parada creada" });
     } catch {
       toast({ title: "Error al crear la parada", variant: "destructive" });
@@ -121,17 +172,25 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
               <Label className="text-xs mb-1.5">Nombre de la parada</Label>
               <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Terminal Central" className={inputCls} data-testid="input-parada-nombre" />
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-xs mb-1.5">Latitud</Label>
-                <Input value={lat} onChange={(e) => setLat(e.target.value)} placeholder="11.5444" className={`${inputCls} font-mono`} inputMode="decimal" data-testid="input-parada-lat" />
-              </div>
-              <div>
-                <Label className="text-xs mb-1.5">Longitud</Label>
-                <Input value={lng} onChange={(e) => setLng(e.target.value)} placeholder="-72.9072" className={`${inputCls} font-mono`} inputMode="decimal" data-testid="input-parada-lng" />
-              </div>
+            <div>
+              <Label className="text-xs mb-1.5 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-sky-400" /> Ubicación — toca el mapa donde está la parada
+              </Label>
+              <div
+                ref={mapContainerRef}
+                className="w-full h-64 rounded-xl overflow-hidden border border-border"
+                data-testid="map-parada-picker"
+              />
             </div>
-            <p className="text-xs text-muted-foreground">Centro de Riohacha: Lat 11.5444, Lng -72.9072</p>
+            {lat && lng ? (
+              <p className="text-xs text-muted-foreground">
+                Punto elegido: <span className="font-mono text-foreground">{lat}, {lng}</span>
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Aún no has elegido un punto. Toca el mapa para ubicar la parada (los puntos celestes son las paradas ya creadas).
+              </p>
+            )}
             <Button onClick={crear} disabled={crearParada.isPending} className="w-full h-11 rounded-xl" data-testid="button-crear-parada">
               <Plus className="w-4 h-4 mr-2" />{crearParada.isPending ? "Creando..." : "Crear parada"}
             </Button>
