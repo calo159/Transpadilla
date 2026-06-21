@@ -783,7 +783,7 @@ export default function Pasajero() {
       </div>
 
       {/* Contenido del sheet (scrollable) */}
-      <div className="flex-1 overflow-y-auto px-4 pb-safe min-h-0">
+      <div className="flex-1 overflow-y-auto px-4 pb-safe min-h-0 flex flex-col">
         {/* Ruta seleccionada */}
         {selectedRuta && (
           <div className="mb-3 rounded-xl border p-3" style={{ borderColor: selectedRuta.color + "60", background: selectedRuta.color + "0D" }}>
@@ -1024,6 +1024,14 @@ export default function Pasajero() {
               <ChevronRight className="w-4 h-4 text-primary" />
             </button>
           )}
+        </div>
+
+        {/* Pie de marca: ancla el fondo para que el espacio sobrante no se vea vacío */}
+        <div className="mt-auto pt-6 pb-8 flex flex-col items-center gap-1.5 opacity-40">
+          <LogoTP size={26} />
+          <p className="text-[10px] font-semibold tracking-widest text-muted-foreground">
+            TRANSPADILLA · RIOHACHA
+          </p>
         </div>
       </div>
     </div>
