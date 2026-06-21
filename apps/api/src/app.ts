@@ -5,13 +5,16 @@ import fs from "node:fs";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { rateLimit } from "./middleware/rate-limit";
 
 const app: Express = express();
 const isProd = process.env["NODE_ENV"] === "production";
 
 // Detrás del proxy de Render: permite obtener la IP real del cliente (rate-limit)
-// y respetar X-Forwarded-Proto (HTTPS).
+// y respetar X-Forwarded-Proto (HTTPS). "1" = un único proxy de confianza delante.
 app.set("trust proxy", 1);
+// No revelar el framework (reduce fingerprinting de atacantes).
+app.disable("x-powered-by");
 
 app.use(
   pinoHttp({
@@ -39,6 +42,8 @@ app.use((_req, res, next) => {
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("X-DNS-Prefetch-Control", "off");
   res.setHeader("Permissions-Policy", "geolocation=(self)");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
   if (isProd) {
     res.setHeader("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
   }
@@ -62,10 +67,26 @@ app.use(
   ),
 );
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Límites de tamaño de body: payloads pequeños bastan para esta API; cerrar la
+// puerta a cuerpos enormes evita un vector de DoS por memoria/parseo.
+app.use(express.json({ limit: "32kb" }));
+app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 
-app.use("/api", router);
+// Tope global por IP sobre toda la API (defensa contra floods de capa 7). Es
+// generoso para no afectar el sondeo normal del mapa (que refresca buses/ETA);
+// los endpoints sensibles (login, registro, etc.) tienen además límites estrictos.
+const apiLimiter = rateLimit({
+  ventanaMs: 60_000,
+  max: Number(process.env["API_RATE_LIMIT"] ?? 600),
+  mensaje: "Demasiadas solicitudes desde tu conexión. Espera un momento.",
+});
+// Los health checks de la plataforma NO se limitan: si un flood les diera 429,
+// Render creería que la app está caída y la reiniciaría (el flood causaría el apagón).
+app.use("/api", (req, res, next) => {
+  const ruta = req.originalUrl.split("?")[0];
+  if (ruta === "/api/healthz" || ruta === "/api/readyz") return next();
+  return apiLimiter(req, res, next);
+}, router);
 
 // 404 JSON para rutas de API no encontradas (en vez de caer al SPA o a HTML).
 app.use("/api", (_req, res) => {

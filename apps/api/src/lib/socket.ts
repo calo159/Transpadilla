@@ -18,6 +18,11 @@ export function initSocketIO(httpServer: HttpServer): Server {
   io = new Server(httpServer, {
     path: "/socket.io",
     cors: { origin: corsOrigin(), methods: ["GET", "POST"] },
+    // Endurecimiento anti-abuso:
+    maxHttpBufferSize: 10_000,   // los mensajes del cliente son diminutos ({rutaId})
+    pingTimeout: 20_000,         // corta conexiones zombi
+    pingInterval: 25_000,
+    connectTimeout: 10_000,      // no dejar handshakes colgados
   });
 
   // El socket es SOLO de difusión servidor→cliente para datos públicos del mapa.
@@ -26,7 +31,26 @@ export function initSocketIO(httpServer: HttpServer): Server {
   // ese handler es el único que emite "bus:ubicacion". Así un cliente no puede
   // falsear la ubicación de un bus conectándose al socket.
   io.on("connection", (socket) => {
+    // Throttle por socket: frena a un cliente que spamee eventos (flood de capa 7).
+    let ventana = Date.now();
+    let eventos = 0;
+    const permitido = (): boolean => {
+      const ahora = Date.now();
+      if (ahora - ventana > 10_000) { ventana = ahora; eventos = 0; }
+      eventos++;
+      if (eventos > 40) { socket.disconnect(true); return false; }
+      return true;
+    };
+
+    socket.onAny(() => permitido());
+
     socket.on("subscribe_ruta", ({ rutaId }: { rutaId: number }) => {
+      // Validar la entrada del cliente y acotar a una sola room a la vez (evita
+      // que un cliente acumule miles de rooms).
+      if (!Number.isInteger(rutaId) || rutaId <= 0) return;
+      for (const room of socket.rooms) {
+        if (room.startsWith("ruta_")) socket.leave(room);
+      }
       socket.join(`ruta_${rutaId}`);
     });
   });
