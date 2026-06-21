@@ -30,6 +30,15 @@ suite("API (integración)", () => {
     expect(res.status).toBe(401);
   });
 
+  // Regresión: la guarda global de conductores llegó a bloquear estas lecturas
+  // públicas (la vista del pasajero no cargaba). Deben responder 200 sin token.
+  it("las lecturas del mapa son públicas (rutas, paradas, stats)", async () => {
+    for (const ruta of ["/api/rutas", "/api/rutas/paradas/todas", "/api/stats"]) {
+      const res = await request(app).get(ruta);
+      expect(res.status, `${ruta} debe ser pública`).toBe(200);
+    }
+  });
+
   it("el registro público SIEMPRE crea rol pasajero (no admin)", async () => {
     const correo = `test_${Date.now()}@ejemplo.com`;
     const res = await request(app)
@@ -84,6 +93,8 @@ suite("API (integración)", () => {
 
   it("GET /api/rutas/:id/eta devuelve la forma esperada", async () => {
     const rutas = await request(app).get("/api/rutas");
+    expect(rutas.status).toBe(200);
+    expect(Array.isArray(rutas.body)).toBe(true);
     const rutaId = rutas.body[0]?.id;
     if (!rutaId) return; // sin rutas sembradas, nada que comprobar
     const res = await request(app).get(`/api/rutas/${rutaId}/eta`);
