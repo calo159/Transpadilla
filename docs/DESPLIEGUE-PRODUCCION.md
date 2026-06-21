@@ -32,7 +32,7 @@ Todo en **un solo servidor** (DigitalOcean/Hetzner/AWS Lightsail, ~US$6–12/mes
    ```bash
    docker compose up -d --build
    ```
-   Esto inicia PostgreSQL + Django + el servidor web (que sirve el frontend).
+   Esto inicia PostgreSQL + el servidor web (API + WebSockets + sirve el frontend).
 4. **HTTPS + dominio**: pon **Caddy** o **Nginx** como proxy inverso delante del
    puerto 8080, apuntando tu dominio. Caddy saca el certificado HTTPS solo:
    ```
@@ -66,15 +66,12 @@ Todo en **un solo servidor** (DigitalOcean/Hetzner/AWS Lightsail, ~US$6–12/mes
 
 | Variable | Servicio | Para qué |
 |----------|----------|----------|
-| `DATABASE_URL` | Node + Django | Conexión a PostgreSQL |
+| `DATABASE_URL` | Node | Conexión a PostgreSQL |
 | `JWT_SECRET` | Node | Firma de sesiones (obligatorio en prod) |
-| `DJANGO_SECRET_KEY` | Django | Obligatorio si `DJANGO_DEBUG=False` |
-| `TRAFICO_URL` | Node | A dónde apunta el proxy de tráfico |
 | `SEED_DEMO` | Node | `false` = arranque limpio (solo admin) |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Node | Admin inicial en arranque limpio |
 | `CORS_ORIGIN` | Node | Orígenes permitidos (opcional) |
 | `VITE_MAP_TILES_URL` / `VITE_OSRM_URL` | Frontend (build) | Proveedor de mapas/rutas |
-| `DJANGO_ALLOWED_HOSTS` | Django | Hosts permitidos |
 
 > ⚠️ Los Dockerfiles y `docker-compose.yml` son una base lista para usar; prueba
 > `docker compose build` en el servidor destino antes de la puesta en marcha.

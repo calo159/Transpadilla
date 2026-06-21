@@ -5,6 +5,7 @@ import busesRouter from "./buses";
 import conductoresRouter from "./conductores";
 import rutasRouter from "./rutas";
 import paradasRouter from "./paradas";
+import etaRouter from "./eta";
 import statsRouter from "./stats";
 import seedRouter from "./seed";
 
@@ -16,6 +17,7 @@ router.use(busesRouter);
 router.use(conductoresRouter);
 router.use(rutasRouter);
 router.use(paradasRouter);
+router.use(etaRouter);
 router.use(statsRouter);
 router.use(seedRouter);
 

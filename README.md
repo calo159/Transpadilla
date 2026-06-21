@@ -1,8 +1,8 @@
 # 🚌 TransPadilla — Rastreo de Transporte Público en Tiempo Real
 
 **Moviendo la Ciudad.** Sistema web para rastrear los buses del servicio de
-transporte público de **Riohacha, La Guajira** en tiempo real, con monitoreo de
-tráfico calculado a partir de la velocidad real de los buses.
+transporte público de **Riohacha, La Guajira** en tiempo real, con estimación de
+llegada del próximo bus (ETA) a cada parada.
 
 
 
@@ -16,18 +16,16 @@ tráfico calculado a partir de la velocidad real de los buses.
 
 En Riohacha no existe forma de saber **dónde está el bus** ni **cuánto falta para
 que pase**. Los pasajeros esperan sin información, los conductores no reportan
-novedades y la empresa no tiene visibilidad de su flota ni del estado de las vías.
+novedades y la empresa no tiene visibilidad de su flota.
 
 **TransPadilla** resuelve esto con tres vistas según el usuario:
 
 - **Pasajero** (sin necesidad de cuenta): abre el mapa y ve los buses moverse en
-  vivo, las rutas, las paradas y los tiempos. Botón de atención al cliente por
-  WhatsApp.
+  vivo, las rutas, las paradas y el **tiempo estimado de llegada**. Botón de
+  atención al cliente por WhatsApp.
 - **Conductor**: inicia su recorrido, transmite su ubicación GPS y reporta
   novedades (accidente, desvío, demora) que los pasajeros ven al instante.
-- **Administrador**: gestiona rutas, paradas y buses, y monitorea el **tráfico**
-  de la ciudad como un mapa tipo Google (verde = fluido, amarillo = lento,
-  rojo = detenido).
+- **Administrador**: gestiona rutas, paradas, buses y conductores.
 
 El destinatario real es la **empresa TransPadilla**, como herramienta para mejorar y supervisar el servicio.
 
@@ -44,44 +42,39 @@ El destinatario real es la **empresa TransPadilla**, como herramienta para mejor
    lo asigna el administrador.
 4. **Panel de administración (CRUD)** — gestión de rutas, paradas, buses y
    conductores con persistencia en base de datos.
-5. **Monitoreo de tráfico (microservicio Python/Django)** — clasifica cada tramo
-   de vía según la velocidad real de los buses y lo colorea en el mapa.
-6. **ETA "próximo bus en ~X min"** — el microservicio Python estima el tiempo de
-   llegada del próximo bus a cada parada (distancia Haversine ÷ velocidad real).
-7. **Comodidad del pasajero** — rutas favoritas, "seguir mi bus" (el mapa lo
+5. **ETA "próximo bus en ~X min"** — el backend estima el tiempo de llegada del
+   próximo bus a cada parada (distancia Haversine ÷ velocidad real).
+6. **Comodidad del pasajero** — rutas favoritas, "seguir mi bus" (el mapa lo
    sigue), botón de ubicación y ocupación visible en cada bus.
+7. **Seguridad y calidad** — autorización por rol en el backend, cambio de
+   contraseña self-service, pruebas automatizadas (Vitest) e integración continua.
 
 ---
 
 ## 🧱 Arquitectura y tecnologías
 
 ```
-┌──────────────┐   WebSocket/HTTP   ┌────────────────┐   proxy /api/trafico  ┌──────────────────┐
-│   Frontend   │ ─────────────────► │   API Server   │ ────────────────────► │  Microservicio   │
-│ React + Vite │                    │ Express + IO   │                       │  Tráfico (Python)│
-│  (Leaflet)   │ ◄───────────────── │   (Node.js)    │ ◄──────────────────── │  Django + DRF    │
-└──────────────┘                    └───────┬────────┘                       └────────┬─────────┘
-                                            │                                         │
-                                            ▼                                         ▼
-                                    ┌─────────────────────────────────────────────────┐
-                                    │              PostgreSQL (una sola base)           │
-                                    └─────────────────────────────────────────────────┘
+┌──────────────┐   WebSocket/HTTP   ┌────────────────┐
+│   Frontend   │ ─────────────────► │   API Server   │
+│ React + Vite │                    │ Express + IO   │
+│  (Leaflet)   │ ◄───────────────── │   (Node.js)    │
+└──────────────┘                    └───────┬────────┘
+                                            │
+                                            ▼
+                                    ┌────────────────┐
+                                    │   PostgreSQL   │
+                                    └────────────────┘
 ```
 
-- **Microservicio de Tráfico (Python):** **Django 5** + **Django REST Framework**,
-  `psycopg2`, `python-dotenv`. Expone una API REST (`/api/estado/`,
-  `/api/procesar/`) y contiene la lógica de negocio del proyecto: genera los tramos
-  de vía dinámicamente desde las rutas, asigna cada bus al tramo más cercano
-  (distancia punto-a-segmento con fórmula de Haversine) y clasifica la congestión.
+Un **único servicio Node** sirve la API, los WebSockets, el cálculo del ETA y el
+frontend ya construido (mismo dominio, sin CORS). Más simple de operar y desplegar.
+
 - **Frontend:** React + Vite + TypeScript, Leaflet (mapas), TanStack Query,
   Tailwind, PWA instalable.
-- **API Server:** Node.js + Express + Socket.IO (tiempo real) + Drizzle ORM.
-- **Base de datos:** PostgreSQL (compartida entre el API Node y el microservicio
-  Python, que la lee con modelos `managed = False`).
-
-> El componente **Python/Django** es responsable de todo el módulo de tráfico:
-> modelos, migraciones, servicio de clasificación y API REST. Ver
-> [`services/trafico/`](services/trafico/).
+- **API Server:** Node.js + Express + Socket.IO (tiempo real) + Drizzle ORM. Sirve
+  el frontend en producción y calcula el ETA del próximo bus (Haversine).
+- **Base de datos:** PostgreSQL.
+- **Calidad:** TypeScript estricto, pruebas con Vitest + Supertest y CI en GitHub Actions.
 
 ---
 
@@ -89,7 +82,6 @@ El destinatario real es la **empresa TransPadilla**, como herramienta para mejor
 
 ### Requisitos
 - **Node.js 20+** y **pnpm** — `npm install -g pnpm`
-- **Python 3.12+**
 - **PostgreSQL 14+**
 
 ### 1. Base de datos
@@ -121,21 +113,14 @@ Cargar datos demo (con el API corriendo):
 curl -X POST http://localhost:8080/api/seed
 ```
 
-### 4. Microservicio de Tráfico (Python/Django)
+### Pruebas
 ```bash
-cd services/trafico
-python -m venv venv
-venv\Scripts\activate        # Windows   (source venv/bin/activate en Linux/Mac)
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver 127.0.0.1:8000
+pnpm --filter @workspace/api run test   # unitarias siempre; integración si hay DATABASE_URL
 ```
 
 ### En Windows (atajo)
-Hay scripts que automatizan todo lo anterior:
 ```powershell
-./configurar-trafico.ps1   # solo la primera vez (venv + dependencias + migraciones)
-./iniciar.ps1              # arranca frontend + API + Django juntos
+./iniciar.ps1   # arranca API + frontend juntos
 ```
 Luego abre **http://localhost:5173**.
 
@@ -150,27 +135,24 @@ Luego abre **http://localhost:5173**.
 
 ## ☁️ Despliegue en Render (producción)
 
-El repo incluye un **Blueprint** ([`render.yaml`](render.yaml)) que despliega los
-tres componentes con un solo clic:
+El repo incluye un **Blueprint** ([`render.yaml`](render.yaml)) que despliega todo
+con un solo clic:
 
 | Recurso | Qué es |
 |---------|--------|
 | `transpadilla-web` | Node: API + Socket.IO **y** sirve el frontend React ya construido (un solo dominio con HTTPS). Render detecta pnpm por el `pnpm-lock.yaml` y el campo `packageManager`. |
-| `transpadilla-trafico` | Django + Gunicorn: microservicio de tráfico. |
-| `transpadilla-db` | PostgreSQL gestionado, compartido por ambos. |
+| `transpadilla-db` | PostgreSQL gestionado. |
 
 ### Pasos
 
 1. **Sube el repo a GitHub** (el `.env` no se sube; los secretos se configuran en
    Render). Verifica que `.env` siga en `.gitignore`.
 2. En [Render](https://render.com): **New → Blueprint** → conecta tu repositorio →
-   **Apply**. Render lee `render.yaml`, crea los 3 recursos y los enlaza
-   automáticamente: la `DATABASE_URL`, los secretos `JWT_SECRET` /
-   `DJANGO_SECRET_KEY` y la `TRAFICO_URL` (que apunta del backend al microservicio
-   Django) se configuran **solos** — sin pasos manuales.
-3. Abre la URL de `transpadilla-web`. En el primer arranque, el servidor **crea las
-   tablas y carga los datos demo automáticamente** (`SEED_ON_START=true`), así que
-   ya puedes entrar con las cuentas demo de arriba.
+   **Apply**. Render lee `render.yaml`, crea ambos recursos y los enlaza: la
+   `DATABASE_URL` y el `JWT_SECRET` se configuran **solos**.
+3. Define `ADMIN_EMAIL` / `ADMIN_PASSWORD` cuando Render los pida (van como
+   `sync:false`, no en el repo); con `SEED_DEMO=false` la base arranca limpia y
+   crea solo ese administrador.
 
 > **Nota sobre el plan gratuito:** los servicios free de Render se "duermen" tras
 > unos minutos de inactividad (la primera petición tarda ~30 s en despertar) y la
@@ -178,10 +160,9 @@ tres componentes con un solo clic:
 > suficiente; para uso institucional 24/7 se recomienda el plan de pago o un VPS.
 
 ### Migraciones / esquema
-- Las tablas del backend Node se crean solas al arrancar (idempotente, ver
-  [`init-db.ts`](apps/api/src/lib/init-db.ts)) — **no** se usa
-  `drizzle-kit push` en producción para no interferir con las tablas de Django.
-- Las tablas de Django se crean en su `buildCommand` con `manage.py migrate`.
+- Las tablas se crean solas al arrancar (idempotente, ver
+  [`init-db.ts`](apps/api/src/lib/init-db.ts)); en local puedes usar
+  `pnpm --filter @workspace/db push`.
 
 ---
 
@@ -189,25 +170,24 @@ tres componentes con un solo clic:
 
 ```
 apps/
-  web/              Frontend React (mapa, login, conductor, admin, tráfico)
-  api/              API Node.js (Express + Socket.IO + Drizzle)
+  web/              Frontend React (mapa, login, conductor, admin)
+  api/              API Node.js (Express + Socket.IO + Drizzle + ETA), con tests
 packages/
   db/               Esquema de base de datos (Drizzle ORM)
   api-client/       Hooks React generados (TanStack Query)
   api-types/        Tipos Zod generados
   api-spec/         Especificación OpenAPI + orval
-services/
-  trafico/          Microservicio Python/Django (tráfico + ETA)
 docs/
   PROPUESTA-ALCALDIA.md       Presupuesto y propuesta para la Alcaldía
   generar-propuesta-word.py   Genera la propuesta en formato Word (.docx)
   DESPLIEGUE-PRODUCCION.md    Guía de despliegue 24/7 (VPS / Render)
   CAPACITOR-ANDROID.md        App nativa Android para el conductor
+.github/workflows/ci.yml      Integración continua (typecheck, build, test, audit)
 ```
 
 > Los scripts `.ps1` de la raíz (`iniciar.ps1`, `iniciar-https.ps1`,
-> `configurar-trafico.ps1`, `habilitar-celular.ps1`) son lanzadores de Windows
-> pensados para ejecutarse desde la raíz; por eso se dejan ahí a propósito.
+> `habilitar-celular.ps1`) son lanzadores de Windows pensados para ejecutarse
+> desde la raíz; por eso se dejan ahí a propósito.
 
 ---
 

@@ -47,15 +47,6 @@ Start-Sleep -Seconds 2
 Write-Host "  -> Frontend (app)   http://localhost:5173" -ForegroundColor Green
 Start-Process powershell -ArgumentList "-NoExit","-Command","cd '$raiz'; pnpm --filter @workspace/web run dev"
 
-# Arrancar microservicio de Trafico (Django) si esta configurado
-$venvPy = Join-Path $raiz "services\trafico\venv\Scripts\python.exe"
-if (Test-Path $venvPy) {
-    Write-Host "  -> Trafico (Django) http://localhost:8000 (interno)" -ForegroundColor Green
-    Start-Process powershell -ArgumentList "-NoExit","-Command","cd '$raiz\services\trafico'; .\venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000"
-} else {
-    Write-Host "  -> Trafico: sin configurar (ejecuta 'configurar-trafico.ps1' una vez)" -ForegroundColor DarkYellow
-}
-
 Write-Host ""
 Write-Host "  Listo." -ForegroundColor Cyan
 Write-Host ""

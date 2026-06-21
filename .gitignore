@@ -53,14 +53,9 @@ Thumbs.db
 .env.local
 .env.*.local
 
-# Python / Django
-venv/
-services/trafico/venv/
+# Python (solo el generador de la propuesta en docs/)
 __pycache__/
 *.py[cod]
-*.sqlite3
-services/trafico/static/
-services/trafico/staticfiles/
 
 # Respaldos comprimidos
 *.zip

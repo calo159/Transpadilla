@@ -17,6 +17,6 @@ ENV NODE_ENV=production
 # Copiamos el repo ya construido (incluye node_modules y los dist/).
 COPY --from=build /app ./
 EXPOSE 8080
-# El servidor crea las tablas y arranca. DATABASE_URL, JWT_SECRET y TRAFICO_URL
-# se inyectan por entorno (ver docker-compose.yml).
+# El servidor crea las tablas y arranca. DATABASE_URL y JWT_SECRET se inyectan
+# por entorno (ver docker-compose.yml).
 CMD ["pnpm", "--filter", "@workspace/api", "start"]

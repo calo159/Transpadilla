@@ -1,7 +1,7 @@
 # ============================================================================
 #  TransPadilla — Auto-hospedaje en un solo servidor (VPS) con Docker Compose
-#  Alternativa económica a los 3 servicios de pago de Render: todo corre en un
-#  único VPS (~US$6–12/mes). Levanta base de datos + Django + web (Node).
+#  Alternativa económica a Render: todo corre en un único VPS (~US$6–12/mes).
+#  Levanta base de datos + web (Node: API + Socket.IO + frontend).
 #
 #  Uso:
 #    1. Copia .env.example a .env y completa los valores (¡secretos fuertes!).
@@ -25,20 +25,6 @@ services:
       timeout: 5s
       retries: 5
 
-  trafico:
-    build:
-      context: .
-      dockerfile: services/trafico/Dockerfile
-    restart: unless-stopped
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-transpadilla}
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?define DJANGO_SECRET_KEY en .env}
-      DJANGO_DEBUG: "False"
-      DJANGO_ALLOWED_HOSTS: "*"
-    depends_on:
-      db:
-        condition: service_healthy
-
   web:
     build:
       context: .
@@ -49,8 +35,7 @@ services:
       PORT: "8080"
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-transpadilla}
       JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET en .env}
-      TRAFICO_URL: http://trafico:8000
-      # Producción real (Alcaldía): descomenta para arrancar sin datos demo.
+      # Producción real: descomenta para arrancar sin datos demo.
       # SEED_DEMO: "false"
       # ADMIN_EMAIL: ${ADMIN_EMAIL}
       # ADMIN_PASSWORD: ${ADMIN_PASSWORD}
@@ -59,8 +44,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      trafico:
-        condition: service_started
 
 volumes:
   pgdata:

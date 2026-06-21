@@ -1,18 +1,14 @@
 # ============================================================================
 #  TransPadilla — Render Blueprint (Infrastructure as Code)
 #  Despliega TODO el sistema en Render con un solo archivo:
-#    1. transpadilla-web      → Node (API Express + Socket.IO + frontend React)
-#    2. transpadilla-trafico  → Django (microservicio de tráfico)
-#    3. transpadilla-db       → PostgreSQL gestionado (compartido por ambos)
+#    1. transpadilla-web → Node (API Express + Socket.IO + frontend React)
+#    2. transpadilla-db  → PostgreSQL gestionado
 #
 #  Cómo usar:
 #    1. Sube este repo a GitHub.
 #    2. En Render: New → Blueprint → conecta el repo → Apply.
-#    3. Render crea los 3 recursos y los enlaza automáticamente.
-#    4. ÚNICO paso manual: copia la URL pública del servicio
-#       "transpadilla-trafico" (https://transpadilla-trafico.onrender.com)
-#       y pégala en la variable TRAFICO_URL del servicio "transpadilla-web".
-#       (Está marcada como sync:false justamente para que la pegues tú.)
+#    3. Render crea ambos recursos y los enlaza automáticamente.
+#    4. Define ADMIN_EMAIL / ADMIN_PASSWORD (sync:false) cuando Render los pida.
 # ============================================================================
 
 databases:
@@ -59,34 +55,3 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
-      # URL publica del microservicio Django. Nota: fromService 'property: host'
-      # devuelve solo el nombre corto ("transpadilla-trafico"), no resoluble; por
-      # eso usamos la URL publica completa, que el proxy alcanza por HTTPS.
-      - key: TRAFICO_URL
-        value: https://transpadilla-trafico.onrender.com
-
-  # ──────────────────────────────────────────────────────────────────────────
-  #  Microservicio de tráfico (Django + Gunicorn)
-  # ──────────────────────────────────────────────────────────────────────────
-  - type: web
-    name: transpadilla-trafico
-    runtime: python
-    plan: free
-    region: oregon
-    rootDir: services/trafico
-    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
-    startCommand: gunicorn trafico_config.wsgi:application --bind 0.0.0.0:$PORT
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: transpadilla-db
-          property: connectionString
-      - key: DJANGO_SECRET_KEY
-        generateValue: true
-      - key: DJANGO_DEBUG
-        value: "False"
-      # Django acepta cualquier subdominio de onrender.com (prefijo con punto).
-      - key: DJANGO_ALLOWED_HOSTS
-        value: ".onrender.com"
-      - key: PYTHON_VERSION
-        value: "3.12.6"

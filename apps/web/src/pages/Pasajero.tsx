@@ -273,13 +273,13 @@ export default function Pasajero() {
     return () => clearTimeout(t);
   }, [sidebarOpen, sheetState]);
 
-  // ETA del próximo bus por parada de la ruta seleccionada (lo calcula Django).
+  // ETA del próximo bus por parada de la ruta seleccionada (lo calcula el API Node).
   useEffect(() => {
     if (selectedRutaId === null) { setEtaPorParada({}); return; }
     let cancelado = false;
     const cargarEta = async () => {
       try {
-        const res = await fetch(`/api/trafico/eta/?ruta_id=${selectedRutaId}`);
+        const res = await fetch(`/api/rutas/${selectedRutaId}/eta`);
         if (!res.ok || cancelado) return;
         const data = (await res.json()) as {
           paradas: { parada_id: number; eta_min: number | null; placa: string | null }[];
@@ -289,7 +289,7 @@ export default function Pasajero() {
           if (p.eta_min !== null && p.placa) mapa[p.parada_id] = { eta: p.eta_min, placa: p.placa };
         }
         if (!cancelado) setEtaPorParada(mapa);
-      } catch { /* tráfico no disponible — se ignora */ }
+      } catch { /* ETA no disponible — se ignora */ }
     };
     cargarEta();
     const t = setInterval(cargarEta, 15000);
@@ -636,6 +636,7 @@ export default function Pasajero() {
                   onClick={() => setLocation(user.rol === "admin" ? "/admin" : "/conductor")}
                   className="h-7 px-2 text-muted-foreground hover:text-primary"
                   title="Ir al panel"
+                  aria-label="Ir al panel"
                 >
                   <Shield className="w-3.5 h-3.5" />
                 </Button>
@@ -645,6 +646,7 @@ export default function Pasajero() {
                 onClick={() => { clearAuth(); window.location.reload(); }}
                 className="h-7 px-2 text-muted-foreground hover:text-foreground"
                 title="Cerrar sesión"
+                aria-label="Cerrar sesión"
               >
                 <LogOut className="w-3.5 h-3.5" />
               </Button>
@@ -736,7 +738,7 @@ export default function Pasajero() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            {/* Próximo bus (ETA calculado por Django) */}
+            {/* Próximo bus (ETA calculado por el backend) */}
             {proximoBus && (
               <div className="flex items-center gap-2 mb-2.5 px-2.5 py-2 rounded-lg" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
                 <Clock className="w-4 h-4 text-green-400 flex-shrink-0" />
@@ -1157,6 +1159,7 @@ export default function Pasajero() {
           className="absolute bottom-[208px] md:bottom-36 left-3 z-[1000] flex items-center justify-center w-11 h-11 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg hover:bg-secondary active:scale-95 transition-all"
           title="¿Cómo funciona?"
           aria-label="¿Cómo funciona?"
+          aria-label="¿Cómo funciona?"
         >
           <HelpCircle className="w-5 h-5" style={{ color: "var(--tp-sky)" }} />
         </button>
@@ -1167,6 +1170,7 @@ export default function Pasajero() {
           disabled={locating}
           className="absolute bottom-36 md:bottom-20 left-3 z-[1000] flex items-center justify-center w-11 h-11 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg hover:bg-secondary active:scale-95 transition-all disabled:opacity-60"
           title="Centrar en mi ubicación"
+          aria-label="Centrar en mi ubicación"
           aria-label="Centrar en mi ubicación"
         >
           {locating
@@ -1205,6 +1209,7 @@ export default function Pasajero() {
           className="absolute bottom-20 md:bottom-4 right-3 z-[1000] flex items-center gap-2 shadow-xl rounded-xl px-3 py-2 text-xs font-bold transition-opacity hover:opacity-90"
           style={{ background: "#25D366", color: "white" }}
           title="Atención al cliente por WhatsApp"
+          aria-label="Atención al cliente por WhatsApp"
         >
           <MessageCircle className="w-4 h-4" />
           <span className="hidden md:inline">Atención al cliente</span>
