@@ -42,8 +42,10 @@ Las defensas de arriba frenan abuso por IP y floods de capa 7, pero **ningún
 servidor Node detiene por sí solo un DDoS volumétrico** (gigabits de tráfico de
 miles de IPs). Para eso, antes de ir a producción real:
 
-1. **Pon Cloudflare (gratis) delante del dominio** — absorbe el grueso del
-   tráfico, da WAF, rate limiting de borde, "I'm under attack mode" y caché.
+1. **Pon Cloudflare (gratis) delante del dominio** — guía completa en
+   [CLOUDFLARE.md](CLOUDFLARE.md). La app ya está preparada: con
+   `BEHIND_CLOUDFLARE=true` usa la IP real del usuario para el rate-limit, y con
+   `CLOUDFLARE_ORIGIN_SECRET` rechaza el tráfico que intente esquivar Cloudflare.
 2. Activa las protecciones de la plataforma (Render/VPS) y, en VPS, un proxy
    (Caddy/Nginx) con límites de conexión + `fail2ban`.
 3. Mantén `API_RATE_LIMIT` ajustado a tu tráfico real.

@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { clienteIp } from "../lib/client-ip";
 
 interface Registro {
   count: number;
@@ -29,7 +30,7 @@ export function rateLimit(opts: { ventanaMs: number; max: number; mensaje?: stri
   limpiar.unref?.(); // no mantener vivo el proceso por este timer
 
   return (req: Request, res: Response, next: NextFunction): void => {
-    const ip = req.ip || req.socket.remoteAddress || "desconocida";
+    const ip = clienteIp(req);
     const ahora = Date.now();
     let reg = store.get(ip);
     if (!reg || reg.reset < ahora) {

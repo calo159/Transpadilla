@@ -10,9 +10,10 @@ import { rateLimit } from "./middleware/rate-limit";
 const app: Express = express();
 const isProd = process.env["NODE_ENV"] === "production";
 
-// Detrás del proxy de Render: permite obtener la IP real del cliente (rate-limit)
-// y respetar X-Forwarded-Proto (HTTPS). "1" = un único proxy de confianza delante.
-app.set("trust proxy", 1);
+// Proxies de confianza delante de la app. Con Cloudflare → Render hay 2 saltos;
+// solo Render es 1. (La IP real del cliente para rate-limit la da client-ip.ts.)
+const detrasDeCloudflare = process.env["BEHIND_CLOUDFLARE"] === "true";
+app.set("trust proxy", detrasDeCloudflare ? 2 : 1);
 // No revelar el framework (reduce fingerprinting de atacantes).
 app.disable("x-powered-by");
 
@@ -80,6 +81,20 @@ const apiLimiter = rateLimit({
   max: Number(process.env["API_RATE_LIMIT"] ?? 600),
   mensaje: "Demasiadas solicitudes desde tu conexión. Espera un momento.",
 });
+// Bloqueo OPCIONAL de acceso directo al origen: si se define CLOUDFLARE_ORIGIN_SECRET,
+// se exige que cada request a /api traiga ese secreto en una cabecera (que Cloudflare
+// inyecta vía Transform Rule). Así un atacante no puede esquivar Cloudflare golpeando
+// la URL de Render directamente. Los health checks quedan exentos (Render los hace directo).
+const originSecret = process.env["CLOUDFLARE_ORIGIN_SECRET"];
+if (originSecret) {
+  app.use("/api", (req, res, next) => {
+    const ruta = req.originalUrl.split("?")[0];
+    if (ruta === "/api/healthz" || ruta === "/api/readyz") return next();
+    if (req.headers["x-cf-origin-secret"] === originSecret) return next();
+    res.status(403).json({ error: "Acceso directo no permitido" });
+  });
+}
+
 // Los health checks de la plataforma NO se limitan: si un flood les diera 429,
 // Render creería que la app está caída y la reiniciaría (el flood causaría el apagón).
 app.use("/api", (req, res, next) => {
