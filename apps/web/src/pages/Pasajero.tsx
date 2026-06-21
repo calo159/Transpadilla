@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useGetRutas, useGetBuses, getGetBusesQueryKey } from "@workspace/api-client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -6,7 +6,7 @@ import { clearAuth, getUser } from "@/lib/auth";
 import {
   Bus, MapPin, LogOut, Radio, AlertTriangle, X,
   Search, Clock, LogIn, Shield, ChevronRight, ChevronUp,
-  Menu, MessageCircle, Instagram, Phone, LocateFixed, Loader2, Star, HelpCircle,
+  Menu, MessageCircle, Instagram, Phone, LocateFixed, Loader2, Star, HelpCircle, Navigation,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import { WHATSAPP_NUMERO, INSTAGRAM_URL, TARIFA_COP } from "@/lib/constants";
 import type { BusLocation, Novedad } from "@/lib/types";
 import { tiempoRelativo } from "@/lib/format";
 import { distanciaKm, velEfectiva } from "@/lib/geo";
+import { recomendarRuta, busMasCercano } from "@/lib/sugerencia";
 
 type SheetState = "collapsed" | "half" | "full";
 
@@ -32,6 +33,7 @@ export default function Pasajero() {
   const stopMarkersRef = useRef<Array<{ rutaId: number; marker: L.Marker }>>([]);
   const socketRef = useRef<Socket | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
+  const destinoMarkerRef = useRef<L.Marker | null>(null);
   const queryClient = useQueryClient();
 
   const [selectedRutaId, setSelectedRutaId] = useState<number | null>(null);
@@ -47,6 +49,10 @@ export default function Pasajero() {
   const [conectado, setConectado] = useState(true);
   const [locating, setLocating] = useState(false);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
+  // "¿A dónde vas?": el usuario arma el modo y toca el mapa para fijar su destino;
+  // la app recomienda la ruta y el bus más cercano de esa ruta en vivo.
+  const [modoDestino, setModoDestino] = useState(false);
+  const [destino, setDestino] = useState<{ lat: number; lng: number } | null>(null);
   // Rutas favoritas del pasajero (se recuerdan en localStorage y van arriba).
   const [favoritos, setFavoritos] = useState<number[]>(() => {
     try { return JSON.parse(localStorage.getItem("tp_favoritos") ?? "[]") as number[]; }
@@ -281,6 +287,44 @@ export default function Pasajero() {
     return () => clearTimeout(t);
   }, [sidebarOpen, sheetState]);
 
+  // Modo destino: mientras está armado, el siguiente toque en el mapa fija el
+  // destino, recomienda la ruta (la resalta/encuadra) y desarma el modo.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !modoDestino) return;
+    const container = map.getContainer();
+    container.style.cursor = "crosshair";
+    const onClick = (e: L.LeafletMouseEvent) => {
+      const p = { lat: e.latlng.lat, lng: e.latlng.lng };
+      setDestino(p);
+      setModoDestino(false);
+      const sug = recomendarRuta(rutas, p, userPos ?? undefined);
+      if (sug && selectedRutaId !== sug.ruta.id) handleSelectRuta(sug.ruta.id);
+      setSheetState("half");
+    };
+    map.on("click", onClick);
+    return () => { map.off("click", onClick); container.style.cursor = ""; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modoDestino, rutas, userPos]);
+
+  // Marcador del destino elegido (bandera). Se crea/mueve/elimina según `destino`.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!destino) {
+      destinoMarkerRef.current?.remove();
+      destinoMarkerRef.current = null;
+      return;
+    }
+    const icon = L.divIcon({
+      className: "",
+      html: `<div style="font-size:26px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))">📍</div>`,
+      iconSize: [26, 26], iconAnchor: [13, 26],
+    });
+    if (destinoMarkerRef.current) destinoMarkerRef.current.setLatLng([destino.lat, destino.lng]);
+    else destinoMarkerRef.current = L.marker([destino.lat, destino.lng], { icon }).bindPopup("Tu destino").addTo(map);
+  }, [destino]);
+
   // ETA del próximo bus por parada de la ruta seleccionada (lo calcula el API Node).
   useEffect(() => {
     if (selectedRutaId === null) { setEtaPorParada({}); return; }
@@ -335,6 +379,30 @@ export default function Pasajero() {
       return { bus: b, distKm, etaMin };
     })
     .sort((a, b) => (a.distKm ?? Infinity) - (b.distKm ?? Infinity));
+
+  // ── "¿A dónde vas?": recomendación de ruta + bus más cercano ────────────────
+  // Recalcula la ruta recomendada cuando cambia el destino, las rutas o el origen.
+  const sugerencia = useMemo(
+    () => (destino ? recomendarRuta(rutas, destino, userPos ?? undefined) : null),
+    [destino, rutas, userPos],
+  );
+  // El bus más cercano se deriva de `buses` → se actualiza solo con cada posición
+  // que llega por el socket (queda "en vivo").
+  const busSugerido = useMemo(() => {
+    if (!sugerencia) return null;
+    const ref = sugerencia.paradaOrigen ?? sugerencia.paradaDestino;
+    return busMasCercano(buses, sugerencia.ruta.id, { lat: ref.latitud, lng: ref.longitud });
+  }, [sugerencia, buses]);
+
+  const armarDestino = () => {
+    setModoDestino(true);
+    setSheetState("collapsed"); // libera el mapa para tocarlo (móvil)
+  };
+  const limpiarDestino = () => {
+    setModoDestino(false);
+    setDestino(null);
+    setSelectedRutaId(null);
+  };
 
   const cycleSheet = () => {
     setSheetState((s) => s === "collapsed" ? "half" : s === "half" ? "full" : "collapsed");
@@ -409,6 +477,82 @@ export default function Pasajero() {
 
   const sheetTransform = dragOffset !== null ? `translateY(${dragOffset}px)` : `translateY(${sheetTranslate})`;
 
+  const fmtDist = (km: number) => (km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`);
+
+  // Panel "¿A dónde vas?": botón para elegir destino y la tarjeta de resultado.
+  // Se muestra arriba de la lista, tanto en el sidebar de escritorio como en el sheet.
+  const panelDestino = !destino ? (
+    !modoDestino && (
+      <button
+        onClick={armarDestino}
+        className="w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl font-semibold text-sm transition-colors"
+        style={{ background: "rgba(245,194,0,0.12)", color: "var(--tp-yellow)", border: "1px solid rgba(245,194,0,0.3)" }}
+      >
+        <Navigation className="w-4 h-4" />
+        ¿A dónde vas? Elige tu destino en el mapa
+      </button>
+    )
+  ) : sugerencia ? (
+    <div className="rounded-xl border p-3.5" style={{ borderColor: sugerencia.ruta.color + "60", background: sugerencia.ruta.color + "0D" }}>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tu mejor ruta</span>
+        <button onClick={limpiarDestino} aria-label="Quitar destino" className="text-muted-foreground hover:text-foreground -mr-1 -mt-1 p-1">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: sugerencia.ruta.color + "22" }}>
+          <Bus style={{ color: sugerencia.ruta.color, width: 18, height: 18 }} />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-foreground truncate">Toma la {sugerencia.ruta.nombre}</p>
+          {sugerencia.paradaOrigen && sugerencia.dCaminaOrigenKm != null && (
+            <p className="text-[11px] text-muted-foreground truncate">
+              Camina ~{fmtDist(sugerencia.dCaminaOrigenKm)} hasta {sugerencia.paradaOrigen.nombre}
+            </p>
+          )}
+        </div>
+      </div>
+      {busSugerido ? (
+        <div className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
+          <span className="text-xs text-foreground">
+            Bus más cercano <span className="font-mono font-bold">{busSugerido.bus.placa}</span>:{" "}
+            <span className="font-bold text-green-400">{busSugerido.etaMin <= 0 ? "llegando" : `~${busSugerido.etaMin} min`}</span>
+          </span>
+          <button
+            onClick={() => seguirBus(busSugerido.bus.id)}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold flex-shrink-0"
+            style={siguiendoBusId === busSugerido.bus.id
+              ? { background: "var(--tp-sky)", color: "#001018" }
+              : { background: "rgba(75,169,216,0.15)", color: "var(--tp-sky)" }}
+          >
+            <LocateFixed className="w-3 h-3" />{siguiendoBusId === busSugerido.bus.id ? "Siguiendo" : "Seguir"}
+          </button>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground px-1">Esta ruta no tiene buses circulando ahora mismo.</p>
+      )}
+      {!userPos && (
+        <button onClick={locateMe} className="mt-2 text-[11px] font-semibold flex items-center gap-1" style={{ color: "var(--tp-sky)" }}>
+          <LocateFixed className="w-3 h-3" /> Activa tu ubicación para una mejor recomendación
+        </button>
+      )}
+    </div>
+  ) : (
+    <div className="rounded-xl border border-border bg-card p-3.5">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-sm font-semibold text-foreground">Ninguna ruta pasa cerca</span>
+        <button onClick={limpiarDestino} aria-label="Quitar destino" className="text-muted-foreground hover:text-foreground -mr-1 -mt-1 p-1">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <p className="text-xs text-muted-foreground">Ese punto queda lejos de las rutas actuales. Prueba con otro destino.</p>
+      <button onClick={armarDestino} className="mt-2 text-[11px] font-semibold flex items-center gap-1" style={{ color: "var(--tp-yellow)" }}>
+        <Navigation className="w-3 h-3" /> Elegir otro destino
+      </button>
+    </div>
+  );
+
   // ─── SIDEBAR DESKTOP ────────────────────────────────────────────────────────
   const DesktopSidebar = () => (
     <div
@@ -467,6 +611,8 @@ export default function Pasajero() {
             </button>
           )}
         </div>
+        {/* ¿A dónde vas? — recomendación por destino */}
+        <div className="mt-2.5">{panelDestino}</div>
       </div>
 
       {/* Lista de rutas */}
@@ -784,6 +930,8 @@ export default function Pasajero() {
 
       {/* Contenido del sheet (scrollable) */}
       <div className="flex-1 overflow-y-auto px-4 pb-safe min-h-0 flex flex-col">
+        {/* ¿A dónde vas? — recomendación por destino */}
+        {panelDestino && <div className="mb-3">{panelDestino}</div>}
         {/* Ruta seleccionada */}
         {selectedRuta && (
           <div className="mb-3 rounded-xl border p-3" style={{ borderColor: selectedRuta.color + "60", background: selectedRuta.color + "0D" }}>
@@ -1272,6 +1420,19 @@ export default function Pasajero() {
             ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
             : <LocateFixed className="w-5 h-5 text-primary" />}
         </button>
+
+        {/* Aviso flotante: modo "elegir destino" armado */}
+        {modoDestino && (
+          <div className="absolute top-16 md:top-3 left-1/2 -translate-x-1/2 z-[1001] flex items-center gap-2 rounded-xl px-3.5 py-2 shadow-xl"
+            style={{ background: "var(--tp-yellow)", color: "#1a1300" }}
+          >
+            <Navigation className="w-4 h-4" />
+            <span className="text-xs font-bold">Toca tu destino en el mapa</span>
+            <button onClick={() => setModoDestino(false)} className="ml-1 hover:opacity-70" aria-label="Cancelar">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* Chip "siguiendo bus" */}
         {busSeguido && (
