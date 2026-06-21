@@ -257,6 +257,23 @@
 /* Primary glow para estados activos */
 .tp-primary-glow { box-shadow: 0 0 16px rgba(23, 87, 194, 0.45); }
 
+/* Pulso de confirmación del marcador de destino (micro-interacción). */
+.tp-destino-pulse {
+  position: absolute;
+  left: 50%;
+  top: 64%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(245, 194, 0, 0.55);
+  animation: tp-pin-pulse 1.4s ease-out infinite;
+}
+@keyframes tp-pin-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(245, 194, 0, 0.5); opacity: 1; }
+  100% { box-shadow: 0 0 0 16px rgba(245, 194, 0, 0); opacity: 0.4; }
+}
+
 /* Gradiente de marca TransPadilla */
 .tp-gradient { background: linear-gradient(135deg, var(--tp-navy) 0%, #1757C2 100%); }
 .tp-gradient-sky { background: linear-gradient(135deg, #1757C2 0%, var(--tp-sky) 100%); }
