@@ -136,8 +136,15 @@ def main():
     r.bold = True
     r.font.color.rgb = AZUL
 
-    doc.save(SALIDA)
-    print(f"OK Word generado: {SALIDA}")
+    try:
+        doc.save(SALIDA)
+        print(f"OK Word generado: {SALIDA}")
+    except PermissionError:
+        alterno = os.path.join(AQUI, "PROPUESTA-ALCALDIA (nuevo).docx")
+        doc.save(alterno)
+        print(f"OK Word generado: {alterno}")
+        print("   (el archivo original estaba abierto en Word; ciérralo y vuelve a "
+              "ejecutar para sobrescribirlo)")
 
 
 if __name__ == "__main__":
