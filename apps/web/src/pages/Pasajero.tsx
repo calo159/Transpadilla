@@ -64,6 +64,8 @@ export default function Pasajero() {
   const dismissWelcome = () => {
     setShowWelcome(false);
     try { localStorage.setItem("tp_welcome_visto", "1"); } catch { /* ignore */ }
+    // Tras cerrar la guía, deja la lista de rutas abierta y a la vista (móvil).
+    setSheetState("full");
   };
   // Panel de ayuda "¿Cómo funciona?" — accesible en cualquier momento con el botón ?.
   const [showAyuda, setShowAyuda] = useState(false);
@@ -463,6 +465,16 @@ export default function Pasajero() {
 
       {/* Lista de rutas */}
       <div className="flex-1 overflow-y-auto py-2">
+        {!selectedRutaId && rutas.length > 0 && (
+          <div className="mx-3 mb-1 rounded-xl border p-3 flex items-start gap-2.5"
+            style={{ borderColor: "rgba(75,169,216,0.35)", background: "rgba(23,87,194,0.10)" }}>
+            <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "var(--tp-sky)" }} />
+            <div>
+              <p className="text-xs font-bold text-foreground">Elige tu ruta para empezar</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Haz clic en una ruta y verás el bus en vivo y en cuántos minutos llega.</p>
+            </div>
+          </div>
+        )}
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-4 py-2">
           Rutas disponibles {rutasFiltradas.length !== rutas.length && `(${rutasFiltradas.length})`}
         </p>
@@ -699,8 +711,17 @@ export default function Pasajero() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{rutas.length} rutas</span>
-            <ChevronUp className={`w-4 h-4 text-muted-foreground transition-transform ${sheetState === "full" ? "rotate-180" : ""}`} />
+            {sheetState === "collapsed" && !selectedRutaId ? (
+              <span className="text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 animate-pulse"
+                style={{ background: "rgba(75,169,216,0.18)", color: "var(--tp-sky)" }}>
+                Elige tu ruta <ChevronUp className="w-3.5 h-3.5" />
+              </span>
+            ) : (
+              <>
+                <span className="text-xs text-muted-foreground">{rutas.length} rutas</span>
+                <ChevronUp className={`w-4 h-4 text-muted-foreground transition-transform ${sheetState === "full" ? "rotate-180" : ""}`} />
+              </>
+            )}
           </div>
         </div>
       </button>
@@ -817,6 +838,16 @@ export default function Pasajero() {
         )}
 
         {/* Lista de rutas */}
+        {!selectedRutaId && rutas.length > 0 && (
+          <div className="mb-3 rounded-xl border p-3 flex items-start gap-2.5"
+            style={{ borderColor: "rgba(75,169,216,0.35)", background: "rgba(23,87,194,0.10)" }}>
+            <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "var(--tp-sky)" }} />
+            <div>
+              <p className="text-sm font-bold text-foreground">Elige tu ruta para empezar</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Toca una ruta y verás el bus en vivo y en cuántos minutos llega.</p>
+            </div>
+          </div>
+        )}
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
           {selectedRutaId ? "Otras rutas" : "Rutas disponibles"}
         </p>
@@ -1021,28 +1052,30 @@ export default function Pasajero() {
                   <p className="text-[11px] font-semibold" style={{ color: "var(--tp-yellow)" }}>Rastrea tu bus en tiempo real</p>
                 </div>
               </div>
+              <p className="text-sm text-white/70 mb-3">En 3 pasos sabes cuándo pasa tu bus:</p>
               <div className="space-y-2.5 mb-4">
                 {[
-                  { icon: <Bus className="w-4 h-4" />, txt: "Mira los buses moverse en vivo en el mapa." },
-                  { icon: <MapPin className="w-4 h-4" />, txt: "Toca tu ruta para ver sus paradas y buses." },
-                  { icon: <LocateFixed className="w-4 h-4" />, txt: "Usa el botón de ubicación para ver qué bus tienes cerca." },
-                ].map((step, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background: "rgba(23,87,194,0.2)", color: "var(--tp-sky)" }}>
-                      {step.icon}
+                  { n: "1", txt: "Elige tu ruta en la lista de abajo." },
+                  { n: "2", txt: "Mira el bus moverse en vivo en el mapa." },
+                  { n: "3", txt: "Lee cuántos minutos faltan para que llegue." },
+                ].map((step) => (
+                  <div key={step.n} className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-black text-white"
+                      style={{ background: "linear-gradient(135deg, #1757C2 0%, var(--tp-sky) 100%)" }}>
+                      {step.n}
                     </div>
-                    <p className="text-sm text-white/85">{step.txt}</p>
+                    <p className="text-sm text-white/90">{step.txt}</p>
                   </div>
                 ))}
               </div>
               <Button
                 onClick={dismissWelcome}
-                className="w-full h-11 rounded-xl font-bold text-white border-0"
+                className="w-full h-12 rounded-xl font-bold text-white border-0 text-base"
                 style={{ background: "linear-gradient(135deg, #1757C2 0%, var(--tp-sky) 100%)" }}
               >
-                Entendido, ver el mapa
+                Elegir mi ruta →
               </Button>
+              <p className="text-[11px] text-white/40 text-center mt-2">No necesitas cuenta para ver los buses.</p>
             </div>
           </div>
         )}
@@ -1159,7 +1192,6 @@ export default function Pasajero() {
           className="absolute bottom-[208px] md:bottom-36 left-3 z-[1000] flex items-center justify-center w-11 h-11 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg hover:bg-secondary active:scale-95 transition-all"
           title="¿Cómo funciona?"
           aria-label="¿Cómo funciona?"
-          aria-label="¿Cómo funciona?"
         >
           <HelpCircle className="w-5 h-5" style={{ color: "var(--tp-sky)" }} />
         </button>
@@ -1170,7 +1202,6 @@ export default function Pasajero() {
           disabled={locating}
           className="absolute bottom-36 md:bottom-20 left-3 z-[1000] flex items-center justify-center w-11 h-11 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg hover:bg-secondary active:scale-95 transition-all disabled:opacity-60"
           title="Centrar en mi ubicación"
-          aria-label="Centrar en mi ubicación"
           aria-label="Centrar en mi ubicación"
         >
           {locating
