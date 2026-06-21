@@ -1,196 +1,242 @@
-# 📄 Propuesta — TransPadilla para la Alcaldía de Riohacha
+# Propuesta — TransPadilla para el Distrito de Riohacha
 
-**Sistema de rastreo de transporte público en tiempo real para Riohacha, La Guajira.**
+**Sistema de rastreo de transporte público en tiempo real para el Distrito Especial,
+Turístico y Cultural de Riohacha, La Guajira.**
 *Moviendo la Ciudad.*
 
 > 🌐 **Demostración en vivo:** https://transpadilla-web.onrender.com
-> (plan gratuito: la primera carga puede tardar ~30–50 s mientras el servidor "despierta").
+> (en el plan gratuito de prueba, la primera carga puede tardar ~30–50 s mientras el
+> servidor "despierta"; en operación real esto no ocurre).
 
-> Los valores económicos son **estimados** (los precios de proveedores cambian) y se dan
-> en USD con equivalente aproximado en COP (tasa de referencia ~$4.000/US$1). Verificar
-> al contratar.
+> **Sobre las cifras:** los valores económicos de este documento son de **referencia
+> de mercado (Colombia, sector público)** y están **sujetos a acuerdo**. Se expresan en
+> pesos colombianos (COP); cuando se menciona USD es por insumos internacionales
+> (tasa de referencia ~$4.000/US$1).
 
 ---
 
-## 1. Resumen ejecutivo
+## 1. Contexto
 
-En Riohacha no hay forma de saber **dónde está el bus** ni **cuánto falta para que
-pase**. TransPadilla resuelve esto con una sola plataforma web:
+Riohacha es **Distrito Especial, Turístico y Cultural**, con cerca de **330.000
+habitantes** y un flujo importante de **turismo** (puerta de entrada a La Guajira).
+Un sistema de transporte **visible y predecible** mejora la vida del ciudadano que
+madruga a trabajar y, además, da una imagen **moderna y confiable** al visitante.
 
-- **Ciudadanía (sin necesidad de cuenta):** ve los buses moverse **en vivo** en el
-  mapa, busca su ruta, consulta **en cuántos minutos llega el próximo bus** y, tocando
-  su destino, recibe **qué ruta tomar y cuál es el bus más cercano**.
+Hoy no existe forma de saber **dónde está el bus** ni **cuánto falta para que pase**:
+los pasajeros esperan sin información, los conductores no reportan novedades y la
+administración no tiene visibilidad de la flota. **TransPadilla resuelve exactamente
+eso.**
+
+---
+
+## 2. Resumen ejecutivo
+
+TransPadilla es una plataforma **ya construida, probada y funcionando** (ver demo) que
+ofrece, en una sola solución web:
+
+- **Ciudadanía (sin necesidad de cuenta ni instalar nada):** ve los buses **en vivo**
+  en el mapa, busca su ruta, consulta **en cuántos minutos llega el próximo bus** y,
+  tocando su destino, recibe **qué ruta tomar y cuál es el bus más cercano**.
 - **Conductores:** inician su recorrido, transmiten su ubicación y reportan ocupación
   y novedades (accidente, desvío, demora) que la gente ve al instante.
-- **Administración (empresa/Alcaldía):** gestiona rutas, paradas, buses y conductores,
-  y supervisa la flota.
+- **Distrito / empresa operadora:** gestiona rutas, paradas, buses y conductores, y
+  supervisa la flota en tiempo real.
 
-El sistema **ya está construido, probado y funcionando** (ver demo). Para operarlo de
-forma **continua y confiable (24/7)** se requiere una inversión principalmente
-**operativa** (hospedaje, GPS de los buses y soporte), **no** un desarrollo desde cero.
-
-> **No existe software 100% "sin errores".** Lo que la inversión garantiza es **alta
-> disponibilidad**, **detección temprana de fallos**, **respaldo de datos** y
-> **mantenimiento** para corregir rápido cualquier incidencia.
+La inversión propuesta es un **modelo de servicio mensual (SaaS) "todo incluido"**: el
+Distrito **no compra ni mantiene servidores ni equipos de desarrollo**, sino que accede
+a la plataforma operada, soportada y actualizada, por una cuota. Esto reduce el riesgo
+y el costo frente a construir un sistema desde cero.
 
 ---
 
-## 2. Qué hace el sistema (funcionalidades)
+## 3. El problema que resuelve (en detalle)
+
+- **Para el ciudadano:** incertidumbre y tiempo perdido en el paradero. No sabe si el
+  bus ya pasó, si viene lleno o cuánto falta. TransPadilla le da **información en vivo**.
+- **Para el turista:** desconoce las rutas; con el mapa y la función "¿A dónde vas?"
+  llega a su destino sin preguntar.
+- **Para el conductor:** no tiene canal para avisar una novedad; ahora la reporta y los
+  pasajeros la ven.
+- **Para el Distrito/operador:** no tiene datos de su servicio; ahora ve la flota,
+  estados y novedades, base para **tomar decisiones y rendir cuentas**.
+
+---
+
+## 4. Qué hace el sistema (funcionalidades)
 
 | Para | Funciones |
 |---|---|
-| **Pasajero** (público) | Mapa en vivo de buses · buscar/seleccionar ruta · **ETA del próximo bus** por parada · **"¿A dónde vas?"** (toca tu destino → ruta recomendada + bus más cercano) · seguir un bus · rutas favoritas · ver ocupación (vacío/medio/lleno) · alertas de novedades · **app instalable (PWA)** · atención por WhatsApp. **Sin instalar nada ni crear cuenta.** |
-| **Conductor** | Iniciar/finalizar recorrido · transmisión de GPS · reportar **ocupación** y **novedades** en vivo · aviso si el GPS falla · cambio de contraseña. El bus se lo asigna el administrador. |
-| **Administrador** | Gestión (alta/baja/edición) de **rutas, paradas, buses y conductores** · asignación de bus ↔ conductor · panel con estado de la flota · cambio de contraseña. |
+| **Pasajero** (público) | Mapa en vivo de buses · buscar y seleccionar ruta · **tiempo de llegada (ETA)** del próximo bus por parada · **"¿A dónde vas?"** (toca tu destino → ruta recomendada + bus más cercano) · seguir un bus en el mapa · rutas favoritas · ver ocupación (vacío/medio/lleno) · alertas de novedades · **aplicación instalable (PWA)** · atención por WhatsApp |
+| **Conductor** | Iniciar y finalizar recorrido · transmisión de GPS · reportar **ocupación** y **novedades** en vivo · aviso si el GPS falla · cambio de contraseña |
+| **Administrador** | Alta/baja/edición de **rutas, paradas, buses y conductores** · asignar bus ↔ conductor · panel con estado de la flota · cambio de contraseña |
 
 ---
 
-## 3. Arquitectura y nivel técnico
+## 5. Arquitectura y nivel técnico
 
 - **Un solo servicio** (Node.js + Express + Socket.IO) que entrega la API, el tiempo
-  real, el cálculo de tiempos de llegada **y** la aplicación web, con **una base de
-  datos PostgreSQL**. Un solo servicio = **más simple, más barato y más fácil de
-  operar y mantener** que arquitecturas con varios componentes.
-- **Tiempo real** por WebSockets (los buses aparecen moviéndose sin recargar).
-- **PWA instalable**: el ciudadano puede "instalar" la app desde el navegador.
-- **Código con calidad de producto:** TypeScript estricto, **pruebas automatizadas**
-  e **integración continua** (cada cambio se verifica solo antes de publicarse).
+  real, el cálculo de tiempos de llegada **y** la aplicación web, sobre **una base de
+  datos PostgreSQL**. Una arquitectura de un solo servicio es **más simple, más barata
+  y más fácil de operar** que las de varios componentes.
+- **Tiempo real** por WebSockets: los buses se ven moverse sin recargar.
+- **Aplicación instalable (PWA):** el ciudadano la "instala" desde el navegador.
+- **Calidad de producto:** TypeScript estricto, **pruebas automatizadas** e
+  **integración continua** (cada cambio se verifica antes de publicarse).
 
 ---
 
-## 4. Seguridad (apto para una entidad pública)
-
-Implementado **sin costo adicional**, pensado para uso institucional:
+## 6. Seguridad (apto para una entidad pública)
 
 - **Autorización en el servidor, no en el cliente:** el registro público solo crea
   cuentas de *pasajero*; las de conductor las crea un administrador; un conductor solo
-  puede operar **su** bus (evita suplantación). Las acciones de gestión exigen rol admin.
-- **Contraseñas** cifradas (bcrypt) y **cambio de contraseña** autogestionado.
-- **Defensa anti-abuso/DDoS de capa de aplicación:** límite de solicitudes por IP
-  (login, registro y global), límites de tamaño de petición, tiempos de espera
-  (anti *slow-loris*) y canal en tiempo real endurecido.
-- **Listo para Cloudflare** (anti-DDoS de borde, gratis): la app ya coopera con
-  Cloudflare para tomar la IP real del usuario y **rechazar tráfico que intente
-  esquivarlo**. (Requiere un dominio propio.)
-- **Cabeceras de seguridad**, HTTPS forzado en producción y secretos obligatorios.
-
-> Detalle técnico en `docs/SEGURIDAD.md` y la guía `docs/CLOUDFLARE.md`.
+  puede operar **su** bus (evita suplantación). La gestión exige rol de administrador.
+- **Contraseñas cifradas** (bcrypt) y **cambio de contraseña** autogestionado.
+- **Defensa anti-abuso / DDoS de capa de aplicación:** límite de solicitudes por IP,
+  límites de tamaño de petición, tiempos de espera (anti *slow-loris*) y canal en
+  tiempo real endurecido.
+- **Listo para Cloudflare** (anti-DDoS de borde, **gratis**): la plataforma rechaza el
+  tráfico que intente esquivar la protección. Requiere un dominio propio.
+- **HTTPS forzado**, cabeceras de seguridad y secretos obligatorios en producción.
 
 ---
 
-## 5. Escala: pensado para crecer con la ciudad
+## 7. Escala: pensado para crecer con el Distrito
 
-- Riohacha tiene **≈ 330.000 habitantes**.
+- Riohacha ≈ **330.000 habitantes**.
 - Flota: **10 buses hoy**, con ampliación prevista a **70**.
-- La arquitectura **soporta con holgura** ese volumen (70 buses transmitiendo y miles
-  de ciudadanos consultando son carga baja para un solo servidor). El verdadero
-  factor es el **plan de hospedaje**: el gratuito sirve para demostración; para 24/7
-  se usa un plan de pago o un servidor propio (abajo).
+- La arquitectura **soporta con holgura** ese volumen. El sistema **no cambia** al
+  crecer: solo se suman buses. El factor de costo al escalar es el **plan de hospedaje**
+  y el **GPS por bus**, no rehacer la plataforma.
 
 ---
 
-## 6. Inversión para operar 24/7
+## 8. Valor económico
 
-### 6.1 Hospedaje — OBLIGATORIO
-La demo usa un plan gratuito que **se apaga por inactividad**. Para 24/7:
+Esta sección detalla **el valor de todo**: el producto en sí, el servicio profesional y
+la operación. El modelo propuesto es **SaaS (cuota mensual todo incluido)** + un costo
+único de **implementación**.
 
-| Alternativa | Detalle | Costo mensual aprox. |
+### 8.1 Valor del producto (desarrollo ya realizado)
+
+Construir desde cero una plataforma equivalente (web en tiempo real + app de conductor +
+panel administrativo + ETA + seguridad + pruebas) implica un equipo de desarrollo
+durante varios meses. **Valor de desarrollo equivalente en el mercado colombiano:
+~$50.000.000 – $100.000.000 COP.**
+
+> **El Distrito no paga esa cifra.** El producto **ya está construido**; se accede a él
+> mediante el modelo de servicio mensual de abajo, eliminando el riesgo y el costo de un
+> desarrollo a la medida desde cero.
+
+### 8.2 Servicio profesional incluido
+
+La cuota y la implementación cubren el **servicio profesional** (desarrollo, operación y
+evolución del sistema):
+
+- Personalización de marca y datos del Distrito (rutas, paradas, buses reales).
+- Despliegue y operación **24/7** (hospedaje, HTTPS, dominio, Cloudflare).
+- **Soporte y mantenimiento:** parches de seguridad, corrección de incidencias,
+  monitoreo y respaldos de la base de datos.
+- **Actualizaciones y mejoras** evolutivas de la plataforma.
+- Capacitación a administradores y conductores.
+
+### 8.3 Costo único — Implementación (puesta en marcha)
+
+Pago **una sola vez** al inicio:
+
+| Concepto | Incluye | Valor de referencia (COP) |
 |---|---|---|
-| **VPS único (recomendado)** | Un servidor (Hetzner/DigitalOcean) con Docker: **web + base de datos** | **US$6–15** (~$24.000–60.000 COP) |
-| Render (gestionado) | **web + PostgreSQL** con respaldos, casi sin administración | US$14–40 (~$56.000–160.000 COP) |
+| Implementación y puesta en marcha | Personalización, carga de rutas/paradas reales, configuración de dominio + Cloudflare, despliegue 24/7, capacitación y acompañamiento del piloto | **$6.000.000 – $12.000.000** |
 
-### 6.2 GPS de los buses — el rubro principal 🚍
-La decisión más importante: **cómo reporta su posición cada bus**. El reto es la
-**transmisión continua**, sobre todo con la pantalla apagada o el teléfono en segundo plano.
+### 8.4 Cuota mensual — Plataforma como servicio (SaaS, todo incluido)
 
-> Una **app web** no puede transmitir con la pantalla **totalmente apagada** (límite de
-> los navegadores). Ya se implementó que **la pantalla se mantenga encendida** durante
-> el recorrido (Wake Lock) y que el GPS se reactive al volver a la app, lo que cubre el
-> caso común. Para 100% en segundo plano se requiere app nativa o rastreador dedicado.
+Incluye plataforma + hospedaje + soporte + monitoreo + respaldos + actualizaciones.
+Planes por tamaño de flota:
 
-| Opción | Confiabilidad | Inversión inicial | Mensual por bus | Depende del conductor |
-|---|---|---|---|---|
-| **A) Web actual + Wake Lock** (ya hecho) | Media (pantalla encendida) | Smartphone (si no tienen) | Datos US$5–10 | Sí (deja la app abierta) |
-| **B) App nativa Android** (Capacitor, reusa el código) | Alta (GPS en segundo plano) | ~US$25 cuenta Google Play (una vez) + plugin opcional | Datos US$5–10 | Sí (lleva el teléfono) |
-| **C) Rastreador GPS dedicado** (recomendado) | **Máxima** | Equipo US$30–80 por bus (una vez) | SIM datos US$3–8 | **No** (transmite solo) |
-
-> Solo el **conductor** necesitaría app nativa; pasajeros y administración siguen como
-> web. **Android es suficiente** (se evita el costo de Apple). Para operación
-> institucional, el **rastreador dedicado** es lo más confiable.
-
-### 6.3 Mapas y rutas — RECOMENDADO
-Los servicios públicos de demostración (OpenStreetMap) **no tienen garantía** para uso
-intensivo. Se pueden cambiar a un proveedor con SLA (MapTiler/Mapbox tienen capa
-gratuita) **solo cambiando configuración, sin reprogramar** — US$0–50/mes.
-
-### 6.4 Confiabilidad y operación — RECOMENDADO
-| Ítem | Para qué | Costo aprox. |
+| Plan | Flota | Cuota mensual de referencia (COP) |
 |---|---|---|
-| Dominio propio (`.gov.co`/`.com`) | Imagen institucional + Cloudflare | US$10–40 / año |
-| **Cloudflare** (anti-DDoS, WAF, caché) | Protección y velocidad | **Gratis** (plan Free) |
-| Monitoreo de uptime (UptimeRobot) | Aviso si se cae | US$0–10 / mes |
-| Rastreo de errores (Sentry) | Detectar fallos en vivo | US$0–26 / mes |
-| Respaldos de base de datos | No perder información | Incluido en VPS / plan DB |
+| **Piloto** | hasta 10 buses | **$1.490.000 – $2.490.000** |
+| **Crecimiento** | hasta 30 buses | **$2.990.000 – $3.990.000** |
+| **Distrito** | hasta 70 buses | **$4.990.000 – $6.990.000** |
 
-### 6.5 Mantenimiento y soporte — CLAVE
-Todo sistema 24/7 necesita **mantenimiento continuo** (parches, soporte, ajustes,
-monitoreo). Se cotiza por **horas de desarrollador** o un **contrato de soporte
-mensual**, según el alcance que defina la Alcaldía.
+> La cuota es **operativa** (no es compra de licencia perpetua): mientras el servicio
+> esté activo, el Distrito tiene la plataforma operada, soportada y al día.
 
----
+### 8.5 GPS de los buses (se cotiza aparte)
 
-## 7. Presupuesto consolidado
+Es el rubro que **depende del hardware** elegido para que cada bus reporte su posición.
+No está incluido en la cuota porque son equipos/planes de datos físicos.
 
-### Costos únicos (una vez)
-| Concepto | Estimado |
-|---|---|
-| Dominio (primer año) | ~US$15 (~$60.000 COP) |
-| Rastreadores GPS (opcional, por bus) | ~US$30–80 c/u |
-| Puesta en marcha (carga de rutas, cuentas, despliegue) | a acordar (soporte) |
+| Opción | Confiabilidad | Inversión inicial por bus (COP) | Mensual por bus (COP) |
+|---|---|---|---|
+| **A) Celular del conductor + Wake Lock** (ya soportado) | Media (pantalla encendida) | Smartphone (si no tienen) | Datos $20.000 – $40.000 |
+| **B) App nativa Android** (reusa el código) | Alta (GPS en segundo plano) | ~$100.000 (cuenta Google Play, única, para toda la flota) | Datos $20.000 – $40.000 |
+| **C) Rastreador GPS dedicado** (recomendado) | **Máxima** (no depende del conductor) | $120.000 – $320.000 c/u | SIM datos $12.000 – $32.000 |
 
-### Recurrente mensual — **escenario económico (VPS), núcleo del sistema**
-| Concepto | Estimado mensual |
-|---|---|
-| Hospedaje (VPS único) | US$6–15 |
-| Cloudflare | US$0 |
-| Mapas con SLA (opcional) | US$0–50 |
-| Monitoreo + errores | US$0–30 |
-| **Núcleo sin GPS ni soporte** | **~US$10–60/mes** (~$40.000–240.000 COP) |
-| Datos GPS por bus | US$5–10 × nº de buses |
+> Solo el **conductor** necesitaría app; pasajeros y administración siguen como web.
+> **Android es suficiente** (se evita el costo de Apple).
 
-> Ejemplo orientativo:
-> - **Fase piloto (10 buses, rastreadores):** inicial ~US$300–800 (~$1,2M–3,2M COP) +
->   mensual del núcleo + ~US$30–80 de datos.
-> - **Flota completa (70 buses):** inicial ~US$2.100–5.600 + mensual del núcleo +
->   ~US$210–560 de datos. La plataforma **no** cambia: solo se suman buses.
+### 8.6 Resumen — "el valor de todo"
 
-El **mantenimiento/soporte** es adicional y es lo que sostiene la confiabilidad.
+| Rubro | Tipo | Valor de referencia (COP) |
+|---|---|---|
+| Producto (desarrollo equivalente, ya construido) | Informativo | $50.000.000 – $100.000.000 |
+| Implementación / puesta en marcha | Único | $6.000.000 – $12.000.000 |
+| Plataforma como servicio (según plan) | Mensual | $1.490.000 – $6.990.000 |
+| GPS por bus (equipo) | Único | $0 – $320.000 c/u |
+| GPS por bus (datos) | Mensual | $12.000 – $40.000 c/u |
+| Dominio `.gov.co`/`.com` | Anual | ~$60.000 |
+| Cloudflare (anti-DDoS) | Mensual | $0 (incluido) |
+
+> Todos los valores son **de referencia y ajustables**, sujetos a acuerdo y al alcance
+> que defina el Distrito.
 
 ---
 
-## 8. Plan de implementación
+## 9. Por qué conviene (retorno)
 
-1. **Fase 1 — Puesta en marcha (1–2 semanas):** contratar VPS + dominio, desplegar,
-   activar HTTPS y Cloudflare, backups y monitoreo. Cargar rutas y paradas reales.
-   Crear el administrador y los conductores.
-2. **Fase 2 — Piloto (10 buses):** equipar con GPS (celular o rastreador), capacitar
-   conductores, validar en campo y comunicar a la ciudadanía.
-3. **Fase 3 — Escalado a la flota completa (hasta 70):** sumar buses, ajustar y
-   difundir masivamente.
-4. **Continuo — Operación:** monitoreo, respaldos y soporte/mantenimiento.
+- **Sin desarrollo desde cero:** se accede a un producto valorado en decenas de millones
+  por una cuota mensual.
+- **Riesgo bajo:** el Distrito no administra servidores ni equipos técnicos; el servicio
+  los cubre.
+- **Escalable:** de 10 a 70 buses sin rehacer nada.
+- **Imagen de Distrito moderno y turístico:** transporte transparente y en tiempo real.
+- **Datos para decidir:** estado de la flota y novedades, base para gestión y rendición
+  de cuentas.
 
 ---
 
-## 9. Conclusión
+## 10. Plan de implementación
 
-El producto **ya existe, funciona y está probado**. La inversión solicitada es
-principalmente **operativa** (hospedaje, GPS de los buses y soporte), no de desarrollo
-desde cero. Con un presupuesto modesto, Riohacha puede ofrecer a su ciudadanía un
-servicio de transporte **moderno, transparente y supervisable en tiempo real**, listo
-para crecer de 10 a 70 buses sin rehacer nada.
+1. **Fase 1 — Puesta en marcha (1–2 semanas):** despliegue 24/7, dominio + HTTPS +
+   Cloudflare, respaldos y monitoreo. Carga de rutas y paradas reales. Creación del
+   administrador y los conductores. Capacitación.
+2. **Fase 2 — Piloto (10 buses):** equipar con GPS (celular o rastreador), validar en
+   campo y comunicar a la ciudadanía.
+3. **Fase 3 — Escalado (hasta 70 buses):** sumar la flota completa y difundir
+   masivamente.
+4. **Continuo — Operación:** monitoreo, respaldos, soporte y mejoras (incluido en la cuota).
+
+---
+
+## 11. Soporte y garantías
+
+- **Disponibilidad:** operación 24/7 con monitoreo y respaldos automáticos.
+- **Soporte:** atención a incidencias y mantenimiento continuo dentro de la cuota.
+- **Transparencia:** *ningún software es 100% "sin errores"*; lo que el servicio
+  garantiza es **alta disponibilidad, detección temprana de fallos, respaldo de datos y
+  corrección oportuna**.
+
+---
+
+## 12. Próximos pasos
+
+1. Validar el alcance y el plan (número de buses de la fase piloto).
+2. Acordar el modelo económico (implementación + plan mensual).
+3. Definir el método de GPS para el piloto.
+4. Firmar y arrancar la **Fase 1**.
 
 ---
 
 **Contacto:** WhatsApp +57 314 416 7656 · Instagram [@transpadilla.co](https://www.instagram.com/transpadilla.co)
 
-_TransPadilla — Moviendo la Ciudad · Riohacha, La Guajira_
+_TransPadilla — Moviendo la Ciudad · Distrito de Riohacha, La Guajira_
