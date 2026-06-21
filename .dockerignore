@@ -2,9 +2,6 @@ node_modules
 **/node_modules
 **/dist
 **/.tsbuildinfo
-services/trafico/venv
-services/trafico/staticfiles
-**/__pycache__
 .git
 .env
 *.zip

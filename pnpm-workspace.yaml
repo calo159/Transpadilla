@@ -73,4 +73,3 @@ overrides:
   # Parches de seguridad de dependencias transitivas (DoS) — ver `pnpm audit`.
   ws: "8.21.0"
   qs: "6.15.2"
-  http-proxy-middleware: "4.1.1"

@@ -9,9 +9,8 @@ import { getUser, clearAuth, homeForRol } from "@/lib/auth";
 import {
   Bus, LogOut, Map, MapPin, BarChart3,
   RefreshCw, Users, Route,
-  Radio, TrafficCone, UserCheck,
+  Radio, UserCheck, KeyRound,
 } from "lucide-react";
-import TraficoTab from "./TraficoTab";
 import DashboardTab from "./admin/DashboardTab";
 import RutasTab from "./admin/RutasTab";
 import BusesTab from "./admin/BusesTab";
@@ -22,8 +21,9 @@ import { useToast } from "@/hooks/use-toast";
 import { LogoTP } from "@/components/LogoTP";
 import { ConfirmDialog, type ConfirmOpts } from "@/components/ConfirmDialog";
 import { PromptDialog, type PromptOpts } from "@/components/PromptDialog";
+import { CambiarPasswordDialog } from "@/components/CambiarPasswordDialog";
 
-type Tab = "dashboard" | "rutas" | "buses" | "paradas" | "conductores" | "trafico";
+type Tab = "dashboard" | "rutas" | "buses" | "paradas" | "conductores";
 
 export default function Admin() {
   const [, setLocation] = useLocation();
@@ -31,6 +31,7 @@ export default function Admin() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("dashboard");
+  const [cambiarPass, setCambiarPass] = useState(false);
 
   // Guard de rol: solo un admin puede ver este panel. Cualquier otro usuario es
   // enviado a su propia página (conductor → /conductor, pasajero → /).
@@ -64,7 +65,6 @@ export default function Admin() {
     { id: "buses"       as Tab, label: "Buses",       icon: <Bus className="w-4 h-4" /> },
     { id: "paradas"     as Tab, label: "Paradas",     icon: <MapPin className="w-4 h-4" /> },
     { id: "conductores" as Tab, label: "Conductores", icon: <UserCheck className="w-4 h-4" /> },
-    { id: "trafico"     as Tab, label: "Tráfico",     icon: <TrafficCone className="w-4 h-4" /> },
   ];
 
 
@@ -74,7 +74,6 @@ export default function Admin() {
     buses:       "Gestión de Buses",
     paradas:     "Gestión de Paradas",
     conductores: "Conductores",
-    trafico:     "Monitoreo de Tráfico",
   };
 
   // Evita que el panel admin se muestre (aunque sea un instante) a quien no es admin;
@@ -97,7 +96,7 @@ export default function Admin() {
         </div>
 
         <nav className="flex-1 p-3 space-y-1">
-          {navItems.slice(0, 5).map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setTab(item.id)}
@@ -117,7 +116,7 @@ export default function Admin() {
           {/* Separador visual */}
           <div className="h-px bg-border/50 mx-2 my-1" />
 
-          {/* Ir al mapa — encima de Tráfico */}
+          {/* Ir al mapa público */}
           <button
             onClick={() => setLocation("/")}
             className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:bg-white/5 hover:text-foreground border-l-2 border-transparent"
@@ -125,23 +124,6 @@ export default function Admin() {
             <Map className="w-4 h-4" />
             Ir al mapa
           </button>
-
-          {navItems.slice(5).map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setTab(item.id)}
-              data-testid={`nav-${item.id}`}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                tab === item.id
-                  ? "text-foreground bg-white/5 border-l-2"
-                  : "text-muted-foreground hover:bg-white/5 hover:text-foreground border-l-2 border-transparent"
-              }`}
-              style={tab === item.id ? { borderLeftColor: "var(--tp-yellow)", paddingLeft: "10px" } : {}}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
         </nav>
 
         <div className="p-4 border-t border-border space-y-1.5">
@@ -149,6 +131,13 @@ export default function Admin() {
             <Users className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="truncate">{user?.nombre ?? "Admin"}</span>
           </div>
+          <Button
+            variant="ghost" size="sm"
+            className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground h-8"
+            onClick={() => setCambiarPass(true)}
+          >
+            <KeyRound className="w-3.5 h-3.5" />Cambiar contraseña
+          </Button>
           <Button
             variant="ghost" size="sm"
             className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive h-8"
@@ -175,10 +164,13 @@ export default function Admin() {
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setLocation("/")} className="p-2 text-muted-foreground hover:text-foreground" title="Ir al mapa">
+            <button onClick={() => setLocation("/")} className="p-2 text-muted-foreground hover:text-foreground" title="Ir al mapa" aria-label="Ir al mapa">
               <Map className="w-4.5 h-4.5" style={{ width: "18px", height: "18px" }} />
             </button>
-            <button onClick={() => { clearAuth(); setLocation("/"); }} className="p-2 text-muted-foreground hover:text-destructive" data-testid="button-salir" title="Cerrar sesión">
+            <button onClick={() => setCambiarPass(true)} className="p-2 text-muted-foreground hover:text-foreground" title="Cambiar contraseña" aria-label="Cambiar contraseña">
+              <KeyRound className="w-4.5 h-4.5" style={{ width: "18px", height: "18px" }} />
+            </button>
+            <button onClick={() => { clearAuth(); setLocation("/"); }} className="p-2 text-muted-foreground hover:text-destructive" data-testid="button-salir" title="Cerrar sesión" aria-label="Cerrar sesión">
               <LogOut className="w-4.5 h-4.5" style={{ width: "18px", height: "18px" }} />
             </button>
           </div>
@@ -274,13 +266,13 @@ export default function Admin() {
             <ConductoresTab buses={buses} setConfirmar={setConfirmar} />
           )}
 
-          {tab === "trafico" && <TraficoTab />}
         </div>
       </div>
 
       {/* Diálogos in-app (confirmar / renombrar) */}
       <ConfirmDialog opts={confirmar} onClose={() => setConfirmar(null)} />
       <PromptDialog opts={renombrar} onClose={() => setRenombrar(null)} />
+      <CambiarPasswordDialog open={cambiarPass} onClose={() => setCambiarPass(false)} />
     </div>
   );
 }

@@ -7,10 +7,8 @@ import { seedIfEmpty } from "./seed";
  * (CREATE TABLE IF NOT EXISTS), así que se puede ejecutar en cada arranque sin
  * riesgo de pérdida de datos.
  *
- * No usamos `drizzle-kit push` en producción a propósito: la misma base de datos
- * es compartida con el microservicio Django (tablas trafico_* y django_*), y
- * drizzle-kit intentaría borrar esas tablas "desconocidas". Este SQL solo toca
- * las tablas propias del backend Node.
+ * Usamos SQL explícito (en vez de `drizzle-kit push` en producción) para tener
+ * control total del arranque y no depender de la CLI de drizzle en runtime.
  */
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS usuarios (

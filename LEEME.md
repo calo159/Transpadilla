@@ -36,23 +36,9 @@ Para detener: cierra las dos ventanas de PowerShell.
 - **Node.js 24** + **pnpm** — entorno de ejecución
 - **PostgreSQL 17** — base de datos (servicio automático de Windows)
   - Usuario: `postgres` · Contraseña: `postgres` · Base: `transpadilla`
-- **Python 3.12** + **Django 5** — microservicio de tráfico (`services/trafico/venv`)
 - Dependencias del proyecto (`node_modules`) — ya instaladas
 - Tablas de la base de datos — ya creadas
 - Datos demo (3 rutas, 7 paradas, 3 buses) — ya cargados
-
-## 🚦 Módulo de Tráfico (Python/Django)
-
-El tab **Tráfico** del panel Admin colorea las vías según la congestión
-(verde = fluido, amarillo = lento, rojo = detenido), calculada con la velocidad
-real de los buses. Lo gestiona un microservicio **Django** (puerto 8000 interno).
-
-- Ya está configurado. `iniciar.ps1` lo arranca junto con el resto.
-- Si alguna vez falta, ejecuta una vez: **`configurar-trafico.ps1`**.
-- Los tramos se **generan solos** desde las rutas y paradas que creas en el panel
-  Admin (cada par de paradas consecutivas = un tramo). No hay que configurarlos.
-- Para ver colores en vivo: entra como **conductor**, **inicia recorrido** (transmite
-  tu GPS real) y muévete; en el tab Tráfico verás los tramos cambiar de color.
 
 La configuración está en el archivo **`.env`** (no lo subas a internet).
 
@@ -67,7 +53,7 @@ La configuración está en el archivo **`.env`** (no lo subas a internet).
 | Solo el frontend | `pnpm --filter @workspace/web run dev` |
 | Recrear tablas | `pnpm --filter @workspace/db push` |
 | Recargar datos demo | `Invoke-RestMethod -Method Post http://localhost:8080/api/seed` |
-| Configurar tráfico (1 vez) | `./configurar-trafico.ps1` |
+| Pruebas del API | `pnpm --filter @workspace/api run test` |
 | Build de producción | `pnpm --filter @workspace/web run build` |
 
 ---
@@ -83,8 +69,6 @@ packages/
   api-client/     → Hooks React generados (TanStack Query)
   api-types/      → Tipos Zod generados
   api-spec/       → Especificación OpenAPI + orval
-services/
-  trafico/        → Microservicio de tráfico Python/Django
 docs/
   PROPUESTA-ALCALDIA.md       → Presupuesto y propuesta para la Alcaldía
   generar-propuesta-word.py   → Genera la propuesta en Word (.docx)

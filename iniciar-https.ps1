@@ -36,15 +36,6 @@ Start-Sleep -Seconds 2
 Write-Host "  -> Frontend (app)   HTTPS, puerto 5173" -ForegroundColor Green
 Start-Process powershell -ArgumentList "-NoExit","-Command","cd '$raiz'; `$env:HTTPS='true'; pnpm --filter @workspace/web run dev"
 
-# Arrancar microservicio de Trafico (Django) si esta configurado
-$venvPy = Join-Path $raiz "services\trafico\venv\Scripts\python.exe"
-if (Test-Path $venvPy) {
-    Write-Host "  -> Trafico (Django) puerto 8000 (interno)" -ForegroundColor Green
-    Start-Process powershell -ArgumentList "-NoExit","-Command","cd '$raiz\services\trafico'; .\venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000"
-} else {
-    Write-Host "  -> Trafico: sin configurar (ejecuta 'configurar-trafico.ps1' una vez)" -ForegroundColor DarkYellow
-}
-
 Start-Sleep -Seconds 1
 
 Write-Host ""

@@ -4,11 +4,12 @@ import { useGetBuses, useUpdateGps, useReportarNovedad, useFinalizarRecorrido, g
 import { useQueryClient } from "@tanstack/react-query";
 import { getUser, clearAuth, homeForRol } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
-import { Bus, LogOut, Play, Square, AlertTriangle, Radio, Clock, ChevronLeft, Users, MapPin, X } from "lucide-react";
+import { Bus, LogOut, Play, Square, AlertTriangle, Radio, Clock, ChevronLeft, Users, MapPin, X, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { LogoTP } from "@/components/LogoTP";
 import { ConfirmDialog, type ConfirmOpts } from "@/components/ConfirmDialog";
+import { CambiarPasswordDialog } from "@/components/CambiarPasswordDialog";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +39,7 @@ export default function Conductor() {
   const [ocupacion, setOcupacion] = useState<string | null>(null);
   const [showMapa, setShowMapa] = useState(false);
   const [confirmar, setConfirmar] = useState<ConfirmOpts | null>(null);
+  const [cambiarPass, setCambiarPass] = useState(false);
 
   const elapsed = useElapsedTime(activo);
 
@@ -212,10 +214,13 @@ export default function Conductor() {
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={() => setLocation("/")} className="h-8 px-2 text-muted-foreground hover:text-foreground" title="Volver al mapa">
+            <Button variant="ghost" size="sm" onClick={() => setLocation("/")} className="h-8 px-2 text-muted-foreground hover:text-foreground" title="Volver al mapa" aria-label="Volver al mapa">
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => { clearAuth(); setLocation("/"); }} className="h-8 px-2 text-muted-foreground hover:text-destructive" data-testid="button-salir" title="Cerrar sesión">
+            <Button variant="ghost" size="sm" onClick={() => setCambiarPass(true)} className="h-8 px-2 text-muted-foreground hover:text-foreground" title="Cambiar contraseña" aria-label="Cambiar contraseña">
+              <KeyRound className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => { clearAuth(); setLocation("/"); }} className="h-8 px-2 text-muted-foreground hover:text-destructive" data-testid="button-salir" title="Cerrar sesión" aria-label="Cerrar sesión">
               <LogOut className="w-4 h-4" />
             </Button>
           </div>
@@ -424,6 +429,7 @@ export default function Conductor() {
       </div>
 
       <ConfirmDialog opts={confirmar} onClose={() => setConfirmar(null)} />
+      <CambiarPasswordDialog open={cambiarPass} onClose={() => setCambiarPass(false)} />
     </div>
   );
 }
