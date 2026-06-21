@@ -6,7 +6,7 @@ import { clearAuth, getUser } from "@/lib/auth";
 import {
   Bus, MapPin, LogOut, Radio, AlertTriangle, X,
   Search, Clock, LogIn, Shield, ChevronRight, ChevronUp,
-  Menu, MessageCircle, Instagram, LocateFixed, Loader2, Star, HelpCircle, Navigation,
+  Menu, MessageCircle, Instagram, LocateFixed, Loader2, Star, HelpCircle, Navigation, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,8 +83,16 @@ export default function Pasajero() {
   const suppressClickRef = useRef(false);
   const user = getUser();
 
-  const { data: rutas = [] } = useGetRutas({ query: { queryKey: ["rutas"], refetchInterval: 15000 } });
-  const { data: buses = [] } = useGetBuses({ query: { queryKey: getGetBusesQueryKey(), refetchInterval: 10000 } });
+  const {
+    data: rutas = [],
+    isLoading: rutasLoading,
+    isError: rutasError,
+    refetch: refetchRutas,
+  } = useGetRutas({ query: { queryKey: ["rutas"], refetchInterval: 15000 } });
+  const { data: buses = [], refetch: refetchBuses } = useGetBuses({
+    query: { queryKey: getGetBusesQueryKey(), refetchInterval: 10000 },
+  });
+  const reintentarCarga = () => { refetchRutas(); refetchBuses(); };
 
   // Espejo de `buses` en un ref: permite que el socket y los marcadores lean el
   // estado actual sin recrear/reconectar el efecto en cada refetch.
@@ -124,9 +132,11 @@ export default function Pasajero() {
                 <div style="width:10px;height:10px;border-radius:50%;background:${ruta.color}"></div>
                 <b style="font-size:13px">${p.nombre}</b>
               </div>
-              <span style="color:#64748b;font-size:11px">${ruta.nombre}</span>
+              <span style="color:#94a3b8;font-size:11px">${ruta.nombre}</span>
             </div>`)
           .addTo(map);
+        // Tocar una parada también selecciona su ruta (coherente con tocar un bus).
+        m.on("click", () => setSelectedRutaId(ruta.id));
         stopMarkersRef.current.push({ rutaId: ruta.id, marker: m });
       });
 
@@ -318,8 +328,11 @@ export default function Pasajero() {
     }
     const icon = L.divIcon({
       className: "",
-      html: `<div style="font-size:26px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))">📍</div>`,
-      iconSize: [26, 26], iconAnchor: [13, 26],
+      html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;width:40px;height:40px">
+          <span class="tp-destino-pulse"></span>
+          <span style="font-size:28px;line-height:1;position:relative;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))">📍</span>
+        </div>`,
+      iconSize: [40, 40], iconAnchor: [20, 36],
     });
     if (destinoMarkerRef.current) destinoMarkerRef.current.setLatLng([destino.lat, destino.lng]);
     else destinoMarkerRef.current = L.marker([destino.lat, destino.lng], { icon }).bindPopup("Tu destino").addTo(map);
@@ -553,6 +566,37 @@ export default function Pasajero() {
     </div>
   );
 
+  // Skeleton de carga de rutas (sensación de respuesta inmediata).
+  const skeletonRutas = (
+    <div className="space-y-2">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="mx-3 flex items-center gap-3 p-3 rounded-xl bg-card border border-border animate-pulse">
+          <div className="w-10 h-10 rounded-xl bg-muted/40 flex-shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="h-3.5 w-2/3 rounded bg-muted/40" />
+            <div className="h-2.5 w-1/3 rounded bg-muted/30" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  // Estado de error de carga, con reintento.
+  const errorCarga = (
+    <div className="mx-3 rounded-xl border p-4 text-center" style={{ borderColor: "rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)" }}>
+      <AlertTriangle className="w-6 h-6 text-destructive mx-auto mb-2" />
+      <p className="text-sm font-semibold text-foreground">No pudimos cargar la información</p>
+      <p className="text-xs text-muted-foreground mt-0.5 mb-3">Revisa tu conexión e inténtalo de nuevo.</p>
+      <button
+        onClick={reintentarCarga}
+        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-bold"
+        style={{ background: "var(--tp-sky)", color: "#001018" }}
+      >
+        <RefreshCw className="w-4 h-4" /> Reintentar
+      </button>
+    </div>
+  );
+
   // ─── SIDEBAR DESKTOP ────────────────────────────────────────────────────────
   const DesktopSidebar = () => (
     <div
@@ -568,7 +612,7 @@ export default function Pasajero() {
               Trans<span style={{ color: "var(--tp-sky)" }}>Padilla</span>
             </h1>
             <p className="text-[10px] font-semibold tracking-wide" style={{ color: "var(--tp-yellow)" }}>
-              Moviendo la Ciudad · Riohacha
+              Buses de Riohacha en vivo
             </p>
           </div>
         </div>
@@ -578,7 +622,9 @@ export default function Pasajero() {
       <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border text-xs shrink-0">
         <div className="flex items-center gap-1.5">
           <div className={`w-2 h-2 rounded-full ${activeBuses.length > 0 ? "bg-green-500 animate-pulse" : "bg-muted"}`} />
-          <span className="text-muted-foreground font-medium">{activeBuses.length} activos</span>
+          <span className="text-muted-foreground font-medium">
+            {activeBuses.length > 0 ? `${activeBuses.length} en vivo` : "Sin buses ahora"}
+          </span>
         </div>
         {demorasBuses.length > 0 && (
           <div className="flex items-center gap-1.5">
@@ -635,8 +681,11 @@ export default function Pasajero() {
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-4 py-2">
           Rutas disponibles {rutasFiltradas.length !== rutas.length && `(${rutasFiltradas.length})`}
         </p>
-        {rutas.length === 0 && <p className="px-4 py-8 text-xs text-muted-foreground text-center">Cargando rutas...</p>}
-        {busqueda && rutasFiltradas.length === 0 && (
+        {rutasError ? errorCarga
+          : rutasLoading && rutas.length === 0 ? skeletonRutas
+          : rutas.length === 0 ? <p className="px-4 py-8 text-xs text-muted-foreground text-center">No hay rutas configuradas todavía.</p>
+          : null}
+        {busqueda && rutasFiltradas.length === 0 && rutas.length > 0 && (
           <p className="px-4 py-8 text-xs text-muted-foreground text-center">Sin resultados para "{busqueda}"</p>
         )}
         {rutasFiltradas.map((ruta) => {
@@ -677,8 +726,8 @@ export default function Pasajero() {
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); toggleFavorito(ruta.id); }}
-                    className="p-1"
-                    aria-label="Marcar como favorita"
+                    className="p-2 -m-1"
+                    aria-label={favoritos.includes(ruta.id) ? "Quitar de favoritas" : "Marcar como favorita"}
                   >
                     <Star
                       className="w-4 h-4"
@@ -892,7 +941,9 @@ export default function Pasajero() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <div className={`w-2 h-2 rounded-full ${activeBuses.length > 0 ? "bg-green-500 animate-pulse" : "bg-muted"}`} />
-              <span className="text-sm font-semibold text-foreground">{activeBuses.length} activos</span>
+              <span className="text-sm font-semibold text-foreground">
+                {activeBuses.length > 0 ? `${activeBuses.length} en vivo` : "Sin buses ahora"}
+              </span>
             </div>
             {demorasBuses.length > 0 && (
               <span className="text-sm font-semibold" style={{ color: "var(--tp-yellow)" }}>· {demorasBuses.length} demora</span>
@@ -1065,7 +1116,10 @@ export default function Pasajero() {
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
           {selectedRutaId ? "Otras rutas" : "Rutas disponibles"}
         </p>
-        {rutas.length === 0 && <p className="text-xs text-muted-foreground text-center py-6">Cargando rutas...</p>}
+        {rutasError ? <div className="-mx-1">{errorCarga}</div>
+          : rutasLoading && rutas.length === 0 ? <div className="-mx-1">{skeletonRutas}</div>
+          : rutas.length === 0 ? <p className="text-xs text-muted-foreground text-center py-6">No hay rutas configuradas todavía.</p>
+          : null}
         <div className="space-y-2">
           {rutasFiltradas.filter((r) => r.id !== selectedRutaId).map((ruta) => {
             const rutaBuses = buses.filter((b) => b.ruta_id === ruta.id && b.estado !== "inactivo");
@@ -1103,8 +1157,8 @@ export default function Pasajero() {
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); toggleFavorito(ruta.id); }}
-                  className="p-1 flex-shrink-0"
-                  aria-label="Marcar como favorita"
+                  className="p-2 -m-1 flex-shrink-0"
+                  aria-label={favoritos.includes(ruta.id) ? "Quitar de favoritas" : "Marcar como favorita"}
                 >
                   <Star
                     className="w-5 h-5"
@@ -1208,6 +1262,7 @@ export default function Pasajero() {
           onClick={() => setSidebarOpen((o) => !o)}
           className="hidden md:flex absolute top-3 left-3 z-[1000] bg-card/95 backdrop-blur-sm border border-border rounded-xl p-2.5 shadow-lg hover:bg-secondary transition-colors items-center justify-center"
           title={sidebarOpen ? "Ocultar panel" : "Mostrar panel"}
+          aria-label={sidebarOpen ? "Ocultar panel" : "Mostrar panel"}
         >
           <Menu className="w-4 h-4 text-muted-foreground" />
         </button>
@@ -1239,7 +1294,7 @@ export default function Pasajero() {
               <span className="text-sm font-black tracking-widest text-foreground">
                 Trans<span style={{ color: "var(--tp-sky)" }}>Padilla</span>
               </span>
-              <p className="text-[9px] font-semibold leading-none" style={{ color: "var(--tp-yellow)" }}>Moviendo la Ciudad</p>
+              <p className="text-[9px] font-semibold leading-none" style={{ color: "var(--tp-yellow)" }}>Buses en vivo · Riohacha</p>
             </div>
           </div>
           {!user ? (
@@ -1408,10 +1463,10 @@ export default function Pasajero() {
           </div>
         )}
 
-        {/* Botón de ayuda "¿Cómo funciona?" */}
+        {/* Botón de ayuda "¿Cómo funciona?" (móvil: sobre el peek del sheet) */}
         <button
           onClick={() => setShowAyuda(true)}
-          className="absolute bottom-[208px] md:bottom-36 left-3 z-[1000] flex items-center justify-center w-11 h-11 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg hover:bg-secondary active:scale-95 transition-all"
+          className="absolute bottom-[262px] md:bottom-36 left-3 z-[1000] flex items-center justify-center w-11 h-11 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg hover:bg-secondary active:scale-95 transition-all"
           title="¿Cómo funciona?"
           aria-label="¿Cómo funciona?"
         >
@@ -1422,7 +1477,7 @@ export default function Pasajero() {
         <button
           onClick={locateMe}
           disabled={locating}
-          className="absolute bottom-36 md:bottom-20 left-3 z-[1000] flex items-center justify-center w-11 h-11 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg hover:bg-secondary active:scale-95 transition-all disabled:opacity-60"
+          className="absolute bottom-[206px] md:bottom-20 left-3 z-[1000] flex items-center justify-center w-11 h-11 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg hover:bg-secondary active:scale-95 transition-all disabled:opacity-60"
           title="Centrar en mi ubicación"
           aria-label="Centrar en mi ubicación"
         >
@@ -1430,6 +1485,28 @@ export default function Pasajero() {
             ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
             : <LocateFixed className="w-5 h-5 text-primary" />}
         </button>
+
+        {/* FAB "Elegir destino" — SOLO móvil (en desktop está en el sidebar); en la
+            zona del pulgar (abajo-derecha) y siempre accesible aunque el sheet esté colapsado. */}
+        <button
+          onClick={destino ? limpiarDestino : armarDestino}
+          className={`md:hidden absolute bottom-[150px] right-3 z-[1000] flex items-center justify-center w-12 h-12 rounded-full shadow-xl active:scale-95 transition-all border ${modoDestino ? "animate-pulse" : ""}`}
+          style={ destino || modoDestino
+            ? { background: "var(--tp-yellow)", color: "#1a1300", borderColor: "transparent" }
+            : { background: "hsl(var(--card))", color: "var(--tp-yellow)", borderColor: "rgba(245,194,0,0.4)" } }
+          title={destino ? "Quitar destino" : "¿A dónde vas? Elige tu destino"}
+          aria-label={destino ? "Quitar destino" : "Elegir destino en el mapa"}
+        >
+          {destino ? <X className="w-5 h-5" /> : <Navigation className="w-5 h-5" />}
+        </button>
+
+        {/* Pill de carga inicial del mapa */}
+        {rutasLoading && rutas.length === 0 && (
+          <div className="absolute top-16 md:top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-lg">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span className="text-xs text-muted-foreground font-medium">Cargando el mapa…</span>
+          </div>
+        )}
 
         {/* Aviso flotante: modo "elegir destino" armado */}
         {modoDestino && (
@@ -1459,7 +1536,7 @@ export default function Pasajero() {
         )}
 
         {/* Indicador de conexión: honesto sobre si los datos llegan en vivo. */}
-        <div className="absolute bottom-20 md:bottom-4 left-3 z-[1000] flex items-center gap-2 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-lg">
+        <div className="absolute bottom-[150px] md:bottom-4 left-3 z-[1000] flex items-center gap-2 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-lg">
           <div className="relative">
             <Radio className={`w-3.5 h-3.5 ${conectado ? "text-primary" : "text-amber-500"}`} />
             <div className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${conectado ? "bg-green-500 animate-pulse" : "bg-amber-500"}`} />
@@ -1472,7 +1549,7 @@ export default function Pasajero() {
           href={`https://wa.me/${WHATSAPP_NUMERO}?text=Hola%20TransPadilla%2C%20necesito%20informaci%C3%B3n%20sobre%20el%20servicio`}
           target="_blank"
           rel="noopener noreferrer"
-          className="absolute bottom-20 md:bottom-4 right-3 z-[1000] flex items-center justify-center w-12 h-12 rounded-full shadow-xl transition-transform active:scale-95 hover:scale-105"
+          className="absolute bottom-[206px] md:bottom-4 right-3 z-[1000] flex items-center justify-center w-12 h-12 rounded-full shadow-xl transition-transform active:scale-95 hover:scale-105"
           style={{ background: "#25D366", color: "white" }}
           title="Atención al cliente por WhatsApp"
           aria-label="Atención al cliente por WhatsApp"
