@@ -40,6 +40,7 @@ export default function Conductor() {
   const [showMapa, setShowMapa] = useState(false);
   const [confirmar, setConfirmar] = useState<ConfirmOpts | null>(null);
   const [cambiarPass, setCambiarPass] = useState(false);
+  const [gpsError, setGpsError] = useState(false);
 
   const elapsed = useElapsedTime(activo);
 
@@ -71,6 +72,7 @@ export default function Conductor() {
 
   const sendGps = useCallback((lat: number, lng: number, vel: number) => {
     if (!busId) return;
+    setGpsError(false); // llegó una posición: el GPS está OK
     setGpsLat(lat); setGpsLng(lng); setGpsVel(vel); setGpsCount((c) => c + 1);
     if (mapRef.current) {
       const icon = L.divIcon({
@@ -95,10 +97,10 @@ export default function Conductor() {
     if (gpsWatchRef.current !== null) navigator.geolocation.clearWatch(gpsWatchRef.current);
     gpsWatchRef.current = navigator.geolocation.watchPosition(
       (pos) => sendGps(pos.coords.latitude, pos.coords.longitude, (pos.coords.speed ?? 0) * 3.6),
-      () => toast({ title: "Error de GPS — verifica los permisos", variant: "destructive" }),
+      () => setGpsError(true),
       { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
     );
-  }, [sendGps, toast]);
+  }, [sendGps]);
 
   // Mantiene la PANTALLA ENCENDIDA durante el recorrido (Wake Lock API), para que
   // no se apague sola y el GPS siga transmitiendo. Una app web no puede transmitir
@@ -144,7 +146,7 @@ export default function Conductor() {
     if (gpsWatchRef.current !== null) { navigator.geolocation.clearWatch(gpsWatchRef.current); gpsWatchRef.current = null; }
     liberarWakeLock();
     if (busId) { await finalizarRecorrido.mutateAsync({ data: { bus_id: busId } }); queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() }); }
-    setActivo(false); setGpsLat(null); setGpsLng(null); setGpsCount(0);
+    setActivo(false); setGpsLat(null); setGpsLng(null); setGpsCount(0); setGpsError(false);
     busMarkerRef.current?.remove(); busMarkerRef.current = null;
     setShowCustom(false); setOcupacion(null);
     toast({ title: "Recorrido finalizado", description: `Duración: ${elapsed}` });
@@ -263,6 +265,20 @@ export default function Conductor() {
               </div>
             )}
           </div>
+
+          {/* Aviso persistente si el GPS falla durante el recorrido */}
+          {activo && gpsError && (
+            <div className="rounded-xl p-3.5 border" style={{ borderColor: "rgba(239,68,68,0.4)", background: "rgba(239,68,68,0.1)" }}>
+              <div className="flex items-center gap-2 mb-1">
+                <AlertTriangle className="w-4 h-4 text-red-400" />
+                <span className="text-xs font-black uppercase tracking-wide text-red-400">Sin señal de GPS</span>
+              </div>
+              <p className="text-sm text-foreground">
+                No estamos recibiendo tu ubicación. Activa el GPS y da permiso de
+                ubicación al navegador; mantén la app abierta y la pantalla encendida.
+              </p>
+            </div>
+          )}
 
           {/* Sin bus asignado */}
           {!busId && (

@@ -43,6 +43,8 @@ export default function Pasajero() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sheetState, setSheetState] = useState<SheetState>("collapsed");
   const [busqueda, setBusqueda] = useState("");
+  // Estado real de la conexión en vivo (Socket.IO). Para no mentir con "En vivo".
+  const [conectado, setConectado] = useState(true);
   const [locating, setLocating] = useState(false);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
   // Rutas favoritas del pasajero (se recuerdan en localStorage y van arriba).
@@ -234,6 +236,10 @@ export default function Pasajero() {
   useEffect(() => {
     const socket = io({ path: "/socket.io", transports: ["websocket", "polling"] });
     socketRef.current = socket;
+    setConectado(socket.connected);
+    socket.on("connect", () => setConectado(true));
+    socket.on("disconnect", () => setConectado(false));
+    socket.io.on("reconnect", () => setConectado(true));
     socket.on("bus:ubicacion", (data: BusLocation) => {
       const bus = busesRef.current.find((b) => b.id === data.busId);
       updateBusMarker(data.busId, data.lat, data.lng, bus?.color_ruta ?? "#1757C2", bus?.placa ?? "BUS", data.rutaId);
@@ -1223,13 +1229,13 @@ export default function Pasajero() {
           </div>
         )}
 
-        {/* Indicador en vivo */}
+        {/* Indicador de conexión: honesto sobre si los datos llegan en vivo. */}
         <div className="absolute bottom-20 md:bottom-4 left-3 z-[1000] flex items-center gap-2 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-lg">
           <div className="relative">
-            <Radio className="w-3.5 h-3.5 text-primary" />
-            <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <Radio className={`w-3.5 h-3.5 ${conectado ? "text-primary" : "text-amber-500"}`} />
+            <div className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${conectado ? "bg-green-500 animate-pulse" : "bg-amber-500"}`} />
           </div>
-          <span className="text-xs text-muted-foreground font-medium">En vivo</span>
+          <span className="text-xs text-muted-foreground font-medium">{conectado ? "En vivo" : "Reconectando…"}</span>
         </div>
 
         {/* Botón WhatsApp flotante */}
