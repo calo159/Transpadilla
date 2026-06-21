@@ -533,26 +533,52 @@ export default function Pasajero() {
                   </button>
                 </div>
               </div>
-              {isSelected && ruta.paradas.length > 0 && (
-                <div className="mt-2.5 pl-6 space-y-1.5">
-                  {ruta.paradas.map((p, i) => {
-                    const eta = etaPorParada[p.id];
-                    return (
-                      <div key={p.id} className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <MapPin className="w-3 h-3 flex-shrink-0" style={{ color: ruta.color }} />
-                        <span className="flex-1 truncate">{p.nombre}</span>
-                        {eta && (
-                          <span className="text-[10px] font-bold text-green-400 whitespace-nowrap">
-                            {eta.eta <= 0 ? "llegando" : `~${eta.eta} min`}
+              {isSelected && (
+                <div className="mt-2.5 pl-6 space-y-2">
+                  {/* Hero: tiempo de llegada del próximo bus */}
+                  {proximoBus && (
+                    <div className="flex items-end justify-between px-2.5 py-2 rounded-lg" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
+                      <div>
+                        <p className="text-[9px] font-bold uppercase tracking-widest mb-0.5 text-green-400/80">Próximo bus</p>
+                        {proximoBus.eta <= 0 ? (
+                          <span className="text-lg font-black text-green-400 leading-none">¡Llegando!</span>
+                        ) : (
+                          <span className="flex items-baseline gap-1 text-green-400">
+                            <span className="text-3xl font-black leading-none">{proximoBus.eta}</span>
+                            <span className="text-xs font-bold">min</span>
                           </span>
                         )}
-                        {i === 0 && <span className="text-[9px] opacity-50 font-bold">INICIO</span>}
-                        {i === ruta.paradas.length - 1 && ruta.paradas.length > 1 && (
-                          <span className="text-[9px] opacity-50 font-bold">FIN</span>
-                        )}
                       </div>
-                    );
-                  })}
+                      <span className="flex items-center gap-1 text-[11px] font-mono font-bold text-foreground/80 px-2 py-1 rounded-lg bg-background/50">
+                        <Bus className="w-3 h-3" />{proximoBus.placa}
+                      </span>
+                    </div>
+                  )}
+                  {ruta.paradas.length > 0 && (
+                    <div>
+                      {ruta.paradas.map((p, i, arr) => {
+                        const eta = etaPorParada[p.id];
+                        const first = i === 0;
+                        const last = i === arr.length - 1;
+                        return (
+                          <div key={p.id} className="relative flex items-center gap-2.5 py-1">
+                            <div className="relative flex flex-col items-center self-stretch w-3">
+                              <div className="w-0.5 flex-1" style={{ background: first ? "transparent" : ruta.color + "55" }} />
+                              <div className="w-2 h-2 rounded-full ring-2 ring-background flex-shrink-0" style={{ background: ruta.color }} />
+                              <div className="w-0.5 flex-1" style={{ background: last ? "transparent" : ruta.color + "55" }} />
+                            </div>
+                            <span className="flex-1 truncate text-xs text-foreground/80">{p.nombre}</span>
+                            {(first || last) && <span className="text-[9px] opacity-50 font-bold flex-shrink-0">{first ? "INICIO" : "FIN"}</span>}
+                            {eta && (
+                              <span className="text-[10px] font-bold text-green-400 whitespace-nowrap flex-shrink-0 px-1.5 py-0.5 rounded-full bg-green-500/10">
+                                {eta.eta <= 0 ? "llegando" : `~${eta.eta} min`}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -756,41 +782,60 @@ export default function Pasajero() {
         {/* Ruta seleccionada */}
         {selectedRuta && (
           <div className="mb-3 rounded-xl border p-3" style={{ borderColor: selectedRuta.color + "60", background: selectedRuta.color + "0D" }}>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ background: selectedRuta.color }} />
-                <span className="font-semibold text-sm text-foreground">{selectedRuta.nombre}</span>
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: selectedRuta.color }} />
+                <span className="font-bold text-sm text-foreground truncate">{selectedRuta.nombre}</span>
               </div>
-              <button onClick={() => setSelectedRutaId(null)} className="text-muted-foreground hover:text-foreground p-1">
+              <button onClick={() => setSelectedRutaId(null)} aria-label="Cerrar ruta" className="text-muted-foreground hover:text-foreground p-1 -mr-1">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            {/* Próximo bus (ETA calculado por el backend) */}
-            {proximoBus && (
-              <div className="flex items-center gap-2 mb-2.5 px-2.5 py-2 rounded-lg" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
-                <Clock className="w-4 h-4 text-green-400 flex-shrink-0" />
-                <span className="text-xs text-foreground">
-                  Próximo bus <span className="font-mono font-bold">{proximoBus.placa}</span>:{" "}
-                  <span className="font-bold text-green-400">{proximoBus.eta <= 0 ? "llegando" : `~${proximoBus.eta} min`}</span>
+            {/* Hero: el tiempo de llegada del próximo bus es lo principal */}
+            {proximoBus ? (
+              <div className="flex items-end justify-between mb-3 px-3 py-2.5 rounded-xl" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest mb-0.5 text-green-400/80">Próximo bus</p>
+                  {proximoBus.eta <= 0 ? (
+                    <span className="text-2xl font-black text-green-400 leading-none">¡Llegando!</span>
+                  ) : (
+                    <span className="flex items-baseline gap-1 text-green-400">
+                      <span className="text-4xl font-black leading-none">{proximoBus.eta}</span>
+                      <span className="text-sm font-bold">min</span>
+                    </span>
+                  )}
+                </div>
+                <span className="flex items-center gap-1 text-xs font-mono font-bold text-foreground/80 px-2 py-1 rounded-lg bg-background/50">
+                  <Bus className="w-3.5 h-3.5" />{proximoBus.placa}
                 </span>
+              </div>
+            ) : (
+              <div className="mb-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground" style={{ background: "rgba(148,163,184,0.08)" }}>
+                No hay buses en circulación en esta ruta ahora.
               </div>
             )}
             {selectedRuta.paradas.length > 0 && (
-              <div className="space-y-1.5 mb-2">
-                {selectedRuta.paradas.map((p, i) => {
+              <div className="mb-2">
+                {selectedRuta.paradas.map((p, i, arr) => {
                   const eta = etaPorParada[p.id];
+                  const first = i === 0;
+                  const last = i === arr.length - 1;
                   return (
-                    <div key={p.id} className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <MapPin className="w-3 h-3 flex-shrink-0" style={{ color: selectedRuta.color }} />
-                      <span className="flex-1 truncate">{p.nombre}</span>
+                    <div key={p.id} className="relative flex items-center gap-3 py-1">
+                      {/* Línea de tiempo de la ruta (conector + punto) */}
+                      <div className="relative flex flex-col items-center self-stretch w-3">
+                        <div className="w-0.5 flex-1" style={{ background: first ? "transparent" : selectedRuta.color + "55" }} />
+                        <div className="w-2.5 h-2.5 rounded-full ring-2 ring-background flex-shrink-0" style={{ background: selectedRuta.color }} />
+                        <div className="w-0.5 flex-1" style={{ background: last ? "transparent" : selectedRuta.color + "55" }} />
+                      </div>
+                      <span className="flex-1 truncate text-xs text-foreground/80">{p.nombre}</span>
+                      {(first || last) && (
+                        <span className="text-[9px] font-bold opacity-50 flex-shrink-0">{first ? "INICIO" : "FIN"}</span>
+                      )}
                       {eta && (
-                        <span className="text-[10px] font-bold text-green-400 whitespace-nowrap">
+                        <span className="text-[10px] font-bold text-green-400 whitespace-nowrap flex-shrink-0 px-1.5 py-0.5 rounded-full bg-green-500/10">
                           {eta.eta <= 0 ? "llegando" : `~${eta.eta} min`}
                         </span>
-                      )}
-                      {i === 0 && <span className="text-[9px] opacity-60 font-bold">INICIO</span>}
-                      {i === selectedRuta.paradas.length - 1 && selectedRuta.paradas.length > 1 && (
-                        <span className="text-[9px] opacity-60 font-bold">FIN</span>
                       )}
                     </div>
                   );
