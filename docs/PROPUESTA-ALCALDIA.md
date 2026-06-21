@@ -113,24 +113,23 @@ y el costo frente a construir un sistema desde cero.
 ## 8. Valor económico
 
 Esta sección detalla **el valor de todo**: el producto en sí, el servicio profesional y
-la operación. El modelo propuesto es **SaaS (cuota mensual todo incluido)** + un costo
-único de **implementación**.
+la operación. El modelo propuesto es **SaaS (cuota mensual todo incluido)**, **sin costo
+de implementación** (la puesta en marcha va absorbida en la cuota). Las cifras están
+pensadas para un **presupuesto público de La Guajira** y son **ajustables**.
 
 ### 8.1 Valor del producto (desarrollo ya realizado)
 
 Construir desde cero una plataforma equivalente (web en tiempo real + app de conductor +
-panel administrativo + ETA + seguridad + pruebas) implica un equipo de desarrollo
-durante varios meses. **Valor de desarrollo equivalente en el mercado colombiano:
-~$50.000.000 – $100.000.000 COP.**
+panel administrativo + ETA + seguridad + pruebas) implica un equipo de desarrollo durante
+varios meses. **Valor de desarrollo equivalente: ~$25.000.000 – $50.000.000 COP.**
 
 > **El Distrito no paga esa cifra.** El producto **ya está construido**; se accede a él
-> mediante el modelo de servicio mensual de abajo, eliminando el riesgo y el costo de un
-> desarrollo a la medida desde cero.
+> mediante la cuota mensual de abajo, eliminando el riesgo y el costo de un desarrollo a
+> la medida desde cero.
 
-### 8.2 Servicio profesional incluido
+### 8.2 Servicio profesional incluido (en la cuota)
 
-La cuota y la implementación cubren el **servicio profesional** (desarrollo, operación y
-evolución del sistema):
+La cuota mensual cubre **todo el servicio profesional**:
 
 - Personalización de marca y datos del Distrito (rutas, paradas, buses reales).
 - Despliegue y operación **24/7** (hospedaje, HTTPS, dominio, Cloudflare).
@@ -139,27 +138,29 @@ evolución del sistema):
 - **Actualizaciones y mejoras** evolutivas de la plataforma.
 - Capacitación a administradores y conductores.
 
-### 8.3 Costo único — Implementación (puesta en marcha)
+### 8.3 Implementación / puesta en marcha — **incluida (sin costo de entrada)**
 
-Pago **una sola vez** al inicio:
+La personalización, carga de rutas/paradas reales, configuración de dominio + Cloudflare,
+despliegue 24/7 y capacitación **no tienen costo inicial**: van absorbidas en la cuota
+mensual. Esto baja la barrera para que el Distrito arranque.
 
-| Concepto | Incluye | Valor de referencia (COP) |
-|---|---|---|
-| Implementación y puesta en marcha | Personalización, carga de rutas/paradas reales, configuración de dominio + Cloudflare, despliegue 24/7, capacitación y acompañamiento del piloto | **$6.000.000 – $12.000.000** |
+> Para hacer sostenible la puesta en marcha sin cobro de entrada, se sugiere una
+> **permanencia mínima de 12 meses** en el contrato (a acordar).
 
 ### 8.4 Cuota mensual — Plataforma como servicio (SaaS, todo incluido)
 
-Incluye plataforma + hospedaje + soporte + monitoreo + respaldos + actualizaciones.
-Planes por tamaño de flota:
+Incluye plataforma + hospedaje + soporte + monitoreo + respaldos + actualizaciones +
+**puesta en marcha** (sin costo de entrada). Planes por tamaño de flota:
 
 | Plan | Flota | Cuota mensual de referencia (COP) |
 |---|---|---|
-| **Piloto** | hasta 10 buses | **$1.490.000 – $2.490.000** |
-| **Crecimiento** | hasta 30 buses | **$2.990.000 – $3.990.000** |
-| **Distrito** | hasta 70 buses | **$4.990.000 – $6.990.000** |
+| **Piloto** | hasta 10 buses | **$900.000 – $1.500.000** |
+| **Crecimiento** | hasta 30 buses | **$1.500.000 – $2.500.000** |
+| **Distrito** | hasta 70 buses | **$2.500.000 – $3.500.000** |
 
 > La cuota es **operativa** (no es compra de licencia perpetua): mientras el servicio
-> esté activo, el Distrito tiene la plataforma operada, soportada y al día.
+> esté activo, el Distrito tiene la plataforma operada, soportada y al día. Cifras de
+> referencia, ajustables según el alcance final.
 
 ### 8.5 GPS de los buses (se cotiza aparte)
 
@@ -179,9 +180,9 @@ No está incluido en la cuota porque son equipos/planes de datos físicos.
 
 | Rubro | Tipo | Valor de referencia (COP) |
 |---|---|---|
-| Producto (desarrollo equivalente, ya construido) | Informativo | $50.000.000 – $100.000.000 |
-| Implementación / puesta en marcha | Único | $6.000.000 – $12.000.000 |
-| Plataforma como servicio (según plan) | Mensual | $1.490.000 – $6.990.000 |
+| Producto (desarrollo equivalente, ya construido) | Informativo | $25.000.000 – $50.000.000 |
+| Implementación / puesta en marcha | Único | **Incluida ($0)** |
+| Plataforma como servicio (según plan: 10/30/70 buses) | Mensual | $900.000 – $3.500.000 |
 | GPS por bus (equipo) | Único | $0 – $320.000 c/u |
 | GPS por bus (datos) | Mensual | $12.000 – $40.000 c/u |
 | Dominio `.gov.co`/`.com` | Anual | ~$60.000 |
@@ -231,7 +232,7 @@ No está incluido en la cuota porque son equipos/planes de datos físicos.
 ## 12. Próximos pasos
 
 1. Validar el alcance y el plan (número de buses de la fase piloto).
-2. Acordar el modelo económico (implementación + plan mensual).
+2. Acordar el **plan mensual** y la permanencia (sin costo de implementación).
 3. Definir el método de GPS para el piloto.
 4. Firmar y arrancar la **Fase 1**.
 
