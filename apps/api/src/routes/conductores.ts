@@ -6,12 +6,15 @@ import { authMiddleware, requireRol } from "../middleware/auth";
 import { validarBody, requerido, texto, correoValido } from "../middleware/validate";
 
 // Toda la gestión de conductores es exclusiva del administrador autenticado.
+// IMPORTANTE: la guarda se aplica POR RUTA (no con un router.use global), porque
+// este router se monta sin prefijo junto a los demás; un middleware global aquí
+// bloquearía también las rutas públicas montadas después (rutas, paradas, eta…).
 const router = Router();
-router.use(authMiddleware, requireRol("admin"));
+const soloAdmin = [authMiddleware, requireRol("admin")] as const;
 
 const idParam = (raw: unknown): number => parseInt(String(raw));
 
-router.get("/conductores", async (_req, res) => {
+router.get("/conductores", ...soloAdmin, async (_req, res) => {
   const rows = await db
     .select({
       id: usuarios.id,
@@ -29,6 +32,7 @@ router.get("/conductores", async (_req, res) => {
 // del cliente), de modo que otorgar privilegios es siempre decisión del backend.
 router.post(
   "/conductores",
+  ...soloAdmin,
   validarBody(
     requerido("nombre"), texto("nombre", 2, 100),
     requerido("correo"), correoValido("correo"),
@@ -66,7 +70,7 @@ router.post(
   },
 );
 
-router.delete("/conductores/:id", async (req, res) => {
+router.delete("/conductores/:id", ...soloAdmin, async (req, res) => {
   const id = idParam(req.params["id"]);
   // Libera el bus que tuviera asignado antes de borrar al conductor.
   await db.update(buses).set({ conductor_id: null }).where(eq(buses.conductor_id, id));
@@ -75,7 +79,7 @@ router.delete("/conductores/:id", async (req, res) => {
 });
 
 // Asignar / desasignar el conductor de un bus.
-router.patch("/buses/:id/conductor", async (req, res) => {
+router.patch("/buses/:id/conductor", ...soloAdmin, async (req, res) => {
   const { conductor_id } = req.body as { conductor_id: number | null };
   await db
     .update(buses)
