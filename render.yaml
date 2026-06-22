@@ -2,19 +2,20 @@
 #  TransPadilla — Render Blueprint (Infrastructure as Code)
 #  Despliega TODO el sistema en Render con un solo archivo:
 #    1. transpadilla-web → Node (API Express + Socket.IO + frontend React)
-#    2. transpadilla-db  → PostgreSQL gestionado
+#  La base de datos es SUPABASE (gestionada aparte, no por Render).
 #
 #  Cómo usar:
 #    1. Sube este repo a GitHub.
 #    2. En Render: New → Blueprint → conecta el repo → Apply.
-#    3. Render crea ambos recursos y los enlaza automáticamente.
-#    4. Define ADMIN_EMAIL / ADMIN_PASSWORD (sync:false) cuando Render los pida.
+#    3. Render te pedirá DATABASE_URL, ADMIN_EMAIL y ADMIN_PASSWORD (sync:false).
+#       En DATABASE_URL pega la cadena del POOLER de Supabase (ver nota abajo).
+#
+#  ⚠ IMPORTANTE — usar el POOLER de Supabase, no la conexión directa:
+#    La conexión directa (db.<ref>.supabase.co) es solo IPv6 y Render NO tiene
+#    salida IPv6 → fallará. Usa la cadena del pooler (host
+#    aws-0-<region>.pooler.supabase.com), que es IPv4. En Supabase:
+#    Connect → "Session pooler" (puerto 5432) para este servidor persistente.
 # ============================================================================
-
-databases:
-  - name: transpadilla-db
-    databaseName: transpadilla
-    plan: free
 
 services:
   # ──────────────────────────────────────────────────────────────────────────
@@ -33,10 +34,10 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Cadena del POOLER de Supabase (Session pooler, IPv4). Como contiene la
+      # contraseña, va como sync:false (Render la pide al desplegar; NO en el repo).
       - key: DATABASE_URL
-        fromDatabase:
-          name: transpadilla-db
-          property: connectionString
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: SEED_ON_START

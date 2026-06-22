@@ -15,6 +15,11 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL no está definida. Crea un archivo .env en la raíz del proyecto (ver .env.example).");
 }
 
+// Supabase exige TLS; detectarlo igual que el pool de runtime.
+const needsSsl =
+  /supabase\.(co|com)/.test(process.env.DATABASE_URL) ||
+  /[?&]sslmode=(require|verify-full|verify-ca)/.test(process.env.DATABASE_URL);
+
 export default defineConfig({
   // Path relativo (no absoluto): el directorio del proyecto puede contener
   // caracteres como paréntesis que el glob de drizzle-kit malinterpreta.
@@ -22,5 +27,6 @@ export default defineConfig({
   dialect: "postgresql",
   dbCredentials: {
     url: process.env.DATABASE_URL,
+    ...(needsSsl ? { ssl: { rejectUnauthorized: false } } : {}),
   },
 });
