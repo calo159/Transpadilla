@@ -36,14 +36,48 @@ app.use(
     },
   }),
 );
+// ── Content-Security-Policy ──────────────────────────────────────────────────
+// Política a la medida de esta app (React/Vite + Leaflet + Socket.IO):
+//  - script-src 'self': el build de Vite solo emite scripts externos (sin inline),
+//    así que esto es estricto y NO rompe el SPA.
+//  - style-src incluye 'unsafe-inline': Leaflet y los componentes (Radix/shadcn)
+//    inyectan estilos en línea; en estilos el riesgo es bajo.
+//  - img-src https: data: blob:: los tiles del mapa pueden venir de cualquier
+//    proveedor (OSM/Mapbox/MapTiler/propio) y Leaflet usa data:/blob: para marcadores.
+//  - connect-src https: wss: ws:: fetch a OSRM (router.project-osrm.org o el propio)
+//    y el WebSocket de Socket.IO.
+//  - worker-src 'self' blob:: el service worker de la PWA (vite-plugin-pwa/workbox).
+// Se puede sobreescribir por entorno con la variable CSP.
+const csp =
+  process.env["CSP"] ??
+  [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'self'",
+    "form-action 'self'",
+    "script-src 'self'",
+    // Google Fonts: el CSS viene de fonts.googleapis.com y los archivos .woff2
+    // de fonts.gstatic.com (la fuente Inter que usa el index.html).
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "connect-src 'self' https: wss: ws:",
+    "worker-src 'self' blob:",
+    "manifest-src 'self'",
+    ...(isProd ? ["upgrade-insecure-requests"] : []),
+  ].join("; ");
+
 // ── Cabeceras de seguridad (helmet-lite, sin dependencias) ───────────────────
 app.use((_req, res, next) => {
+  res.setHeader("Content-Security-Policy", csp);
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("X-DNS-Prefetch-Control", "off");
   res.setHeader("Permissions-Policy", "geolocation=(self)");
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
   res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
   if (isProd) {
     res.setHeader("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
