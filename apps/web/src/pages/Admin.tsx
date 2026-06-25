@@ -81,130 +81,97 @@ export default function Admin() {
   if (!user || user.rol !== "admin") return null;
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="tp-light flex h-screen overflow-hidden" style={{ background: "var(--color-gray-light)" }}>
 
-      {/* ─── DESKTOP SIDEBAR ─────────────────────────────────────────────── */}
-      <div className="hidden md:flex flex-col w-56 min-w-56 border-r border-border" style={{ background: "linear-gradient(180deg, hsl(225 65% 8%) 0%, hsl(225 65% 6%) 100%)" }}>
-        <div className="flex items-center gap-2.5 px-4 py-4 border-b border-border">
-          <LogoTP size={32} />
+      {/* ─── DESKTOP SIDEBAR (navy, estilo Stitch) ───────────────────────── */}
+      <div className="hidden md:flex flex-col w-60 min-w-60 text-white" style={{ background: "var(--color-navy)" }}>
+        <div className="flex items-center gap-2.5 px-5 py-5">
+          <LogoTP size={34} />
           <div>
-            <p className="text-sm font-black tracking-wider text-foreground">
-              Trans<span style={{ color: "var(--tp-sky)" }}>Padilla</span>
-            </p>
-            <p className="text-[10px] font-semibold" style={{ color: "var(--tp-yellow)" }}>Administración</p>
+            <p className="text-base font-extrabold tracking-wide text-white">TRANSPADILLA</p>
+            <p className="text-[10px] font-semibold text-white/60">Administración · Riohacha</p>
           </div>
         </div>
 
-        <nav className="flex-1 p-3 space-y-1">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setTab(item.id)}
-              data-testid={`nav-${item.id}`}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                tab === item.id
-                  ? "text-foreground bg-white/5 border-l-2"
-                  : "text-muted-foreground hover:bg-white/5 hover:text-foreground border-l-2 border-transparent"
-              }`}
-              style={tab === item.id ? { borderLeftColor: "var(--tp-yellow)", paddingLeft: "10px" } : {}}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
-
-          {/* Separador visual */}
-          <div className="h-px bg-border/50 mx-2 my-1" />
-
-          {/* Ir al mapa público */}
+        <nav className="flex-1 px-3 space-y-1">
+          {navItems.map((item) => {
+            const a = tab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setTab(item.id)}
+                data-testid={`nav-${item.id}`}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors active:scale-[0.98]"
+                style={a ? { background: "var(--color-gold)", color: "var(--color-navy)" } : { color: "rgba(255,255,255,0.8)" }}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+            );
+          })}
           <button
             onClick={() => setLocation("/")}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:bg-white/5 hover:text-foreground border-l-2 border-transparent"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors text-white/80 hover:text-white"
           >
             <Map className="w-4 h-4" />
             Ir al mapa
           </button>
         </nav>
 
-        <div className="p-4 border-t border-border space-y-1.5">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 py-0.5">
+        <div className="p-3">
+          <button onClick={() => setTab("rutas")} className="w-full flex items-center justify-center gap-2 h-11 rounded-xl font-bold mb-3 active:scale-[0.98]" style={{ background: "var(--color-blue)", color: "#fff" }}>
+            <Route className="w-4 h-4" /> Nueva ruta
+          </button>
+          <div className="flex items-center gap-2 text-xs text-white/70 px-1 py-1">
             <Users className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="truncate">{user?.nombre ?? "Admin"}</span>
           </div>
-          <Button
-            variant="ghost" size="sm"
-            className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground h-8"
-            onClick={() => setCambiarPass(true)}
-          >
-            <KeyRound className="w-3.5 h-3.5" />Cambiar contraseña
-          </Button>
-          <Button
-            variant="ghost" size="sm"
-            className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive h-8"
-            onClick={() => { clearAuth(); setLocation("/"); }}
-            data-testid="button-salir"
-          >
-            <LogOut className="w-3.5 h-3.5" />Cerrar sesión
-          </Button>
+          <button onClick={() => setCambiarPass(true)} className="w-full flex items-center gap-2 px-1 py-1.5 text-xs text-white/70 hover:text-white"><KeyRound className="w-3.5 h-3.5" />Cambiar contraseña</button>
+          <button onClick={() => { clearAuth(); setLocation("/"); }} data-testid="button-salir" className="w-full flex items-center gap-2 px-1 py-1.5 text-xs text-white/70 hover:text-white"><LogOut className="w-3.5 h-3.5" />Cerrar sesión</button>
         </div>
       </div>
 
       {/* ─── MAIN AREA ───────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
-        {/* ── MOBILE HEADER ── */}
-        <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-border shrink-0" style={{ background: "hsl(225 65% 8%)" }}>
-          <div className="flex items-center gap-2.5">
-            <LogoTP size={32} />
-            <div>
-              <p className="text-sm font-black tracking-wider text-foreground">
-                Trans<span style={{ color: "var(--tp-sky)" }}>Padilla</span>
-              </p>
-              <p className="text-[10px] font-semibold" style={{ color: "var(--tp-yellow)" }}>Administración</p>
-            </div>
-          </div>
+        {/* ── MOBILE HEADER (navy) ── */}
+        <div className="md:hidden flex items-center justify-between px-4 shrink-0 text-white" style={{ background: "var(--color-navy)", height: 56 }}>
+          <span className="font-extrabold text-lg tracking-wide text-white">TRANSPADILLA</span>
           <div className="flex items-center gap-1">
-            <button onClick={() => setLocation("/")} className="p-2 text-muted-foreground hover:text-foreground" title="Ir al mapa" aria-label="Ir al mapa">
-              <Map className="w-4.5 h-4.5" style={{ width: "18px", height: "18px" }} />
-            </button>
-            <button onClick={() => setCambiarPass(true)} className="p-2 text-muted-foreground hover:text-foreground" title="Cambiar contraseña" aria-label="Cambiar contraseña">
-              <KeyRound className="w-4.5 h-4.5" style={{ width: "18px", height: "18px" }} />
-            </button>
-            <button onClick={() => { clearAuth(); setLocation("/"); }} className="p-2 text-muted-foreground hover:text-destructive" data-testid="button-salir" title="Cerrar sesión" aria-label="Cerrar sesión">
-              <LogOut className="w-4.5 h-4.5" style={{ width: "18px", height: "18px" }} />
-            </button>
+            <button onClick={() => setLocation("/")} className="p-2 text-white" title="Ir al mapa" aria-label="Ir al mapa"><Map style={{ width: 18, height: 18 }} /></button>
+            <button onClick={() => setCambiarPass(true)} className="p-2 text-white" title="Cambiar contraseña" aria-label="Cambiar contraseña"><KeyRound style={{ width: 18, height: 18 }} /></button>
+            <button onClick={() => { clearAuth(); setLocation("/"); }} className="p-2 text-white" data-testid="button-salir" title="Cerrar sesión" aria-label="Cerrar sesión"><LogOut style={{ width: 18, height: 18 }} /></button>
           </div>
         </div>
 
-        {/* ── MOBILE TABS ── */}
-        <div className="md:hidden flex border-b border-border shrink-0 overflow-x-auto" style={{ background: "hsl(225 65% 7%)", WebkitOverflowScrolling: "touch" }}>
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setTab(item.id)}
-              data-testid={`nav-${item.id}`}
-              className={`flex items-center gap-1.5 px-4 py-3 text-xs font-semibold whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${
-                tab === item.id
-                  ? "text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-              style={tab === item.id ? { borderBottomColor: "var(--tp-yellow)" } : {}}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
+        {/* ── MOBILE TABS (navy) ── */}
+        <div className="md:hidden flex shrink-0 overflow-x-auto text-white" style={{ background: "var(--color-navy)", WebkitOverflowScrolling: "touch" }}>
+          {navItems.map((item) => {
+            const a = tab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setTab(item.id)}
+                data-testid={`nav-${item.id}`}
+                className="flex items-center gap-1.5 px-4 py-3 text-xs font-semibold whitespace-nowrap border-b-2 flex-shrink-0"
+                style={a ? { borderBottomColor: "var(--color-gold)", color: "#fff" } : { borderBottomColor: "transparent", color: "rgba(255,255,255,0.6)" }}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+            );
+          })}
         </div>
 
-        {/* ── DESKTOP TOPBAR ── */}
-        <div className="hidden md:flex items-center justify-between px-6 py-3 border-b border-border shrink-0" style={{ background: "hsl(225 65% 8% / 0.6)" }}>
+        {/* ── DESKTOP TOPBAR (claro) ── */}
+        <div className="hidden md:flex items-center justify-between px-6 py-3 shrink-0 bg-white border-b" style={{ borderColor: "#e8edf4" }}>
           <div>
-            <h1 className="text-lg font-bold text-foreground">{tabTitle[tab]}</h1>
-            <p className="text-xs text-muted-foreground">Riohacha, La Guajira · TransPadilla</p>
+            <h1 className="text-lg font-bold" style={{ color: "var(--color-navy)" }}>{tabTitle[tab]}</h1>
+            <p className="text-xs" style={{ color: "var(--color-gray-text)" }}>Riohacha, La Guajira · TransPadilla</p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-card border border-border rounded-lg px-3 py-1.5">
-              <Radio className="w-3 h-3 text-green-400" /><span>Sistema en vivo</span>
+            <div className="flex items-center gap-1.5 text-xs rounded-lg px-3 py-1.5" style={{ background: "rgba(56,161,105,0.12)", color: "var(--color-success)" }}>
+              <Radio className="w-3 h-3" /><span>Sistema en vivo</span>
             </div>
             <Button
               variant="outline" size="sm"

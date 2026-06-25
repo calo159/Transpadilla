@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Panel de Administración - TRANSPADILLA</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-fixed-dim": "#ffb866",
+                    "surface-bright": "#f7f9fb",
+                    "on-primary": "#ffffff",
+                    "on-primary-fixed-variant": "#28467b",
+                    "surface-container": "#eceef0",
+                    "inverse-on-surface": "#eff1f3",
+                    "surface-variant": "#e0e3e5",
+                    "surface": "#f7f9fb",
+                    "secondary": "#006494",
+                    "secondary-fixed-dim": "#8ecdff",
+                    "background": "#f7f9fb",
+                    "on-surface-variant": "#43474f",
+                    "surface-tint": "#415e94",
+                    "on-secondary-container": "#005077",
+                    "tertiary-fixed": "#ffddba",
+                    "on-tertiary-container": "#de9842",
+                    "inverse-primary": "#acc7ff",
+                    "secondary-fixed": "#cbe6ff",
+                    "inverse-surface": "#2d3133",
+                    "error": "#ba1a1a",
+                    "on-error-container": "#93000a",
+                    "error-container": "#ffdad6",
+                    "surface-dim": "#d8dadc",
+                    "on-background": "#191c1e",
+                    "on-tertiary-fixed": "#2b1700",
+                    "on-error": "#ffffff",
+                    "tertiary": "#3a2100",
+                    "primary": "#002555",
+                    "on-primary-fixed": "#001a41",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-container": "#583400",
+                    "on-secondary-fixed-variant": "#004b71",
+                    "on-tertiary-fixed-variant": "#673d00",
+                    "outline-variant": "#c4c6d1",
+                    "on-primary-container": "#8aa7e1",
+                    "primary-container": "#1b3b6f",
+                    "on-surface": "#191c1e",
+                    "outline": "#747780",
+                    "primary-fixed": "#d8e2ff",
+                    "on-secondary-fixed": "#001e30",
+                    "surface-container-low": "#f2f4f6",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-container": "#74c3fe",
+                    "surface-container-highest": "#e0e3e5",
+                    "primary-fixed-dim": "#acc7ff",
+                    "surface-container-high": "#e6e8ea"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-max": "1280px",
+                    "stack-sm": "8px",
+                    "stack-md": "16px",
+                    "stack-lg": "24px",
+                    "margin-desktop": "32px",
+                    "margin-mobile": "16px",
+                    "gutter": "24px"
+            },
+            "fontFamily": {
+                    "label-md": ["Inter"],
+                    "label-bold": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "headline-sm": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "headline-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "label-bold": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background flex h-screen overflow-hidden">
+<!-- SideNavBar -->
+<nav class="h-screen w-[280px] fixed left-0 top-0 bg-primary dark:bg-primary shadow-md flex flex-col py-6 z-20">
+<div class="px-6 mb-8 flex flex-col items-center">
+<img class="w-16 h-16 rounded-full border-2 border-on-primary object-cover mb-4" data-alt="A highly detailed portrait photo of a professional administrator for a transport system, wearing a neat navy blue uniform shirt. The lighting is bright and even, set against a clean white background. The image has a crisp, modern, corporate aesthetic suitable for a civic or government dashboard." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjw0yq3sI-DXTDL_nkUOasJS3cyROPdDImIzWpUEeqJiLuWp8qMl_QEUrAuwiTEgHWjaOuynrIlc9iBgXeQGWKEKzT8kDYQWgLQBrfOQCZO5gzVBYhQOKgWIFUoh6hJ5WnLmSiIye6g1PISEfbojD2OmwtiUESr5rg3P_kzQff2-maZHC3Xb6Vq_PXvA8pb579Mbs7g-1XEOMuruQuxoNMnyISRajrj4FoIpOxAYwG70tDGELBYUx2DA_A_cW1WbzjSVik3CIqqmg"/>
+<h1 class="font-headline-md text-headline-md font-bold text-on-primary">TRANSPADILLA</h1>
+<p class="font-body-sm text-body-sm text-on-primary/70">Administración Riohacha</p>
+</div>
+<div class="flex-1 overflow-y-auto px-2 space-y-2">
+<a class="flex items-center gap-3 bg-secondary text-on-primary rounded-xl px-4 py-3 mx-2 opacity-90 scale-[0.99] duration-150 shadow-sm" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 text-on-primary/70 hover:text-on-primary rounded-xl px-4 py-3 mx-2 hover:bg-primary-container transition-colors" href="#">
+<span class="material-symbols-outlined">directions_bus</span>
+<span class="font-label-md text-label-md">Rutas</span>
+</a>
+<a class="flex items-center gap-3 text-on-primary/70 hover:text-on-primary rounded-xl px-4 py-3 mx-2 hover:bg-primary-container transition-colors" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md">Conductores</span>
+</a>
+<a class="flex items-center gap-3 text-on-primary/70 hover:text-on-primary rounded-xl px-4 py-3 mx-2 hover:bg-primary-container transition-colors" href="#">
+<span class="material-symbols-outlined">assessment</span>
+<span class="font-label-md text-label-md">Reportes</span>
+</a>
+<a class="flex items-center gap-3 text-on-primary/70 hover:text-on-primary rounded-xl px-4 py-3 mx-2 hover:bg-primary-container transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-label-md">Configuración</span>
+</a>
+</div>
+<div class="px-6 mt-auto">
+<button class="w-full bg-secondary hover:bg-secondary-container text-on-primary font-label-bold text-label-bold py-3 rounded-xl shadow-sm transition-colors flex justify-center items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                Nueva Ruta
+            </button>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 ml-[280px] flex flex-col h-screen overflow-hidden bg-background">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center h-16 px-margin-desktop bg-surface dark:bg-surface-dim border-b border-outline-variant dark:border-outline z-10 shrink-0">
+<div class="flex items-center gap-4">
+<h2 class="font-headline-sm text-headline-sm font-bold text-primary dark:text-inverse-primary">Dashboard</h2>
+<span class="h-6 w-px bg-outline-variant mx-2"></span>
+<div class="flex items-center text-on-surface-variant font-body-sm text-body-sm bg-surface-container-low px-3 py-1.5 rounded-lg border border-outline-variant/50">
+<span class="material-symbols-outlined text-[18px] mr-2">calendar_today</span>
+                    24 Octubre 2023
+                </div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<input class="bg-surface-container-low border border-outline-variant/50 rounded-lg px-4 py-2 pl-10 focus:outline-none focus:ring-2 focus:ring-secondary w-64 text-body-sm font-body-sm text-on-surface" placeholder="Buscar..." type="text"/>
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-[20px]">search</span>
+</div>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1 right-1 w-2.5 h-2.5 bg-error rounded-full border-2 border-surface"></span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors">
+<span class="material-symbols-outlined">help</span>
+</button>
+<img class="w-8 h-8 rounded-full border border-outline-variant ml-2 object-cover" data-alt="A highly detailed portrait photo of a professional administrator for a transport system, wearing a neat navy blue uniform shirt. The lighting is bright and even, set against a clean white background. The image has a crisp, modern, corporate aesthetic suitable for a civic or government dashboard." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9b7YMBDBT8RWl9wt0hKwkvgelpG00_Gq9SNNmRgpFL7J2EMH08ROybtcXGH9OtcbbQFVqAvDY6bFNnz2Z9_omUt-zeIEw47RXD17Bj6wzKuycQRDEXGgZGCeNB51j5PMtFITdb3L_lA1wtLknbdHpxgnMG3IRZBH07rbdZ2AFt018ELC3AeEbGOtSQvlvH6fy9xF89I6RKVeraohAw1hFnbQVHM7KuyzayN6m4eBa3UoDk39ci3TfIytuB3r0bPBe3kfc9TsBSs4"/>
+</div>
+</header>
+<!-- Scrollable Canvas -->
+<main class="flex-1 overflow-y-auto p-margin-desktop">
+<div class="max-w-container-max mx-auto space-y-stack-lg">
+<!-- Stats Row -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<!-- Stat Card 1 -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 flex items-center p-6 relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-3 bg-secondary"></div>
+<div class="pl-4">
+<h3 class="font-body-sm text-body-sm text-primary mb-1">Buses Activos</h3>
+<div class="flex items-end gap-3">
+<span class="font-headline-lg text-headline-lg text-[#FFD700]">42</span>
+<span class="font-label-md text-label-md text-on-surface-variant pb-1">/ 50 totales</span>
+</div>
+</div>
+<div class="ml-auto bg-surface-container p-3 rounded-full">
+<span class="material-symbols-outlined text-secondary text-[28px]" style="font-variation-settings: 'FILL' 1;">directions_bus</span>
+</div>
+</div>
+<!-- Stat Card 2 -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 flex items-center p-6 relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-3 bg-secondary"></div>
+<div class="pl-4">
+<h3 class="font-body-sm text-body-sm text-primary mb-1">Rutas en Operación</h3>
+<div class="flex items-end gap-3">
+<span class="font-headline-lg text-headline-lg text-[#FFD700]">12</span>
+<span class="font-label-md text-label-md text-on-surface-variant pb-1">Activas hoy</span>
+</div>
+</div>
+<div class="ml-auto bg-surface-container p-3 rounded-full">
+<span class="material-symbols-outlined text-secondary text-[28px]" style="font-variation-settings: 'FILL' 1;">route</span>
+</div>
+</div>
+<!-- Stat Card 3 -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 flex items-center p-6 relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-3 bg-secondary"></div>
+<div class="pl-4">
+<h3 class="font-body-sm text-body-sm text-primary mb-1">Alertas</h3>
+<div class="flex items-end gap-3">
+<span class="font-headline-lg text-headline-lg text-[#FFD700]">3</span>
+<span class="font-label-md text-label-md text-error pb-1 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">arrow_upward</span> Requieren atención</span>
+</div>
+</div>
+<div class="ml-auto bg-error-container p-3 rounded-full">
+<span class="material-symbols-outlined text-error text-[28px]" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+</div>
+</div>
+<!-- Main Grid Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+<!-- Fleet Map -->
+<div class="lg:col-span-2 bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 flex flex-col h-[500px]">
+<div class="p-4 border-b border-outline-variant/30 flex justify-between items-center">
+<h3 class="font-headline-sm text-headline-sm text-primary">Mapa de la Flota</h3>
+<button class="text-secondary hover:bg-secondary-container/20 p-2 rounded-lg transition-colors flex items-center gap-2">
+<span class="font-label-md text-label-md">Pantalla Completa</span>
+<span class="material-symbols-outlined text-[18px]">fullscreen</span>
+</button>
+</div>
+<div class="flex-1 relative rounded-b-xl overflow-hidden">
+<img class="absolute inset-0 w-full h-full object-cover" data-alt="A highly detailed, clean, modern digital map interface of Riohacha, Colombia. The map style is bright and minimalist, suitable for a fleet tracking dashboard, featuring light grey and subtle blue tones for water. It shows distinct street grids and coastal areas. Several stylized map markers in navy blue, sky blue, and bright gold are scattered across the map, indicating active bus locations. The aesthetic is highly professional and civic-oriented." data-location="Riohacha" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCFOoB74JBIScnW4BXVMQVgW0S8LyAp3pFj4yywMr9X5s5NVIt8yhvZNnyoTjNGsTUjM9Dn3QAp-Pbh6HuvhN1JkxQlOpZOSPfEKgVBpyV598nEAMWiT-EkumJHWb8X4B_dhqRlbnGsMGtqR-bbcPxjSKiSU3hZM6UBOvv0jw9dXAt8O5zTNUI4vno49rCFv0_zsDONqRUJeP7EyXoZaDyl4ABlXhBLdDa1HAiW82B6JjScfZyF1HSL1QQUWjBtrRx_S28zDT9a1dM"/>
+<!-- Overlay UI elements on map -->
+<div class="absolute top-4 left-4 bg-surface-container-lowest/90 backdrop-blur-sm p-3 rounded-lg shadow border border-outline-variant/20 flex flex-col gap-2">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-secondary"></span>
+<span class="font-label-md text-label-md text-on-surface">En Ruta (35)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-tertiary-fixed-dim"></span>
+<span class="font-label-md text-label-md text-on-surface">Retraso (5)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-error"></span>
+<span class="font-label-md text-label-md text-on-surface">Detenido (2)</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Fleet Status Table (Side panel on desktop) -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 flex flex-col h-[500px]">
+<div class="p-4 border-b border-outline-variant/30 flex justify-between items-center">
+<h3 class="font-headline-sm text-headline-sm text-primary">Estado de la Flota</h3>
+<span class="material-symbols-outlined text-on-surface-variant">filter_list</span>
+</div>
+<div class="flex-1 overflow-y-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low sticky top-0 z-10">
+<tr>
+<th class="font-label-bold text-label-bold text-on-surface-variant py-3 px-4 uppercase border-b border-outline-variant/30">ID / Ruta</th>
+<th class="font-label-bold text-label-bold text-on-surface-variant py-3 px-4 uppercase border-b border-outline-variant/30">Conductor</th>
+<th class="font-label-bold text-label-bold text-on-surface-variant py-3 px-4 uppercase border-b border-outline-variant/30 text-right">Estado</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b border-outline-variant/20 hover:bg-surface-container-lowest/50 transition-colors">
+<td class="py-3 px-4">
+<div class="font-body-md text-body-md font-semibold text-primary">BUS-104</div>
+<div class="font-label-md text-label-md text-on-surface-variant">R-01 Centro</div>
+</td>
+<td class="py-3 px-4 font-body-sm text-body-sm text-on-surface">Carlos M.</td>
+<td class="py-3 px-4 text-right">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                                                En Movimiento
+                                            </span>
+</td>
+</tr>
+<tr class="border-b border-outline-variant/20 hover:bg-surface-container-lowest/50 transition-colors">
+<td class="py-3 px-4">
+<div class="font-body-md text-body-md font-semibold text-primary">BUS-089</div>
+<div class="font-label-md text-label-md text-on-surface-variant">R-03 Mercado</div>
+</td>
+<td class="py-3 px-4 font-body-sm text-body-sm text-on-surface">Luis F.</td>
+<td class="py-3 px-4 text-right">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
+                                                Retraso
+                                            </span>
+</td>
+</tr>
+<tr class="border-b border-outline-variant/20 hover:bg-surface-container-lowest/50 transition-colors">
+<td class="py-3 px-4">
+<div class="font-body-md text-body-md font-semibold text-primary">BUS-201</div>
+<div class="font-label-md text-label-md text-on-surface-variant">R-02 Norte</div>
+</td>
+<td class="py-3 px-4 font-body-sm text-body-sm text-on-surface">Jorge D.</td>
+<td class="py-3 px-4 text-right">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                                                Detenido
+                                            </span>
+</td>
+</tr>
+<tr class="border-b border-outline-variant/20 hover:bg-surface-container-lowest/50 transition-colors">
+<td class="py-3 px-4">
+<div class="font-body-md text-body-md font-semibold text-primary">BUS-112</div>
+<div class="font-label-md text-label-md text-on-surface-variant">R-01 Centro</div>
+</td>
+<td class="py-3 px-4 font-body-sm text-body-sm text-on-surface">Ana P.</td>
+<td class="py-3 px-4 text-right">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                                                En Movimiento
+                                            </span>
+</td>
+</tr>
+<tr class="border-b border-outline-variant/20 hover:bg-surface-container-lowest/50 transition-colors">
+<td class="py-3 px-4">
+<div class="font-body-md text-body-md font-semibold text-primary">BUS-045</div>
+<div class="font-label-md text-label-md text-on-surface-variant">R-04 Sur</div>
+</td>
+<td class="py-3 px-4 font-body-sm text-body-sm text-on-surface">Pedro R.</td>
+<td class="py-3 px-4 text-right">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                                                En Movimiento
+                                            </span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-lowest/50 transition-colors">
+<td class="py-3 px-4">
+<div class="font-body-md text-body-md font-semibold text-primary">BUS-077</div>
+<div class="font-label-md text-label-md text-on-surface-variant">R-02 Norte</div>
+</td>
+<td class="py-3 px-4 font-body-sm text-body-sm text-on-surface">Maria S.</td>
+<td class="py-3 px-4 text-right">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                                                En Movimiento
+                                            </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-3 border-t border-outline-variant/30 text-center bg-surface-container-low/50">
+<a class="font-label-md text-label-md text-secondary hover:text-primary transition-colors" href="#">Ver listado completo →</a>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
