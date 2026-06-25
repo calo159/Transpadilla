@@ -210,10 +210,13 @@ export default function Pasajero() {
       const novBadge = bus?.novedad
         ? `<span style="position:absolute;top:-6px;right:-6px;width:15px;height:15px;border-radius:50%;background:#F5B731;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.4)">${svgAlerta}</span>`
         : "";
+      // Halo pulsante cuando el pasajero sigue este bus (sensación "en vivo").
+      const seguido = siguiendoBusRef.current === busId;
+      const haloRing = seguido ? "box-shadow:0 4px 14px rgba(0,0,0,.4),0 0 0 4px rgba(245,183,49,.9),0 0 0 9px rgba(245,183,49,.35);" : "box-shadow:0 4px 14px rgba(0,0,0,.4);";
       const icon = L.divIcon({
-        className: "",
+        className: seguido ? "tp-bus-seguido" : "",
         html: `<div style="display:flex;flex-direction:column;align-items:center;font-family:'Inter',system-ui,sans-serif">
-            <div style="position:relative;display:flex;align-items:center;gap:4px;background:${color};color:#fff;min-height:30px;padding:4px 9px;border-radius:12px;font-size:11px;font-weight:800;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.4);border:2px solid #fff;letter-spacing:.3px">
+            <div style="position:relative;display:flex;align-items:center;gap:4px;background:${color};color:#fff;min-height:30px;padding:4px 9px;border-radius:12px;font-size:11px;font-weight:800;white-space:nowrap;${haloRing}border:2px solid #fff;letter-spacing:.3px">
               <span style="display:flex;line-height:0">${svgBus}</span>${placa || "BUS"}
               <span style="position:absolute;bottom:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:${ocupDot};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.45)"></span>
               ${novBadge}
@@ -1125,10 +1128,10 @@ export default function Pasajero() {
 
         {/* ── Estado vacío: chip no intrusivo (no tapa el mapa) ── */}
         {activeBuses.length === 0 && (
-          <div className="absolute top-[160px] md:top-6 left-1/2 -translate-x-1/2 z-[600] pointer-events-none w-full flex justify-center px-4">
-            <div className="flex items-center gap-2 rounded-full shadow-lg px-4 py-2 text-center" style={{ background: "var(--tp-sky)", color: "var(--tp-navy)" }}>
-              <Bus className="w-4 h-4 flex-shrink-0" />
-              <span className="text-xs font-semibold leading-tight">Sin buses activos ahora · 5:00 am – 10:00 pm</span>
+          <div className="absolute top-[172px] md:top-6 left-1/2 -translate-x-1/2 z-[600] pointer-events-none w-full flex justify-center px-4">
+            <div className="flex items-center gap-2 rounded-full shadow-md px-4 py-2" style={{ background: "var(--color-white)", border: "1px solid #e8edf4" }}>
+              <Bus className="w-4 h-4 flex-shrink-0" style={{ color: "var(--color-gold)" }} />
+              <span className="text-xs font-semibold" style={{ color: "var(--color-navy)" }}>Sin buses activos · <span style={{ color: "var(--color-gray-text)" }}>5:00 am – 10:00 pm</span></span>
             </div>
           </div>
         )}
@@ -1163,40 +1166,49 @@ export default function Pasajero() {
         )}
 
         {/* ── Barra superior móvil: navbar navy + búsqueda + chips ── */}
-        <div className="md:hidden fixed top-0 left-0 right-0 z-[1001]" style={{ background: "linear-gradient(180deg, #20457E 0%, #1B3B6F 60%, #173357 100%)", boxShadow: "0 4px 14px rgba(27,59,111,0.35)" }}>
-          {/* Navbar: logo + EN VIVO + acciones como íconos */}
-          <div className="flex items-center gap-2 px-3" style={{ height: 56 }}>
-            <LogoTP size={30} />
-            {/* Badge EN VIVO (gold, punto parpadeante) */}
-            <span
-              className="flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full"
-              style={conectado
-                ? { background: "rgba(245,183,49,0.2)", color: "var(--color-gold)" }
-                : { background: "rgba(255,255,255,0.15)", color: "#fff" }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: conectado ? "var(--color-gold)" : "#fbbf24" }} />
-              {conectado ? "EN VIVO" : "···"}
-            </span>
+        <div className="md:hidden fixed top-0 left-0 right-0 z-[1001] rounded-b-[26px] overflow-hidden" style={{ background: "linear-gradient(180deg, #20457E 0%, #1B3B6F 70%, #19355C 100%)", boxShadow: "0 8px 24px rgba(15,30,60,0.32)" }}>
+          {/* Navbar: marca + acciones (ícono + etiqueta) + cuenta */}
+          <div className="flex items-center gap-2 px-3" style={{ height: 62 }}>
+            <LogoTP size={32} />
+            <div className="flex flex-col justify-center shrink-0 leading-none">
+              <span className="text-white font-extrabold text-sm tracking-tight">TransPadilla</span>
+              <span className="flex items-center gap-1 mt-1 text-[9px] font-bold uppercase tracking-wider" style={{ color: conectado ? "var(--color-gold)" : "#fcd34d" }}>
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: conectado ? "var(--color-gold)" : "#fcd34d" }} />
+                {conectado ? "En vivo" : "Sin conexión"}
+              </span>
+            </div>
             <div className="flex-grow" />
-            {/* Acciones (íconos) */}
-            <div className="flex items-center gap-0.5">
-              <button onClick={locateMe} disabled={locating} className="w-9 h-9 rounded-full flex items-center justify-center text-white active:scale-90 active:bg-white/10 transition-all disabled:opacity-60" aria-label="Centrar en mi ubicación" title="Mi ubicación">
-                {locating ? <Loader2 className="w-5 h-5 animate-spin" /> : <LocateFixed className="w-5 h-5" />}
+            {/* Acciones: ícono + etiqueta */}
+            <div className="flex items-end gap-1.5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+              <button onClick={locateMe} disabled={locating} className="flex flex-col items-center gap-1 shrink-0 min-w-[42px] active:scale-90 transition-transform disabled:opacity-60" aria-label="Centrar en mi ubicación">
+                <span className="w-8 h-8 rounded-full flex items-center justify-center text-white" style={{ background: "rgba(255,255,255,0.14)" }}>
+                  {locating ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <LocateFixed className="w-[18px] h-[18px]" />}
+                </span>
+                <span className="text-[9px] font-semibold leading-none text-white/90">Ubicar</span>
               </button>
-              <button onClick={armarDestino} className="w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition-all" style={destino || modoDestino ? { background: "var(--color-gold)", color: "var(--color-navy)" } : { color: "#fff" }} aria-label="¿A dónde vas? Toca el mapa para tu ruta más cercana" title="¿A dónde vas?">
-                <Navigation className="w-5 h-5" />
+              <button onClick={armarDestino} className="flex flex-col items-center gap-1 shrink-0 min-w-[42px] active:scale-90 transition-transform" aria-label="¿A dónde vas? Toca el mapa para tu ruta más cercana">
+                <span className="w-8 h-8 rounded-full flex items-center justify-center" style={destino || modoDestino ? { background: "var(--color-gold)", color: "var(--color-navy)" } : { background: "rgba(255,255,255,0.14)", color: "#fff" }}>
+                  <Navigation className="w-[18px] h-[18px]" />
+                </span>
+                <span className="text-[9px] font-semibold leading-none text-white/90">Destino</span>
               </button>
-              <a href={`https://wa.me/${WHATSAPP_NUMERO}?text=Hola%20TransPadilla%2C%20necesito%20ayuda`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full flex items-center justify-center text-white active:scale-90 active:bg-white/10 transition-all" aria-label="Atención al cliente por WhatsApp" title="Atención al cliente">
-                <MessageCircle className="w-5 h-5" />
+              <a href={`https://wa.me/${WHATSAPP_NUMERO}?text=Hola%20TransPadilla%2C%20necesito%20ayuda`} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1 shrink-0 min-w-[42px] active:scale-90 transition-transform" aria-label="Atención al cliente por WhatsApp">
+                <span className="w-8 h-8 rounded-full flex items-center justify-center text-white" style={{ background: "#25D366" }}>
+                  <MessageCircle className="w-[18px] h-[18px]" />
+                </span>
+                <span className="text-[9px] font-semibold leading-none text-white/90">Ayuda</span>
               </a>
-              <button onClick={() => setShowAyuda(true)} className="w-9 h-9 rounded-full flex items-center justify-center text-white active:scale-90 active:bg-white/10 transition-all" aria-label="¿Cómo funciona?" title="Info">
-                <HelpCircle className="w-5 h-5" />
-              </button>
-              <span className="w-px h-5 mx-0.5" style={{ background: "rgba(255,255,255,0.2)" }} />
-              <button onClick={() => setLocation(user ? (user.rol === "admin" ? "/admin" : "/conductor") : "/login")} className="w-9 h-9 rounded-full flex items-center justify-center text-white active:scale-90 transition-all" style={{ background: "rgba(255,255,255,0.15)" }} aria-label={user ? "Mi panel" : "Iniciar sesión"} title={user ? "Mi panel" : "Iniciar sesión"}>
-                <User className="w-5 h-5" />
+              <button onClick={() => setShowAyuda(true)} className="flex flex-col items-center gap-1 shrink-0 min-w-[42px] active:scale-90 transition-transform" aria-label="¿Cómo funciona?">
+                <span className="w-8 h-8 rounded-full flex items-center justify-center text-white" style={{ background: "rgba(255,255,255,0.14)" }}>
+                  <HelpCircle className="w-[18px] h-[18px]" />
+                </span>
+                <span className="text-[9px] font-semibold leading-none text-white/90">Info</span>
               </button>
             </div>
+            {/* Cuenta / login (ícono) */}
+            <button onClick={() => setLocation(user ? (user.rol === "admin" ? "/admin" : "/conductor") : "/login")} className="w-9 h-9 rounded-full flex items-center justify-center text-white shrink-0 active:scale-90 transition-transform" style={{ background: "rgba(255,255,255,0.2)" }} aria-label={user ? "Mi panel" : "Iniciar sesión"} title={user ? "Mi panel" : "Iniciar sesión"}>
+              <User className="w-5 h-5" />
+            </button>
           </div>
           {/* Búsqueda */}
           <div className="px-4 pb-2.5">
@@ -1206,9 +1218,9 @@ export default function Pasajero() {
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
                 onFocus={() => setVista("rutas")}
-                placeholder="¿A dónde vas o qué ruta buscas?"
+                placeholder="¿A dónde vas? Busca tu ruta"
                 aria-label="Buscar ruta"
-                className="w-full h-11 pl-10 pr-10 text-sm rounded-full outline-none border-0 transition-shadow focus:shadow-[0_0_0_3px_rgba(123,184,213,0.6)]"
+                className="w-full h-11 pl-11 pr-10 text-sm rounded-full outline-none border-0 shadow-sm transition-shadow focus:shadow-[0_0_0_3px_rgba(123,184,213,0.6)]"
                 style={{ background: "var(--color-white)", color: "var(--color-navy)" }}
               />
               {busqueda && (
@@ -1221,8 +1233,8 @@ export default function Pasajero() {
           {/* Chips de menú (deslizables) */}
           <div className="flex gap-2 overflow-x-auto px-4 pb-3" style={{ scrollbarWidth: "none" }}>
             {([
-              { id: "mapa", label: "Mapa en vivo", icon: <MapIcon className="w-3.5 h-3.5" /> },
-              { id: "favoritos", label: "Mis favoritos", icon: <Star className="w-3.5 h-3.5" /> },
+              { id: "mapa", label: "Mapa", icon: <MapIcon className="w-3.5 h-3.5" /> },
+              { id: "favoritos", label: "Favoritos", icon: <Star className="w-3.5 h-3.5" /> },
               { id: "rutas", label: "Rutas", icon: <RouteIcon className="w-3.5 h-3.5" /> },
               { id: "paraderos", label: "Paraderos", icon: <MapPin className="w-3.5 h-3.5" /> },
             ] as const).map((c) => {
@@ -1231,10 +1243,10 @@ export default function Pasajero() {
                 <button
                   key={c.id}
                   onClick={() => setVista(c.id)}
-                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-semibold transition-all duration-200 shrink-0 active:scale-95 ${activo ? "scale-105 shadow-md" : ""}`}
+                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 shrink-0 active:scale-95 ${activo ? "shadow-md" : ""}`}
                   style={activo
-                    ? { background: "var(--color-gold)", color: "var(--color-navy)" }
-                    : { background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)" }}
+                    ? { background: "var(--color-gold)", color: "var(--color-navy)", boxShadow: "0 4px 12px rgba(245,183,49,0.4)" }
+                    : { background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.18)" }}
                 >
                   {c.icon}{c.label}
                 </button>
@@ -1416,7 +1428,7 @@ export default function Pasajero() {
 
         {/* Pill de carga inicial del mapa */}
         {rutasLoading && rutas.length === 0 && (
-          <div className="absolute top-[160px] md:top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-lg">
+          <div className="absolute top-[172px] md:top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-lg">
             <Loader2 className="w-4 h-4 animate-spin text-primary" />
             <span className="text-xs text-muted-foreground font-medium">Cargando el mapa…</span>
           </div>
@@ -1424,7 +1436,7 @@ export default function Pasajero() {
 
         {/* Aviso flotante: modo "elegir destino" armado */}
         {modoDestino && (
-          <div className="absolute top-[160px] md:top-3 left-1/2 -translate-x-1/2 z-[1001] flex items-center gap-2 rounded-xl px-3.5 py-2 shadow-xl"
+          <div className="absolute top-[172px] md:top-3 left-1/2 -translate-x-1/2 z-[1001] flex items-center gap-2 rounded-xl px-3.5 py-2 shadow-xl"
             style={{ background: "var(--tp-yellow)", color: "#1a1300" }}
           >
             <Navigation className="w-4 h-4" />
@@ -1438,7 +1450,7 @@ export default function Pasajero() {
         {/* Chip "siguiendo bus" */}
         {busSeguido && (
           <div
-            className="absolute top-[160px] md:top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 rounded-xl px-3 py-2 shadow-lg"
+            className="absolute top-[172px] md:top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 rounded-xl px-3 py-2 shadow-lg"
             style={{ background: "var(--tp-sky)", color: "#001018" }}
           >
             <LocateFixed className="w-4 h-4 animate-pulse" />
@@ -1482,7 +1494,7 @@ export default function Pasajero() {
         <div
           key={vista}
           className="tp-light md:hidden fixed left-0 right-0 bottom-0 z-[1000] overflow-y-auto animate-in fade-in slide-in-from-bottom-3 duration-300 ease-out"
-          style={{ top: 160, background: "var(--color-gray-light)" }}
+          style={{ top: 172, background: "var(--color-gray-light)" }}
         >
           <div className="px-4 pt-3 pb-24 space-y-3">
             {(() => {
