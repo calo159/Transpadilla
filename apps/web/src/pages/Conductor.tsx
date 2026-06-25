@@ -4,7 +4,7 @@ import { useGetBuses, useUpdateGps, useReportarNovedad, useFinalizarRecorrido, g
 import { useQueryClient } from "@tanstack/react-query";
 import { getUser, clearAuth, homeForRol } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
-import { Bus, LogOut, Play, Square, AlertTriangle, Radio, Clock, ChevronLeft, Users, MapPin, X, KeyRound } from "lucide-react";
+import { Bus, LogOut, Play, Square, AlertTriangle, Radio, Clock, ChevronLeft, Users, User, MapPin, X, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { LogoTP } from "@/components/LogoTP";
@@ -201,245 +201,170 @@ export default function Conductor() {
   if (!user || user.rol !== "conductor") return null;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Panel del conductor — columna centrada, es lo principal (sin mapa grande) */}
-      <div className="max-w-md mx-auto flex flex-col min-h-screen bg-sidebar md:border-x border-border">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-          <div className="flex items-center gap-2.5">
-            <LogoTP size={32} />
-            <div>
-              <span className="text-sm font-black tracking-wider text-foreground">
-                Trans<span style={{ color: "var(--tp-sky)" }}>Padilla</span>
-              </span>
-              <p className="text-[10px] font-semibold" style={{ color: "var(--tp-yellow)" }}>Panel Conductor</p>
-            </div>
-          </div>
+    <div className="tp-light min-h-screen" style={{ background: "var(--color-gray-light)" }}>
+      <div className="max-w-md mx-auto flex flex-col min-h-screen">
+        {/* Header navy (estilo Stitch) */}
+        <header className="flex items-center justify-between px-3 shrink-0" style={{ background: "var(--color-navy)", height: 56 }}>
+          <button onClick={() => setLocation("/")} className="text-white p-1.5 active:scale-90 transition-transform" aria-label="Volver al mapa" title="Volver al mapa">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <span className="font-extrabold text-lg tracking-wide text-white">TRANSPADILLA</span>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={() => setLocation("/")} className="h-8 px-2 text-muted-foreground hover:text-foreground" title="Volver al mapa" aria-label="Volver al mapa">
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setCambiarPass(true)} className="h-8 px-2 text-muted-foreground hover:text-foreground" title="Cambiar contraseña" aria-label="Cambiar contraseña">
-              <KeyRound className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => { clearAuth(); setLocation("/"); }} className="h-8 px-2 text-muted-foreground hover:text-destructive" data-testid="button-salir" title="Cerrar sesión" aria-label="Cerrar sesión">
-              <LogOut className="w-4 h-4" />
-            </Button>
+            <button onClick={() => setCambiarPass(true)} className="text-white p-1.5 active:scale-90 transition-transform" aria-label="Cambiar contraseña" title="Cambiar contraseña"><KeyRound className="w-5 h-5" /></button>
+            <button onClick={() => { clearAuth(); setLocation("/"); }} className="text-white p-1.5 active:scale-90 transition-transform" data-testid="button-salir" aria-label="Cerrar sesión" title="Cerrar sesión"><LogOut className="w-5 h-5" /></button>
           </div>
-        </div>
+        </header>
 
         {/* Content */}
-        <div className="flex-1 flex flex-col gap-3 p-4 overflow-y-auto">
-          {/* Driver info + GPS status */}
-          <div className={`rounded-xl p-3 border transition-colors ${activo ? "border-green-500/30" : "bg-card border-border"}`} style={activo ? { background: "rgba(16,185,129,0.05)" } : {}}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Conductor</p>
-                <p className="font-semibold text-foreground text-sm" data-testid="text-conductor">{user?.nombre ?? "—"}</p>
-                {selectedBus && (
-                  <div className="mt-1.5 space-y-0.5">
-                    <p className="text-xs text-muted-foreground">Bus: <span className="font-mono font-bold text-foreground">{selectedBus.placa}</span></p>
-                    {selectedBus.nombre_ruta && <p className="text-xs text-muted-foreground">Ruta: <span className="text-foreground">{selectedBus.nombre_ruta}</span></p>}
-                  </div>
-                )}
+        <div className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto">
+          {/* Asignación actual (card navy + GPS) */}
+          <section className="rounded-2xl p-4 flex items-center justify-between shadow-lg" style={{ background: "var(--color-navy)" }}>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shrink-0">
+                <Bus className="w-7 h-7" style={{ color: "var(--color-navy)" }} />
               </div>
-              {activo && (
-                <div className="text-right">
-                  <div className="flex items-center gap-1.5 justify-end mb-1">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-xs font-medium text-green-400">GPS activo</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-base font-mono font-bold text-foreground">
-                    <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                    {elapsed}
-                  </div>
-                  {gpsVel > 0 && <p className="text-xs text-green-400 font-mono mt-0.5">{Math.round(gpsVel)} km/h</p>}
-                </div>
-              )}
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/60">Asignación actual</p>
+                <h2 className="font-bold text-white leading-tight truncate" data-testid="text-conductor">
+                  {selectedBus?.nombre_ruta ? selectedBus.nombre_ruta : selectedBus ? `Bus ${selectedBus.placa}` : "Sin asignación"}
+                </h2>
+                {selectedBus && <p className="text-xs text-white/70 mt-0.5">Bus <span className="font-mono font-bold">{selectedBus.placa}</span> · {user?.nombre}</p>}
+              </div>
             </div>
-            {activo && gpsLat !== null && (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs font-mono mt-2 pt-2 border-t border-border/50">
-                <div><span className="text-muted-foreground">Lat </span><span className="text-foreground">{gpsLat.toFixed(5)}</span></div>
-                <div><span className="text-muted-foreground">Lng </span><span className="text-foreground">{gpsLng?.toFixed(5)}</span></div>
-                <div><span className="text-muted-foreground">Envíos </span><span className="text-foreground">{gpsCount}</span></div>
-              </div>
-            )}
-          </div>
+            <div className="flex flex-col items-center gap-1 shrink-0 ml-2">
+              <span className="relative flex w-5 h-5 items-center justify-center">
+                {activo && !gpsError && <span className="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping" style={{ background: "var(--color-gold)" }} />}
+                <span className="relative inline-flex rounded-full h-3.5 w-3.5" style={{ background: activo && !gpsError ? "var(--color-gold)" : "rgba(255,255,255,0.4)" }} />
+              </span>
+              <span className="text-[10px] font-semibold text-white/80">{activo ? (gpsError ? "SIN GPS" : "GPS OK") : "GPS OFF"}</span>
+              {activo && <span className="text-[11px] font-mono font-bold text-white flex items-center gap-1"><Clock className="w-3 h-3" />{elapsed}</span>}
+            </div>
+          </section>
 
-          {/* Aviso persistente si el GPS falla durante el recorrido */}
+          {/* GPS detalle (en turno) */}
+          {activo && gpsLat !== null && (
+            <div className="grid grid-cols-3 gap-2 -mt-1 text-xs font-mono px-1" style={{ color: "var(--color-gray-text)" }}>
+              <div>Lat <span style={{ color: "var(--color-navy)" }}>{gpsLat.toFixed(4)}</span></div>
+              <div>Lng <span style={{ color: "var(--color-navy)" }}>{gpsLng?.toFixed(4)}</span></div>
+              <div>Envíos <span style={{ color: "var(--color-navy)" }}>{gpsCount}</span>{gpsVel > 0 && <span className="ml-1" style={{ color: "var(--color-success)" }}>· {Math.round(gpsVel)} km/h</span>}</div>
+            </div>
+          )}
+
+          {/* Sin señal de GPS */}
           {activo && gpsError && (
-            <div className="rounded-xl p-3.5 border" style={{ borderColor: "rgba(239,68,68,0.4)", background: "rgba(239,68,68,0.1)" }}>
-              <div className="flex items-center gap-2 mb-1">
-                <AlertTriangle className="w-4 h-4 text-red-400" />
-                <span className="text-xs font-black uppercase tracking-wide text-red-400">Sin señal de GPS</span>
+            <div className="rounded-2xl p-4 flex items-start gap-2" style={{ background: "rgba(229,62,62,0.1)", border: "1px solid rgba(229,62,62,0.4)" }}>
+              <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "var(--color-danger)" }} />
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide" style={{ color: "var(--color-danger)" }}>Sin señal de GPS</p>
+                <p className="text-sm mt-1" style={{ color: "var(--color-navy)" }}>Activa el GPS y da permiso de ubicación; mantén la app abierta y la pantalla encendida.</p>
               </div>
-              <p className="text-sm text-foreground">
-                No estamos recibiendo tu ubicación. Activa el GPS y da permiso de
-                ubicación al navegador; mantén la app abierta y la pantalla encendida.
-              </p>
             </div>
           )}
 
           {/* Sin bus asignado */}
           {!busId && (
-            <div className="bg-card border border-border rounded-xl px-6 py-8 text-center">
-              <Bus className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm font-semibold text-foreground">Sin bus asignado</p>
-              <p className="text-xs text-muted-foreground mt-1">El administrador debe asignarte un bus para iniciar tu recorrido</p>
+            <div className="bg-white rounded-2xl px-6 py-8 text-center shadow-sm">
+              <Bus className="w-10 h-10 mx-auto mb-3" style={{ color: "var(--color-sky)" }} />
+              <p className="text-sm font-bold" style={{ color: "var(--color-navy)" }}>Sin bus asignado</p>
+              <p className="text-xs mt-1" style={{ color: "var(--color-gray-text)" }}>El administrador debe asignarte un bus para iniciar tu recorrido.</p>
             </div>
           )}
 
-          {/* Start / Stop buttons */}
+          {/* Botón GRAN turno (Iniciar / Finalizar) */}
           {!activo ? (
-            <Button
-              onClick={iniciar}
-              className="w-full font-bold text-base rounded-xl"
-              style={{ height: "56px", background: "linear-gradient(135deg, #16a34a, #15803d)", fontSize: "16px" }}
-              disabled={!busId}
-              data-testid="button-iniciar"
-            >
-              <Play className="w-5 h-5 mr-2 fill-white" />
-              INICIAR RECORRIDO
-            </Button>
+            <button onClick={iniciar} disabled={!busId} data-testid="button-iniciar" className="w-full rounded-2xl py-10 flex flex-col items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50 text-white" style={{ background: "var(--color-navy)" }}>
+              <Play className="w-16 h-16 fill-white" />
+              <span className="text-2xl font-extrabold uppercase tracking-wide">Iniciar Turno</span>
+              <span className="text-sm text-white/70">Toque para registrar su inicio de recorrido</span>
+            </button>
           ) : (
-            <div className="space-y-2">
-              <Button
-                onClick={() => setConfirmar({
-                  titulo: "Finalizar recorrido",
-                  descripcion: "¿Seguro que quieres finalizar el recorrido? Dejarás de transmitir tu ubicación.",
-                  textoConfirmar: "Finalizar",
-                  destructivo: true,
-                  accion: finalizar,
-                })}
-                variant="destructive"
-                className="w-full font-bold text-base rounded-xl"
-                style={{ height: "56px", fontSize: "16px" }}
-                disabled={finalizarRecorrido.isPending}
-                data-testid="button-finalizar"
-              >
-                <Square className="w-5 h-5 mr-2 fill-white" />
-                FINALIZAR RECORRIDO
-              </Button>
+            <button
+              onClick={() => setConfirmar({ titulo: "Finalizar recorrido", descripcion: "¿Seguro que quieres finalizar el recorrido? Dejarás de transmitir tu ubicación.", textoConfirmar: "Finalizar", destructivo: true, accion: finalizar })}
+              disabled={finalizarRecorrido.isPending}
+              data-testid="button-finalizar"
+              className="w-full rounded-2xl py-10 flex flex-col items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-transform text-white disabled:opacity-60"
+              style={{ background: "var(--color-danger)" }}
+            >
+              <Square className="w-16 h-16 fill-white" />
+              <span className="text-2xl font-extrabold uppercase tracking-wide">Finalizar Turno</span>
+              <span className="text-sm text-white/80">Recorrido en progreso · {elapsed}</span>
+            </button>
+          )}
 
-              {/* Ocupación del bus */}
-              <div className="bg-card border border-border rounded-xl p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Users className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">¿Qué tan lleno va?</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
+          {/* Ocupación + novedad (solo en turno activo) */}
+          {activo && (
+            <>
+              {/* Ocupación del vehículo (cards grandes) */}
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider px-1 mb-2" style={{ color: "var(--color-gray-text)" }}>Ocupación del vehículo</h3>
+                <div className="grid grid-cols-3 gap-3">
                   {([
-                    { val: "vacio", label: "Vacío", color: "#22c55e" },
-                    { val: "medio", label: "Medio", color: "#F5C200" },
-                    { val: "lleno", label: "Lleno", color: "#ef4444" },
+                    { val: "vacio", label: "Vacío", Icon: User, color: "#38A169" },
+                    { val: "medio", label: "Medio", Icon: Users, color: "#F5B731" },
+                    { val: "lleno", label: "Lleno", Icon: Users, color: "#E53E3E" },
                   ] as const).map((o) => {
                     const activa = ocupacion === o.val;
                     return (
-                      <button
-                        key={o.val}
-                        onClick={() => enviarOcupacion(o.val)}
-                        className="h-11 rounded-xl text-sm font-bold border-2 transition-all active:scale-95"
-                        style={{
-                          borderColor: o.color,
-                          background: activa ? o.color : "transparent",
-                          color: activa ? "#000" : o.color,
-                        }}
-                      >
-                        {o.label}
+                      <button key={o.val} onClick={() => enviarOcupacion(o.val)} className="rounded-2xl py-5 flex flex-col items-center gap-2.5 shadow-sm active:scale-95 transition-all" style={activa ? { background: o.color, color: "#fff" } : { background: "#fff", color: "var(--color-navy)" }}>
+                        <span className="w-12 h-12 rounded-full flex items-center justify-center" style={activa ? { background: "rgba(255,255,255,0.25)" } : { background: "var(--color-gray-light)" }}>
+                          <o.Icon className="w-6 h-6" />
+                        </span>
+                        <span className="font-bold">{o.label}</span>
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Reporte de estado */}
+              {/* Reportar incidente / novedad */}
               {selectedBus?.novedad ? (
-                /* Reporte activo: se mantiene hasta que el conductor lo retire */
-                <div className="rounded-xl p-3.5 border" style={{ borderColor: "rgba(245,158,11,0.45)", background: "rgba(245,158,11,0.1)" }}>
+                <div className="rounded-2xl p-4 shadow-sm" style={{ background: "rgba(245,183,49,0.12)", border: "1px solid rgba(245,183,49,0.45)" }}>
                   <div className="flex items-center gap-2 mb-1.5">
-                    <AlertTriangle className="w-4 h-4" style={{ color: "var(--tp-amber)" }} />
-                    <span className="text-xs font-black uppercase tracking-wide" style={{ color: "var(--tp-amber)" }}>Reporte activo</span>
+                    <AlertTriangle className="w-4 h-4" style={{ color: "var(--color-gold)" }} />
+                    <span className="text-xs font-black uppercase tracking-wide" style={{ color: "#9a6a00" }}>Reporte activo</span>
                   </div>
-                  <p className="text-sm text-foreground mb-3">{selectedBus.novedad}</p>
-                  <Button
-                    onClick={limpiarNovedad}
-                    variant="outline"
-                    className="w-full h-11 rounded-xl font-semibold"
-                    data-testid="button-quitar-reporte"
-                  >
-                    <X className="w-4 h-4 mr-1.5" /> Quitar reporte (volver a normal)
-                  </Button>
+                  <p className="text-sm mb-3" style={{ color: "var(--color-navy)" }}>{selectedBus.novedad}</p>
+                  <button onClick={limpiarNovedad} data-testid="button-quitar-reporte" className="w-full h-11 rounded-xl font-semibold flex items-center justify-center gap-1.5" style={{ background: "#fff", color: "var(--color-navy)", border: "1px solid #e2e8f0" }}>
+                    <X className="w-4 h-4" /> Quitar reporte (volver a normal)
+                  </button>
                 </div>
+              ) : !showCustom ? (
+                <button onClick={() => setShowCustom(true)} className="w-full rounded-2xl py-5 flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-transform text-white" style={{ background: "var(--color-danger)" }}>
+                  <AlertTriangle className="w-7 h-7 fill-white" />
+                  <span className="font-extrabold uppercase tracking-wider">Reportar incidente</span>
+                </button>
               ) : (
-                /* Sin reporte: opciones rápidas (un toque = reportar) */
-                <div className="bg-card border border-border rounded-xl p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="w-4 h-4" style={{ color: "var(--tp-amber)" }} />
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Reportar novedad</span>
+                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--color-gray-text)" }}>Reportar novedad</span>
+                    <button onClick={() => { setShowCustom(false); setNovedadCustom(""); }} aria-label="Cerrar" style={{ color: "var(--color-gray-text)" }}><X className="w-4 h-4" /></button>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     {NOVEDAD_OPCIONES.map((o) => (
-                      <button
-                        key={o.label}
-                        onClick={() => enviarNovedad(o.texto)}
-                        disabled={reportarNovedad.isPending}
-                        className="h-11 rounded-xl text-sm font-semibold border border-border bg-background hover:bg-secondary active:scale-95 transition-all disabled:opacity-50"
-                      >
+                      <button key={o.label} onClick={() => enviarNovedad(o.texto)} disabled={reportarNovedad.isPending} className="h-11 rounded-xl text-sm font-semibold active:scale-95 transition-all disabled:opacity-50" style={{ background: "var(--color-gray-light)", color: "var(--color-navy)" }}>
                         {o.label}
                       </button>
                     ))}
                   </div>
-                  <button
-                    onClick={() => setShowCustom((v) => !v)}
-                    className="w-full mt-2 text-xs text-muted-foreground hover:text-foreground py-1.5"
-                  >
-                    {showCustom ? "Cancelar" : "Escribir otra novedad…"}
-                  </button>
-                  {showCustom && (
-                    <div className="space-y-2">
-                      <Textarea
-                        data-testid="input-novedad-custom"
-                        placeholder="Describe la novedad..."
-                        value={novedadCustom}
-                        onChange={(e) => setNovedadCustom(e.target.value)}
-                        className="bg-background border-border text-sm h-20 resize-none rounded-xl"
-                      />
-                      <Button
-                        onClick={() => enviarNovedad(novedadCustom)}
-                        disabled={!novedadCustom.trim() || reportarNovedad.isPending}
-                        className="w-full h-11 text-sm font-semibold rounded-xl"
-                        style={{ background: "var(--tp-amber)", color: "#000" }}
-                        data-testid="button-novedad"
-                      >
-                        Enviar reporte
-                      </Button>
-                    </div>
-                  )}
+                  <Textarea data-testid="input-novedad-custom" placeholder="Describe otra novedad..." value={novedadCustom} onChange={(e) => setNovedadCustom(e.target.value)} className="mt-2 text-sm h-20 resize-none rounded-xl bg-white" />
+                  <Button onClick={() => enviarNovedad(novedadCustom)} disabled={!novedadCustom.trim() || reportarNovedad.isPending} data-testid="button-novedad" className="w-full h-11 mt-2 text-sm font-bold rounded-xl text-white" style={{ background: "var(--color-blue)" }}>
+                    Enviar reporte
+                  </Button>
                 </div>
               )}
-            </div>
+            </>
           )}
 
-          {/* Estado de transmisión */}
+          {/* Estado de transmisión + mapa opcional */}
           <div className="flex items-center justify-center gap-2 text-xs py-1">
-            <Radio className={`w-3.5 h-3.5 ${activo ? "text-green-400" : "text-muted-foreground"}`} />
-            <span className="text-muted-foreground">{activo ? "Transmitiendo GPS en vivo" : "GPS inactivo"}</span>
+            <Radio className="w-3.5 h-3.5" style={{ color: activo ? "var(--color-success)" : "var(--color-gray-text)" }} />
+            <span style={{ color: "var(--color-gray-text)" }}>{activo ? "Transmitiendo GPS en vivo" : "GPS inactivo"}</span>
           </div>
-
-          {/* Mapa opcional — oculto por defecto; lo principal es el panel */}
-          <button
-            onClick={() => setShowMapa((v) => !v)}
-            className="w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground py-2.5 border border-border rounded-xl transition-colors"
-          >
-            <MapPin className="w-3.5 h-3.5" />
-            {showMapa ? "Ocultar mapa" : "Ver mi ubicación en el mapa"}
+          <button onClick={() => setShowMapa((v) => !v)} className="w-full flex items-center justify-center gap-2 text-xs py-2.5 rounded-xl bg-white shadow-sm" style={{ color: "var(--color-navy)" }}>
+            <MapPin className="w-3.5 h-3.5" /> {showMapa ? "Ocultar mapa" : "Ver mi ubicación en el mapa"}
           </button>
           <div style={{ display: showMapa ? "block" : "none" }}>
-            <div
-              ref={mapContainerRef}
-              className="w-full h-56 rounded-xl overflow-hidden border border-border"
-              data-testid="map-conductor"
-            />
+            <div ref={mapContainerRef} className="w-full h-56 rounded-2xl overflow-hidden shadow-sm" data-testid="map-conductor" />
           </div>
         </div>
       </div>

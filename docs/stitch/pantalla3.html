@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Transpadilla - Panel de Conductor</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed": "#001a41",
+                        "on-secondary-fixed-variant": "#5e4200",
+                        "on-primary": "#ffffff",
+                        "on-background": "#191c1e",
+                        "inverse-surface": "#2d3133",
+                        "on-primary-fixed-variant": "#28467b",
+                        "surface-container-high": "#e6e8ea",
+                        "surface-container": "#eceef0",
+                        "on-secondary": "#ffffff",
+                        "outline": "#747780",
+                        "background": "#f7f9fb",
+                        "secondary": "#7c5800",
+                        "on-error": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "on-tertiary-fixed": "#001f2a",
+                        "secondary-fixed-dim": "#fbbc36",
+                        "surface-container-highest": "#e0e3e5",
+                        "primary-fixed-dim": "#acc7ff",
+                        "tertiary-container": "#004156",
+                        "surface-variant": "#e0e3e5",
+                        "error": "#ba1a1a",
+                        "secondary-fixed": "#ffdea6",
+                        "inverse-on-surface": "#eff1f3",
+                        "primary-container": "#1b3b6f",
+                        "on-secondary-container": "#6f4f00",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed-variant": "#004d65",
+                        "inverse-primary": "#acc7ff",
+                        "tertiary-fixed": "#bee9ff",
+                        "primary": "#002555",
+                        "surface-container-low": "#f2f4f6",
+                        "on-primary-container": "#8aa7e1",
+                        "surface-dim": "#d8dadc",
+                        "on-tertiary-container": "#71aecb",
+                        "tertiary-fixed-dim": "#92cfec",
+                        "surface-tint": "#415e94",
+                        "secondary-container": "#febf39",
+                        "on-secondary-fixed": "#271900",
+                        "surface": "#f7f9fb",
+                        "tertiary": "#002a38",
+                        "on-tertiary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#c4c6d1",
+                        "on-surface": "#191c1e",
+                        "surface-bright": "#f7f9fb",
+                        "primary-fixed": "#d8e2ff",
+                        "on-surface-variant": "#43474f"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "lg": "24px",
+                        "base": "4px",
+                        "md": "16px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "40px",
+                        "xl": "32px",
+                        "sm": "8px",
+                        "gutter": "16px",
+                        "safe": "env(safe-area-inset-bottom)"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Inter", "sans-serif"],
+                        "body-md": ["Inter", "sans-serif"],
+                        "headline-md": ["Inter", "sans-serif"],
+                        "body-lg": ["Inter", "sans-serif"],
+                        "label-sm": ["Inter", "sans-serif"],
+                        "label-lg": ["Inter", "sans-serif"],
+                        "headline-lg": ["Inter", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        };
+    </script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* Prevent pull-to-refresh on mobile for dashboard view */
+        body {
+            overscroll-behavior-y: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen flex flex-col font-body-md">
+<!-- Global Nav Shell: TopAppBar (from JSON) -->
+<header class="fixed top-4 left-4 right-4 rounded-xl z-50 backdrop-blur-md bg-opacity-90 bg-primary shadow-md flex items-center justify-between px-md py-sm w-[calc(100%-32px)] mx-auto">
+<button aria-label="Menú" class="text-on-primary hover:bg-primary-container rounded-full transition-colors p-2 flex items-center justify-center active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="menu" style="font-variation-settings: 'FILL' 0;">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-on-primary tracking-tight">TRANSPADILLA</h1>
+<button aria-label="Buscar" class="text-on-primary hover:bg-primary-container rounded-full transition-colors p-2 flex items-center justify-center active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="search" style="font-variation-settings: 'FILL' 0;">search</span>
+</button>
+</header>
+<!-- Main Dashboard Canvas -->
+<main class="flex-1 flex flex-col px-margin-mobile pt-[100px] pb-margin-desktop gap-md max-w-2xl mx-auto w-full">
+<!-- Driver Route Header -->
+<section class="bg-primary rounded-xl shadow-lg p-md flex items-center justify-between border border-primary-container relative overflow-hidden">
+<!-- Subtle glassmorphism glow effect -->
+<div class="absolute -top-10 -right-10 w-32 h-32 bg-primary-container rounded-full opacity-50 blur-2xl"></div>
+<div class="flex items-center gap-sm relative z-10">
+<div class="w-12 h-12 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="directions_bus" style="font-variation-settings: 'FILL' 1;">directions_bus</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-primary-container uppercase tracking-wider">Asignación Actual</span>
+<h2 class="font-headline-md text-headline-md text-on-primary font-bold">RUTA 1: MERCADO - AEROPUERTO</h2>
+</div>
+</div>
+<!-- GPS Signal Indicator -->
+<div class="flex flex-col items-center justify-center gap-1 relative z-10 min-w-[60px]">
+<div class="relative flex items-center justify-center w-6 h-6">
+<div class="absolute inline-flex h-full w-full rounded-full bg-secondary-container opacity-75 animate-ping"></div>
+<div class="relative inline-flex rounded-full h-4 w-4 bg-secondary-container"></div>
+</div>
+<span class="font-label-sm text-label-sm text-on-primary-container text-[10px]">GPS OK</span>
+</div>
+</section>
+<!-- Primary Action: Shift Toggle -->
+<!-- Note: Using primary brand colors as fallback for strict theme compliance, avoiding arbitrary hex greens -->
+<section class="mt-sm">
+<button class="w-full bg-primary hover:bg-primary-container active:bg-primary text-on-primary rounded-xl py-12 px-6 flex flex-col items-center justify-center gap-4 shadow-lg transition-all duration-200 active:scale-[0.98] border-2 border-transparent" id="shiftToggleBtn">
+<span class="material-symbols-outlined text-[64px]" data-icon="play_circle" id="shiftIcon" style="font-variation-settings: 'FILL' 0; font-size: 64px;">play_circle</span>
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-extrabold uppercase tracking-wide" id="shiftText">Iniciar Turno</span>
+<span class="font-body-md text-body-md text-on-primary-container mt-2">Toque para registrar su inicio de recorrido</span>
+</button>
+</section>
+<!-- Occupancy Selection Cards -->
+<section class="mt-sm flex flex-col gap-sm">
+<h3 class="font-label-lg text-label-lg text-on-surface-variant uppercase tracking-wider px-2">Ocupación del Vehículo</h3>
+<div class="grid grid-cols-3 gap-sm">
+<!-- Vacio -->
+<button class="occupancy-btn bg-surface-container hover:bg-surface-container-high active:bg-surface-variant text-on-surface border border-outline-variant rounded-xl py-8 flex flex-col items-center justify-center gap-3 shadow-sm transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent group">
+<div class="w-16 h-16 rounded-full bg-surface-container-lowest flex items-center justify-center group-focus:bg-primary-container group-focus:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined text-[32px]" data-icon="person_outline" style="font-variation-settings: 'FILL' 0; font-size: 32px;">person_outline</span>
+</div>
+<span class="font-headline-md text-headline-md font-bold">Vacío</span>
+</button>
+<!-- Medio -->
+<button class="occupancy-btn bg-surface-container hover:bg-surface-container-high active:bg-surface-variant text-on-surface border border-outline-variant rounded-xl py-8 flex flex-col items-center justify-center gap-3 shadow-sm transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent group">
+<div class="w-16 h-16 rounded-full bg-surface-container-lowest flex items-center justify-center group-focus:bg-primary-container group-focus:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined text-[32px]" data-icon="people" style="font-variation-settings: 'FILL' 0; font-size: 32px;">people</span>
+</div>
+<span class="font-headline-md text-headline-md font-bold">Medio</span>
+</button>
+<!-- Lleno -->
+<button class="occupancy-btn bg-surface-container hover:bg-surface-container-high active:bg-surface-variant text-on-surface border border-outline-variant rounded-xl py-8 flex flex-col items-center justify-center gap-3 shadow-sm transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent group">
+<div class="w-16 h-16 rounded-full bg-surface-container-lowest flex items-center justify-center group-focus:bg-primary-container group-focus:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined text-[32px]" data-icon="groups" style="font-variation-settings: 'FILL' 0; font-size: 32px;">groups</span>
+</div>
+<span class="font-headline-md text-headline-md font-bold">Lleno</span>
+</button>
+</div>
+</section>
+<!-- Emergency / Incident Action -->
+<section class="mt-auto pt-lg pb-safe">
+<button class="w-full bg-error hover:bg-[#a41717] active:bg-[#8c1414] text-on-error rounded-xl py-6 flex items-center justify-center gap-3 shadow-lg transition-transform duration-150 active:scale-[0.98] border-2 border-transparent focus:outline-none focus:ring-4 focus:ring-error-container">
+<span class="material-symbols-outlined text-[32px]" data-icon="warning" style="font-variation-settings: 'FILL' 1; font-size: 32px;">warning</span>
+<span class="font-headline-md text-headline-md font-extrabold uppercase tracking-wider">REPORTAR INCIDENTE</span>
+</button>
+</section>
+</main>
+<!-- Suppressed BottomNavBar: Task-focused driving screen mandates canvas prioritization over global navigation -->
+<script>
+        // Simple interactions for the prototype
+        document.addEventListener('DOMContentLoaded', () => {
+            const shiftBtn = document.getElementById('shiftToggleBtn');
+            const shiftIcon = document.getElementById('shiftIcon');
+            const shiftText = document.getElementById('shiftText');
+            let isShiftActive = false;
+
+            shiftBtn.addEventListener('click', () => {
+                isShiftActive = !isShiftActive;
+                
+                if (isShiftActive) {
+                    // Transition to "Finalizar Turno" state (Red/Error palette)
+                    shiftBtn.className = "w-full bg-error hover:bg-[#a41717] active:bg-[#8c1414] text-on-error rounded-xl py-12 px-6 flex flex-col items-center justify-center gap-4 shadow-lg transition-all duration-200 active:scale-[0.98] border-2 border-transparent";
+                    shiftIcon.textContent = "stop_circle";
+                    shiftIcon.setAttribute('data-icon', 'stop_circle');
+                    shiftText.textContent = "Finalizar Turno";
+                    shiftBtn.querySelector('span.font-body-md').textContent = "Recorrido en progreso. Toque para terminar.";
+                    shiftBtn.querySelector('span.font-body-md').className = "font-body-md text-body-md text-error-container mt-2";
+                } else {
+                    // Revert to "Iniciar Turno" state
+                    shiftBtn.className = "w-full bg-primary hover:bg-primary-container active:bg-primary text-on-primary rounded-xl py-12 px-6 flex flex-col items-center justify-center gap-4 shadow-lg transition-all duration-200 active:scale-[0.98] border-2 border-transparent";
+                    shiftIcon.textContent = "play_circle";
+                    shiftIcon.setAttribute('data-icon', 'play_circle');
+                    shiftText.textContent = "Iniciar Turno";
+                    shiftBtn.querySelector('span.font-body-md').textContent = "Toque para registrar su inicio de recorrido";
+                    shiftBtn.querySelector('span.font-body-md').className = "font-body-md text-body-md text-on-primary-container mt-2";
+                }
+            });
+
+            // Exclusive selection logic for occupancy buttons
+            const occupancyBtns = document.querySelectorAll('.occupancy-btn');
+            occupancyBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // Reset all
+                    occupancyBtns.forEach(b => {
+                        b.classList.remove('ring-2', 'ring-primary', 'bg-surface-variant');
+                        const iconContainer = b.querySelector('div');
+                        iconContainer.classList.remove('bg-primary-container', 'text-on-primary-container');
+                        iconContainer.classList.add('bg-surface-container-lowest');
+                    });
+                    
+                    // Set active
+                    this.classList.add('ring-2', 'ring-primary', 'bg-surface-variant');
+                    const activeIconContainer = this.querySelector('div');
+                    activeIconContainer.classList.remove('bg-surface-container-lowest');
+                    activeIconContainer.classList.add('bg-primary-container', 'text-on-primary-container');
+                });
+            });
+        });
+    </script>
+</body></html>

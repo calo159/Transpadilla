@@ -24,6 +24,9 @@ node_modules
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
+
+# Claude Code MCP local (contiene API keys — NO commitear)
+.mcp.json
 !.vscode/launch.json
 !.vscode/extensions.json
 

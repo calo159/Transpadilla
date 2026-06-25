@@ -7,7 +7,7 @@ import {
   Bus, MapPin, LogOut, Radio, AlertTriangle, X,
   Search, Clock, LogIn, Shield, ChevronRight,
   Menu, MessageCircle, Instagram, LocateFixed, Loader2, Star, HelpCircle, Navigation, RefreshCw,
-  User, Map as MapIcon, Route as RouteIcon,
+  User, Map as MapIcon, Route as RouteIcon, Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,8 +47,10 @@ export default function Pasajero() {
   const [novedad, setNovedad] = useState<Novedad | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sheetState, setSheetState] = useState<SheetState>("collapsed");
-  // Vista activa de los chips del menú (móvil): mapa | favoritos | rutas | paraderos.
+  // Vista activa (bottom nav móvil): mapa | favoritos | rutas | paraderos.
   const [vista, setVista] = useState<"mapa" | "favoritos" | "rutas" | "paraderos">("mapa");
+  // Menú ☰ del header (acciones: destino, atención, info).
+  const [menuAbierto, setMenuAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   // Estado real de la conexión en vivo (Socket.IO). Para no mentir con "En vivo".
   const [conectado, setConectado] = useState(true);
@@ -975,144 +977,113 @@ export default function Pasajero() {
     if (!selectedRuta && !destino) return null;
     return (
       <div
-        className="md:hidden fixed left-0 right-0 bottom-0 z-[1000] max-h-[62vh] overflow-y-auto rounded-t-3xl px-4 pt-2 pb-6 animate-in slide-in-from-bottom-8 fade-in duration-300 ease-out"
+        className="md:hidden fixed left-0 right-0 bottom-[72px] z-[1000] max-h-[58vh] overflow-y-auto rounded-t-3xl px-4 pt-2 pb-6 animate-in slide-in-from-bottom-8 fade-in duration-300 ease-out"
         style={{ background: "var(--color-white)", boxShadow: "0 -8px 28px rgba(27,59,111,0.18)" }}
       >
         {/* Barrita de arrastre (indicador visual) */}
         <div className="mx-auto mb-3 h-1.5 w-11 rounded-full" style={{ background: "rgba(27,59,111,0.18)" }} />
         {/* ¿A dónde vas? — recomendación por destino */}
         {panelDestino && <div className="mb-3">{panelDestino}</div>}
-        {/* Ruta seleccionada */}
-        {selectedRuta && (
-          <div className="mb-3 rounded-xl border overflow-hidden" style={{ borderColor: selectedRuta.color + "60", background: selectedRuta.color + "0D" }}>
-            {/* Franja de color de la ruta (estilo TransMi) */}
-            <div className="h-1.5 w-full" style={{ background: selectedRuta.color }} />
-            <div className="p-3">
-            <div className="flex items-start justify-between mb-2.5 gap-2">
-              <span className="font-bold text-base text-foreground leading-tight min-w-0">{selectedRuta.nombre}</span>
-              <button onClick={() => setSelectedRutaId(null)} aria-label="Cerrar ruta" className="text-muted-foreground hover:text-foreground p-1 -mr-1 -mt-1 flex-shrink-0">
-                <X className="w-4 h-4" />
-              </button>
+        {/* Ruta seleccionada — diseño Stitch (Detalle de Ruta) */}
+        {selectedRuta && (() => {
+          const rutaNumero = rutas.findIndex((r) => r.id === selectedRuta.id) + 1;
+          const paradas = selectedRuta.paradas;
+          const conEta = paradas
+            .map((p, i) => ({ i, eta: etaPorParada[p.id]?.eta }))
+            .filter((x): x is { i: number; eta: number } => x.eta != null);
+          const nextI = conEta.length ? conEta.sort((a, b) => a.eta - b.eta)[0]!.i : -1;
+          const progresoPct = nextI >= 0 && paradas.length > 1 ? (nextI / (paradas.length - 1)) * 100 : 0;
+          const hayDemora = busesRutaSel.some((x) => x.bus.estado === "demora");
+          const nov = busesRutaSel.find((x) => x.bus.novedad)?.bus.novedad;
+          const proxBus = proximoBus ? buses.find((b) => b.placa === proximoBus.placa) : undefined;
+          const ocupProx = proxBus?.ocupacion
+            ? ({ vacio: { l: "Disponible", c: "#38A169" }, medio: { l: "Medio lleno", c: "#F5B731" }, lleno: { l: "Lleno", c: "#E53E3E" } } as Record<string, { l: string; c: string }>)[proxBus.ocupacion]
+            : null;
+          return (
+          <div className="-mx-4 -mt-1 overflow-hidden">
+            {/* Header navy con número de ruta */}
+            <div className="flex items-center gap-3 px-4 py-3" style={{ background: "var(--color-navy)" }}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center font-extrabold text-xl shrink-0" style={{ background: "#fff", color: "var(--color-navy)" }}>{rutaNumero}</div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-white leading-tight truncate">{selectedRuta.nombre}</h3>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="w-2 h-2 rounded-full" style={{ background: selectedRuta.color }} />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-white/70">Ruta</span>
+                </div>
+              </div>
+              <button onClick={() => setSelectedRutaId(null)} aria-label="Cerrar" className="text-white/80 p-1"><X className="w-5 h-5" /></button>
             </div>
-            {/* Banner de novedad activa de la ruta */}
-            {(() => {
-              const nov = busesRutaSel.find((x) => x.bus.novedad)?.bus.novedad;
-              return nov ? (
-                <div className="flex items-start gap-2 mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(245,183,49,0.14)", border: "1px solid rgba(245,183,49,0.4)" }}>
-                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "var(--tp-yellow)" }} />
-                  <span className="text-xs font-semibold leading-snug" style={{ color: "var(--tp-yellow)" }}>{nov}</span>
-                </div>
-              ) : null;
-            })()}
-            {/* Hero: el tiempo de llegada del próximo bus es lo principal */}
-            {proximoBus ? (
-              <div className="flex items-center justify-between mb-3 px-3 py-2.5 rounded-xl" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
-                <div className="flex items-center gap-2">
-                  <Clock className="w-6 h-6 text-green-400 flex-shrink-0" />
-                  {proximoBus.eta <= 0 ? (
-                    <span className="text-2xl font-black text-green-400 leading-none">¡Llegando!</span>
-                  ) : (
-                    <span className="flex items-baseline gap-1 text-green-400">
-                      <span className="text-sm font-bold">Llega en</span>
-                      <span className="text-3xl font-black leading-none">{proximoBus.eta}</span>
-                      <span className="text-sm font-bold">min</span>
-                    </span>
-                  )}
-                </div>
-                <span className="flex items-center gap-1 text-xs font-mono font-bold text-foreground/80 px-2 py-1 rounded-lg bg-background/50">
-                  <Bus className="w-3.5 h-3.5" />{proximoBus.placa}
-                </span>
+            {/* Estado en vivo + barra de progreso con bus dorado */}
+            <div className="px-4 py-3 bg-white border-b" style={{ borderColor: "#eef2f7" }}>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: "var(--color-gray-text)" }}><Radio className="w-3.5 h-3.5" /> Estado en vivo</span>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded" style={hayDemora ? { background: "rgba(229,62,62,0.12)", color: "var(--color-danger)" } : { background: "rgba(123,184,213,0.25)", color: "var(--color-navy)" }}>{hayDemora ? "CON DEMORA" : "A TIEMPO"}</span>
               </div>
-            ) : (
-              <div className="mb-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground" style={{ background: "rgba(148,163,184,0.08)" }}>
-                No hay buses en circulación en esta ruta ahora.
-              </div>
-            )}
-            {selectedRuta.paradas.length > 0 && (
-              <div className="mb-2">
-                {selectedRuta.paradas.map((p, i, arr) => {
-                  const eta = etaPorParada[p.id];
-                  const first = i === 0;
-                  const last = i === arr.length - 1;
-                  return (
-                    <div key={p.id} className="relative flex items-center gap-3 py-1">
-                      {/* Línea de tiempo de la ruta (conector + punto) */}
-                      <div className="relative flex flex-col items-center self-stretch w-3">
-                        <div className="w-0.5 flex-1" style={{ background: first ? "transparent" : selectedRuta.color + "55" }} />
-                        <div className="w-2.5 h-2.5 rounded-full ring-2 ring-background flex-shrink-0" style={{ background: selectedRuta.color }} />
-                        <div className="w-0.5 flex-1" style={{ background: last ? "transparent" : selectedRuta.color + "55" }} />
-                      </div>
-                      <span className="flex-1 truncate text-xs text-foreground/80">{p.nombre}</span>
-                      {(first || last) && (
-                        <span className="text-[9px] font-bold opacity-50 flex-shrink-0">{first ? "INICIO" : "FIN"}</span>
-                      )}
-                      {eta && (
-                        <span className="text-[10px] font-bold text-green-400 whitespace-nowrap flex-shrink-0 px-1.5 py-0.5 rounded-full bg-green-500/10">
-                          {eta.eta <= 0 ? "llegando" : `~${eta.eta} min`}
-                        </span>
-                      )}
+              {proximoBus ? (
+                <>
+                  <div className="relative h-1.5 rounded-full" style={{ background: "#e6e9ef" }}>
+                    <div className="absolute top-0 left-0 h-full rounded-full" style={{ width: progresoPct + "%", background: "var(--color-navy)" }} />
+                    <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-6 h-6 rounded-full flex items-center justify-center shadow-md" style={{ left: progresoPct + "%", background: "var(--color-gold)", border: "2px solid #fff" }}>
+                      <Bus className="w-3.5 h-3.5" style={{ color: "var(--color-navy)" }} />
                     </div>
-                  );
-                })}
-              </div>
-            )}
-            {/* Buses de la ruta — ordenados del más cercano a mí, con ETA a mi ubicación */}
-            <div className="mt-1 pt-2 border-t border-border/50">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  {userPos ? "Buses — el más cercano a ti primero" : "Buses en circulación"}
-                </span>
-                {!userPos && (
-                  <button onClick={locateMe} className="text-[10px] font-semibold flex items-center gap-1" style={{ color: "var(--tp-sky)" }}>
-                    <LocateFixed className="w-3 h-3" /> Usar mi ubicación
-                  </button>
-                )}
-              </div>
-              {busesRutaSel.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-1">No hay buses en circulación ahora.</p>
+                  </div>
+                  <div className="flex justify-between mt-1.5 text-[11px]" style={{ color: "var(--color-gray-text)" }}>
+                    <span className="truncate max-w-[45%]">{paradas[0]?.nombre}</span>
+                    <span className="truncate max-w-[45%] text-right">{paradas[paradas.length - 1]?.nombre}</span>
+                  </div>
+                </>
               ) : (
-                <div className="space-y-1.5">
-                  {busesRutaSel.map(({ bus: b, distKm, etaMin }) => {
-                    const oc = b.ocupacion
-                      ? ({ vacio: { l: "Vacío", c: "#22c55e" }, medio: { l: "Medio", c: "#F5C200" }, lleno: { l: "Lleno", c: "#ef4444" } } as Record<string, { l: string; c: string }>)[b.ocupacion]
-                      : null;
-                    return (
-                    <div key={b.id} className="flex items-center gap-2 py-1 text-xs">
-                      <span className="font-mono font-bold text-foreground">{b.placa}</span>
-                      {oc && (
-                        <span className="flex items-center gap-1 flex-shrink-0" title={`Ocupación: ${oc.l}`}>
-                          <span className="w-2 h-2 rounded-full" style={{ background: oc.c }} />
-                          <span className="text-[10px] font-semibold" style={{ color: oc.c }}>{oc.l}</span>
-                        </span>
-                      )}
-                      {b.estado === "demora" && <span className="px-1.5 py-0.5 rounded-full font-bold bg-amber-500/20 text-amber-400">demora</span>}
-                      {distKm != null ? (
-                        <span className="text-muted-foreground">
-                          a {distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${distKm.toFixed(1)} km`} ·{" "}
-                          <span className="text-green-400 font-semibold">{etaMin === 0 ? "llegando" : `~${etaMin} min`}</span>
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground/60">activa tu ubicación</span>
-                      )}
-                      <button
-                        onClick={() => seguirBus(b.id)}
-                        className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg font-semibold text-white transition-colors"
-                        style={siguiendoBusId === b.id
-                          ? { background: "var(--tp-sky)", color: "#001018" }
-                          : { background: "#2558A5" }}
-                      >
-                        <LocateFixed className="w-3 h-3" />
-                        {siguiendoBusId === b.id ? "Siguiendo" : "Seguir"}
-                      </button>
-                    </div>
-                    );
-                  })}
-                </div>
+                <p className="text-sm" style={{ color: "var(--color-gray-text)" }}>No hay buses en circulación en esta ruta ahora.</p>
               )}
             </div>
+            {/* Banner de novedad */}
+            {nov && (
+              <div className="flex items-start gap-2 px-4 py-2.5" style={{ background: "rgba(245,183,49,0.14)" }}>
+                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "var(--color-gold)" }} />
+                <span className="text-xs font-semibold leading-snug" style={{ color: "#9a6a00" }}>{nov}</span>
+              </div>
+            )}
+            {/* Lista de paraderos */}
+            {paradas.length > 0 && (
+              <ul className="bg-white">
+                {paradas.map((p, i) => {
+                  const eta = etaPorParada[p.id]?.eta;
+                  const past = nextI >= 0 && i < nextI;
+                  const current = i === nextI;
+                  return (
+                    <li key={p.id} className="relative flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "#f1f4f8", background: current ? "rgba(123,184,213,0.10)" : "transparent", opacity: past ? 0.55 : 1 }}>
+                      {current && <span className="absolute left-0 top-0 bottom-0 w-1" style={{ background: "var(--color-gold)" }} />}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={current ? { background: "rgba(37,88,165,0.12)" } : { background: "#eef2f7" }}>
+                          {past ? <Check className="w-4 h-4" style={{ color: "var(--color-gray-text)" }} /> : current ? <MapPin className="w-4 h-4" style={{ color: "var(--color-blue)" }} /> : <span className="w-2 h-2 rounded-full" style={{ background: "#cbd5e1" }} />}
+                        </span>
+                        <span className={"truncate text-sm " + (current ? "font-bold" : "font-medium")} style={{ color: "var(--color-navy)" }}>{p.nombre}</span>
+                      </div>
+                      {eta != null && (
+                        <div className="text-right shrink-0 ml-2">
+                          <div className={(current ? "text-2xl" : "text-base") + " font-extrabold tabular-nums leading-none"} style={{ color: current ? "var(--color-navy)" : "var(--color-gray-text)" }}>{eta <= 0 ? "•" : eta}</div>
+                          <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--color-gray-text)" }}>{eta <= 0 ? "llegando" : "min"}</div>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {/* Botón Seguir este bus */}
+            <div className="px-4 pt-3 pb-1 bg-white">
+              {proxBus ? (
+                <button onClick={() => seguirBus(proxBus.id)} className="w-full h-12 rounded-2xl font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform" style={siguiendoBusId === proxBus.id ? { background: "var(--color-sky)", color: "var(--color-navy)" } : { background: "var(--color-blue)", color: "#fff" }}>
+                  <LocateFixed className="w-5 h-5" /> {siguiendoBusId === proxBus.id ? "Siguiendo este bus" : "Seguir este bus"}
+                  {ocupProx && <span className="ml-1 text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.22)" }}>{ocupProx.l}</span>}
+                </button>
+              ) : (
+                <div className="w-full h-12 rounded-2xl font-semibold flex items-center justify-center" style={{ background: "#eef2f7", color: "var(--color-gray-text)" }}>Sin buses ahora</div>
+              )}
             </div>
           </div>
-        )}
+          );
+        })()}
 
       </div>
     );
@@ -1126,9 +1097,22 @@ export default function Pasajero() {
       <div className="flex-1 relative">
         <div ref={mapContainerRef} className="w-full h-full" data-testid="map-container" />
 
+        {/* FAB ubicación (estilo Stitch: sky, abajo-derecha sobre el bottom nav) — solo móvil/vista mapa */}
+        {vista === "mapa" && (
+          <button
+            onClick={locateMe}
+            disabled={locating}
+            className="md:hidden absolute right-4 bottom-[88px] z-[900] flex items-center justify-center w-12 h-12 rounded-full shadow-lg active:scale-95 transition-transform disabled:opacity-60"
+            style={{ background: "var(--color-sky)", color: "var(--color-navy)" }}
+            aria-label="Centrar en mi ubicación"
+          >
+            {locating ? <Loader2 className="w-5 h-5 animate-spin" /> : <LocateFixed className="w-5 h-5" />}
+          </button>
+        )}
+
         {/* ── Estado vacío: chip no intrusivo (no tapa el mapa) ── */}
         {activeBuses.length === 0 && (
-          <div className="absolute top-[172px] md:top-6 left-1/2 -translate-x-1/2 z-[600] pointer-events-none w-full flex justify-center px-4">
+          <div className="absolute top-[140px] md:top-6 left-1/2 -translate-x-1/2 z-[600] pointer-events-none w-full flex justify-center px-4">
             <div className="flex items-center gap-2 rounded-full shadow-md px-4 py-2" style={{ background: "var(--color-white)", border: "1px solid #e8edf4" }}>
               <Bus className="w-4 h-4 flex-shrink-0" style={{ color: "var(--color-gold)" }} />
               <span className="text-xs font-semibold" style={{ color: "var(--color-navy)" }}>Sin buses activos · <span style={{ color: "var(--color-gray-text)" }}>5:00 am – 10:00 pm</span></span>
@@ -1165,95 +1149,78 @@ export default function Pasajero() {
           </button>
         )}
 
-        {/* ── Barra superior móvil: navbar navy + búsqueda + chips ── */}
-        <div className="md:hidden fixed top-0 left-0 right-0 z-[1001] rounded-b-[26px] overflow-hidden" style={{ background: "linear-gradient(180deg, #20457E 0%, #1B3B6F 70%, #19355C 100%)", boxShadow: "0 8px 24px rgba(15,30,60,0.32)" }}>
-          {/* Navbar: marca + acciones (ícono + etiqueta) + cuenta */}
-          <div className="flex items-center gap-2 px-3" style={{ height: 62 }}>
-            <LogoTP size={32} />
-            <div className="flex flex-col justify-center shrink-0 leading-none">
-              <span className="text-white font-extrabold text-sm tracking-tight">TransPadilla</span>
-              <span className="flex items-center gap-1 mt-1 text-[9px] font-bold uppercase tracking-wider" style={{ color: conectado ? "var(--color-gold)" : "#fcd34d" }}>
+        {/* ── Header móvil (estilo Stitch): tarjeta navy flotante + búsqueda + menú ── */}
+        <div className="md:hidden fixed top-0 left-0 right-0 z-[1001] px-3 pt-3 flex flex-col gap-2">
+          {/* Tarjeta navy */}
+          <div className="rounded-2xl px-3 py-2.5 shadow-lg" style={{ background: "var(--color-navy)" }}>
+            <div className="flex items-center justify-between">
+              <button onClick={() => setMenuAbierto((o) => !o)} className="p-1 rounded-full text-white active:scale-90 transition-transform" aria-label="Menú">
+                {menuAbierto ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+              <span className="font-extrabold text-lg tracking-wide text-white">TRANSPADILLA</span>
+              <button onClick={() => setLocation(user ? (user.rol === "admin" ? "/admin" : "/conductor") : "/login")} className="p-1 rounded-full text-white active:scale-90 transition-transform" aria-label={user ? "Mi panel" : "Cuenta"}>
+                <User className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="flex items-center justify-between mt-1 px-1">
+              <span className="text-[11px] font-medium text-white/80">Moviendo la Ciudad</span>
+              <span className="flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full" style={conectado ? { background: "rgba(245,183,49,0.2)", color: "var(--color-gold)" } : { background: "rgba(255,255,255,0.15)", color: "#fff" }}>
                 <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: conectado ? "var(--color-gold)" : "#fcd34d" }} />
-                {conectado ? "En vivo" : "Sin conexión"}
+                {conectado ? "EN VIVO" : "SIN CONEXIÓN"}
               </span>
             </div>
-            <div className="flex-grow" />
-            {/* Acciones: ícono + etiqueta */}
-            <div className="flex items-end gap-1.5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-              <button onClick={locateMe} disabled={locating} className="flex flex-col items-center gap-1 shrink-0 min-w-[42px] active:scale-90 transition-transform disabled:opacity-60" aria-label="Centrar en mi ubicación">
-                <span className="w-8 h-8 rounded-full flex items-center justify-center text-white" style={{ background: "rgba(255,255,255,0.14)" }}>
-                  {locating ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <LocateFixed className="w-[18px] h-[18px]" />}
-                </span>
-                <span className="text-[9px] font-semibold leading-none text-white/90">Ubicar</span>
+          </div>
+          {/* Búsqueda (tarjeta blanca) */}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: "var(--color-gray-text)" }} />
+            <input
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              onFocus={() => setVista("rutas")}
+              placeholder="¿A dónde vas?"
+              aria-label="Buscar ruta"
+              className="w-full h-12 pl-12 pr-10 text-sm rounded-2xl outline-none border-0 shadow-md"
+              style={{ background: "#fff", color: "var(--color-navy)" }}
+            />
+            {busqueda && (
+              <button onClick={() => setBusqueda("")} className="absolute right-3.5 top-1/2 -translate-y-1/2" style={{ color: "var(--color-gray-text)" }} aria-label="Limpiar búsqueda">
+                <X className="w-4 h-4" />
               </button>
-              <button onClick={armarDestino} className="flex flex-col items-center gap-1 shrink-0 min-w-[42px] active:scale-90 transition-transform" aria-label="¿A dónde vas? Toca el mapa para tu ruta más cercana">
-                <span className="w-8 h-8 rounded-full flex items-center justify-center" style={destino || modoDestino ? { background: "var(--color-gold)", color: "var(--color-navy)" } : { background: "rgba(255,255,255,0.14)", color: "#fff" }}>
-                  <Navigation className="w-[18px] h-[18px]" />
-                </span>
-                <span className="text-[9px] font-semibold leading-none text-white/90">Destino</span>
+            )}
+          </div>
+          {/* Menú ☰ desplegable con acciones */}
+          {menuAbierto && (
+            <div className="rounded-2xl bg-white shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200" onClick={() => setMenuAbierto(false)}>
+              <button onClick={armarDestino} className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-gray-100" style={{ color: "var(--color-navy)" }}>
+                <Navigation className="w-5 h-5 flex-shrink-0" style={{ color: "var(--color-blue)" }} /><span className="font-semibold text-sm">¿A dónde vas? — toca el mapa</span>
               </button>
-              <a href={`https://wa.me/${WHATSAPP_NUMERO}?text=Hola%20TransPadilla%2C%20necesito%20ayuda`} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1 shrink-0 min-w-[42px] active:scale-90 transition-transform" aria-label="Atención al cliente por WhatsApp">
-                <span className="w-8 h-8 rounded-full flex items-center justify-center text-white" style={{ background: "#25D366" }}>
-                  <MessageCircle className="w-[18px] h-[18px]" />
-                </span>
-                <span className="text-[9px] font-semibold leading-none text-white/90">Ayuda</span>
+              <a href={`https://wa.me/${WHATSAPP_NUMERO}?text=Hola%20TransPadilla%2C%20necesito%20ayuda`} target="_blank" rel="noopener noreferrer" className="w-full flex items-center gap-3 px-4 py-3.5 border-t border-gray-100 active:bg-gray-100" style={{ color: "var(--color-navy)" }}>
+                <MessageCircle className="w-5 h-5 flex-shrink-0" style={{ color: "#25D366" }} /><span className="font-semibold text-sm">Atención al cliente (WhatsApp)</span>
               </a>
-              <button onClick={() => setShowAyuda(true)} className="flex flex-col items-center gap-1 shrink-0 min-w-[42px] active:scale-90 transition-transform" aria-label="¿Cómo funciona?">
-                <span className="w-8 h-8 rounded-full flex items-center justify-center text-white" style={{ background: "rgba(255,255,255,0.14)" }}>
-                  <HelpCircle className="w-[18px] h-[18px]" />
-                </span>
-                <span className="text-[9px] font-semibold leading-none text-white/90">Info</span>
+              <button onClick={() => setShowAyuda(true)} className="w-full flex items-center gap-3 px-4 py-3.5 text-left border-t border-gray-100 active:bg-gray-100" style={{ color: "var(--color-navy)" }}>
+                <HelpCircle className="w-5 h-5 flex-shrink-0" style={{ color: "var(--color-sky)" }} /><span className="font-semibold text-sm">¿Cómo funciona?</span>
               </button>
             </div>
-            {/* Cuenta / login (ícono) */}
-            <button onClick={() => setLocation(user ? (user.rol === "admin" ? "/admin" : "/conductor") : "/login")} className="w-9 h-9 rounded-full flex items-center justify-center text-white shrink-0 active:scale-90 transition-transform" style={{ background: "rgba(255,255,255,0.2)" }} aria-label={user ? "Mi panel" : "Iniciar sesión"} title={user ? "Mi panel" : "Iniciar sesión"}>
-              <User className="w-5 h-5" />
-            </button>
-          </div>
-          {/* Búsqueda */}
-          <div className="px-4 pb-2.5">
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--color-blue)" }} />
-              <input
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                onFocus={() => setVista("rutas")}
-                placeholder="¿A dónde vas? Busca tu ruta"
-                aria-label="Buscar ruta"
-                className="w-full h-11 pl-11 pr-10 text-sm rounded-full outline-none border-0 shadow-sm transition-shadow focus:shadow-[0_0_0_3px_rgba(123,184,213,0.6)]"
-                style={{ background: "var(--color-white)", color: "var(--color-navy)" }}
-              />
-              {busqueda && (
-                <button onClick={() => setBusqueda("")} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--color-gray-text)" }} aria-label="Limpiar búsqueda">
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
-          {/* Chips de menú (deslizables) */}
-          <div className="flex gap-2 overflow-x-auto px-4 pb-3" style={{ scrollbarWidth: "none" }}>
-            {([
-              { id: "mapa", label: "Mapa", icon: <MapIcon className="w-3.5 h-3.5" /> },
-              { id: "favoritos", label: "Favoritos", icon: <Star className="w-3.5 h-3.5" /> },
-              { id: "rutas", label: "Rutas", icon: <RouteIcon className="w-3.5 h-3.5" /> },
-              { id: "paraderos", label: "Paraderos", icon: <MapPin className="w-3.5 h-3.5" /> },
-            ] as const).map((c) => {
-              const activo = vista === c.id;
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => setVista(c.id)}
-                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 shrink-0 active:scale-95 ${activo ? "shadow-md" : ""}`}
-                  style={activo
-                    ? { background: "var(--color-gold)", color: "var(--color-navy)", boxShadow: "0 4px 12px rgba(245,183,49,0.4)" }
-                    : { background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.18)" }}
-                >
-                  {c.icon}{c.label}
-                </button>
-              );
-            })}
-          </div>
+          )}
         </div>
+
+        {/* ── Bottom nav (estilo Stitch): Inicio / Rutas / Favoritos / Perfil ── */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[1002] flex justify-around items-center px-2 pt-2 pb-3 bg-white" style={{ boxShadow: "0 -4px 16px rgba(15,30,60,0.10)" }}>
+          {([
+            { id: "mapa", label: "Inicio", icon: <MapIcon className="w-5 h-5" /> },
+            { id: "rutas", label: "Rutas", icon: <RouteIcon className="w-5 h-5" /> },
+            { id: "favoritos", label: "Favoritos", icon: <Star className="w-5 h-5" /> },
+            { id: "paraderos", label: "Paraderos", icon: <MapPin className="w-5 h-5" /> },
+          ] as const).map((t) => {
+            const activo = vista === t.id;
+            return (
+              <button key={t.id} onClick={() => setVista(t.id)} className="flex flex-col items-center gap-0.5 rounded-2xl px-4 py-1.5 active:scale-90 transition-all" style={activo ? { background: "var(--color-gold)", color: "var(--color-navy)" } : { color: "var(--color-gray-text)" }}>
+                {t.icon}
+                <span className="text-[10px] font-bold">{t.label}</span>
+              </button>
+            );
+          })}
+        </nav>
 
         {/* Guía de bienvenida (primera visita) */}
         {showWelcome && (
@@ -1428,7 +1395,7 @@ export default function Pasajero() {
 
         {/* Pill de carga inicial del mapa */}
         {rutasLoading && rutas.length === 0 && (
-          <div className="absolute top-[172px] md:top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-lg">
+          <div className="absolute top-[140px] md:top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-lg">
             <Loader2 className="w-4 h-4 animate-spin text-primary" />
             <span className="text-xs text-muted-foreground font-medium">Cargando el mapa…</span>
           </div>
@@ -1436,7 +1403,7 @@ export default function Pasajero() {
 
         {/* Aviso flotante: modo "elegir destino" armado */}
         {modoDestino && (
-          <div className="absolute top-[172px] md:top-3 left-1/2 -translate-x-1/2 z-[1001] flex items-center gap-2 rounded-xl px-3.5 py-2 shadow-xl"
+          <div className="absolute top-[140px] md:top-3 left-1/2 -translate-x-1/2 z-[1001] flex items-center gap-2 rounded-xl px-3.5 py-2 shadow-xl"
             style={{ background: "var(--tp-yellow)", color: "#1a1300" }}
           >
             <Navigation className="w-4 h-4" />
@@ -1450,7 +1417,7 @@ export default function Pasajero() {
         {/* Chip "siguiendo bus" */}
         {busSeguido && (
           <div
-            className="absolute top-[172px] md:top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 rounded-xl px-3 py-2 shadow-lg"
+            className="absolute top-[140px] md:top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 rounded-xl px-3 py-2 shadow-lg"
             style={{ background: "var(--tp-sky)", color: "#001018" }}
           >
             <LocateFixed className="w-4 h-4 animate-pulse" />
@@ -1494,7 +1461,7 @@ export default function Pasajero() {
         <div
           key={vista}
           className="tp-light md:hidden fixed left-0 right-0 bottom-0 z-[1000] overflow-y-auto animate-in fade-in slide-in-from-bottom-3 duration-300 ease-out"
-          style={{ top: 172, background: "var(--color-gray-light)" }}
+          style={{ top: 140, bottom: 72, background: "var(--color-gray-light)" }}
         >
           <div className="px-4 pt-3 pb-24 space-y-3">
             {(() => {
