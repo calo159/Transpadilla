@@ -57,7 +57,7 @@ export default function Login() {
     <div
       className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden"
       style={{
-        background: "radial-gradient(ellipse at 50% -10%, #1757C2 0%, #0D2461 35%, #080D18 70%)",
+        background: "radial-gradient(ellipse at 50% -10%, #2558A5 0%, #1B3B6F 35%, #080D18 70%)",
       }}
     >
       {/* Fondo decorativo — ondas de marca */}
@@ -136,7 +136,7 @@ export default function Login() {
         <form
           onSubmit={handleLogin}
           className="rounded-2xl p-5 shadow-2xl space-y-4"
-          style={{ background: "rgba(12,18,32,0.85)", border: "1px solid rgba(75,169,216,0.2)", backdropFilter: "blur(16px)" }}
+          style={{ background: "rgba(12,18,32,0.85)", border: "1px solid rgba(123,184,213,0.2)", backdropFilter: "blur(16px)" }}
         >
           <div>
             <Label htmlFor="correo" className="text-sm font-medium text-white/75">
@@ -194,8 +194,8 @@ export default function Login() {
             className="w-full font-bold text-base tracking-wide rounded-xl text-white shadow-lg border-0"
             style={{
               height: "52px",
-              background: "linear-gradient(135deg, #1757C2 0%, var(--tp-sky) 100%)",
-              boxShadow: "0 4px 20px rgba(23,87,194,0.5)",
+              background: "linear-gradient(135deg, #2558A5 0%, var(--tp-sky) 100%)",
+              boxShadow: "0 4px 20px rgba(37,88,165,0.5)",
             }}
             disabled={loading}
             data-testid="button-login"

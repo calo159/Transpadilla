@@ -5,8 +5,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { clearAuth, getUser } from "@/lib/auth";
 import {
   Bus, MapPin, LogOut, Radio, AlertTriangle, X,
-  Search, Clock, LogIn, Shield, ChevronRight, ChevronUp,
+  Search, Clock, LogIn, Shield, ChevronRight,
   Menu, MessageCircle, Instagram, LocateFixed, Loader2, Star, HelpCircle, Navigation, RefreshCw,
+  User, Map as MapIcon, Route as RouteIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,9 +42,13 @@ export default function Pasajero() {
   // "Seguir mi bus": el mapa hace pan automático al bus elegido cuando se mueve.
   const [siguiendoBusId, setSiguiendoBusId] = useState<number | null>(null);
   const siguiendoBusRef = useRef<number | null>(null);
+  // Espejo del ETA por parada para leerlo dentro de updateBusMarker (useCallback []).
+  const etaRef = useRef<Record<number, { eta: number; placa: string }>>({});
   const [novedad, setNovedad] = useState<Novedad | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sheetState, setSheetState] = useState<SheetState>("collapsed");
+  // Vista activa de los chips del menú (móvil): mapa | favoritos | rutas | paraderos.
+  const [vista, setVista] = useState<"mapa" | "favoritos" | "rutas" | "paraderos">("mapa");
   const [busqueda, setBusqueda] = useState("");
   // Estado real de la conexión en vivo (Socket.IO). Para no mentir con "En vivo".
   const [conectado, setConectado] = useState(true);
@@ -180,44 +185,72 @@ export default function Pasajero() {
   }, [selectedRutaId, rutas]);
 
   const updateBusMarker = useCallback(
-    (busId: number, lat: number, lng: number, color = "#1757C2", placa = "", rutaId?: number) => {
+    (busId: number, lat: number, lng: number, color = "#2558A5", placa = "", rutaId?: number) => {
       if (!mapRef.current) return;
       const bus = busesRef.current.find((b) => b.id === busId);
       const routeName = bus?.nombre_ruta ?? "";
       const vel = bus?.velocidad ?? 0;
-      const novText = bus?.novedad ? `<span style="color:var(--tp-yellow,#F5C200)">⚠ ${bus.novedad}</span><br>` : "";
+      // Colores de OCUPACIÓN (paleta del brief): disponible/medio/lleno.
       const ocupMap: Record<string, { label: string; color: string }> = {
-        vacio: { label: "Vacío", color: "#22c55e" },
-        medio: { label: "Medio lleno", color: "#F5C200" },
-        lleno: { label: "Lleno", color: "#ef4444" },
+        vacio: { label: "Disponible", color: "#38A169" },
+        medio: { label: "Medio lleno", color: "#F5B731" },
+        lleno: { label: "Lleno", color: "#E53E3E" },
       };
       const ocup = bus?.ocupacion ? ocupMap[bus.ocupacion] : undefined;
-      const ocupText = ocup
-        ? `<span style="color:${ocup.color};font-size:12px">● Ocupación: ${ocup.label}</span><br>`
-        : "";
 
-      // Punto de estado: ámbar si tiene novedad, verde si va normal.
-      const dotColor = bus?.novedad ? "#F5C200" : "#22c55e";
-      const dotHtml = `<span style="width:7px;height:7px;border-radius:50%;background:${dotColor};display:inline-block;margin-left:3px;box-shadow:0 0 0 2px rgba(255,255,255,.55)"></span>`;
+      // ETA de ESTE bus a su próxima parada (si su ruta está seleccionada).
+      const etaVals = Object.values(etaRef.current).filter((v) => v.placa === placa);
+      const busEta = etaVals.length ? Math.min(...etaVals.map((v) => v.eta)) : null;
+
+      // ── Ícono: cuerpo con color de ruta + placa; punto de ocupación en la esquina ──
+      const ocupDot = ocup ? ocup.color : "#9CA3AF"; // gris si no hay dato
+      // Íconos SVG inline (sin emoji, regla del UI skill).
+      const svgAlerta = `<svg width="9" height="9" viewBox="0 0 24 24" fill="#1B3B6F"><path d="M12 2 1 21h22L12 2Zm0 6a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0V9a1 1 0 0 1 1-1Zm0 9a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4Z"/></svg>`;
+      const svgBus = `<svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M6 2h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H9v1a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-1a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm0 4v5h12V6H6Zm2 7a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm8 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></svg>`;
+      const novBadge = bus?.novedad
+        ? `<span style="position:absolute;top:-6px;right:-6px;width:15px;height:15px;border-radius:50%;background:#F5B731;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.4)">${svgAlerta}</span>`
+        : "";
       const icon = L.divIcon({
         className: "",
         html: `<div style="display:flex;flex-direction:column;align-items:center;font-family:'Inter',system-ui,sans-serif">
-            <div style="display:flex;align-items:center;gap:4px;background:${color};color:#fff;padding:3px 8px;border-radius:10px;font-size:11px;font-weight:800;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.45);border:2px solid rgba(255,255,255,.9);letter-spacing:.4px">
-              <span style="font-size:12px;line-height:1">🚌</span>${placa || "BUS"}${dotHtml}
+            <div style="position:relative;display:flex;align-items:center;gap:4px;background:${color};color:#fff;min-height:30px;padding:4px 9px;border-radius:12px;font-size:11px;font-weight:800;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.4);border:2px solid #fff;letter-spacing:.3px">
+              <span style="display:flex;line-height:0">${svgBus}</span>${placa || "BUS"}
+              <span style="position:absolute;bottom:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:${ocupDot};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.45)"></span>
+              ${novBadge}
             </div>
             <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid ${color};margin-top:-1px;filter:drop-shadow(0 2px 1px rgba(0,0,0,.3))"></div>
           </div>`,
-        iconSize: [96, 38], iconAnchor: [48, 38],
+        iconSize: [96, 40], iconAnchor: [48, 40],
       });
 
+      // ── Popup: ETA + ocupación + novedad de un vistazo ──
+      const etaHtml = busEta !== null
+        ? `<div style="display:flex;align-items:baseline;gap:5px;margin:6px 0 2px">
+             <span style="font-size:22px;font-weight:800;color:#16a34a;line-height:1">${busEta <= 1 ? "Llegando" : "~" + Math.round(busEta)}</span>
+             ${busEta > 1 ? `<span style="font-size:12px;color:#16a34a;font-weight:600">min a su próxima parada</span>` : ""}
+           </div>`
+        : "";
+      const ocupHtml = ocup
+        ? `<span style="display:inline-flex;align-items:center;gap:5px;background:${ocup.color}1f;color:${ocup.color};font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px">
+             <span style="width:7px;height:7px;border-radius:50%;background:${ocup.color}"></span>${ocup.label}
+           </span>`
+        : "";
+      const novHtml = bus?.novedad
+        ? `<div style="display:flex;gap:5px;align-items:flex-start;background:rgba(245,183,49,.14);border-left:3px solid #F5B731;border-radius:6px;padding:5px 8px;margin-top:7px">
+             <span style="font-size:12px;line-height:1.3">⚠</span><span style="font-size:11px;color:#9a6a00;font-weight:600;line-height:1.3">${bus.novedad}</span>
+           </div>`
+        : "";
       const popupContent = `
-        <div style="min-width:170px;font-family:'Inter',system-ui,sans-serif">
-          <b style="font-size:14px;letter-spacing:0.5px">${placa || "BUS"}</b><br>
-          <span style="color:#64748b;font-size:12px">${routeName}</span><br>
-          ${vel > 0 ? `<span style="color:#22c55e;font-size:12px">● ${Math.round(vel)} km/h</span><br>` : ""}
-          ${ocupText}
-          ${novText}
-          <span style="color:#94a3b8;font-size:11px">Tarifa: ${TARIFA_COP} COP</span>
+        <div style="min-width:180px;font-family:'Inter',system-ui,sans-serif">
+          <div style="display:flex;align-items:center;gap:6px">
+            <b style="font-size:15px;letter-spacing:0.5px">${placa || "BUS"}</b>
+            ${vel > 0 ? `<span style="color:#16a34a;font-size:11px;font-weight:600">● ${Math.round(vel)} km/h</span>` : ""}
+          </div>
+          <div style="color:#64748b;font-size:12px;margin-top:1px">${routeName}</div>
+          ${etaHtml}
+          ${ocupHtml ? `<div style="margin-top:6px">${ocupHtml}</div>` : ""}
+          ${novHtml}
+          <div style="color:#94a3b8;font-size:11px;margin-top:7px;border-top:1px solid #eef2f7;padding-top:5px">Tarifa: ${TARIFA_COP} COP</div>
         </div>`;
 
       // Si estamos siguiendo este bus, centrar el mapa en su nueva posición.
@@ -245,7 +278,7 @@ export default function Pasajero() {
     buses.forEach((b) => {
       if (b.lat != null && b.lng != null && b.estado !== "inactivo") {
         vivos.add(b.id);
-        updateBusMarker(b.id, b.lat, b.lng, b.color_ruta ?? "#1757C2", b.placa, b.ruta_id ?? undefined);
+        updateBusMarker(b.id, b.lat, b.lng, b.color_ruta ?? "#2558A5", b.placa, b.ruta_id ?? undefined);
       }
     });
     Object.keys(markersRef.current).forEach((idStr) => {
@@ -268,7 +301,7 @@ export default function Pasajero() {
     socket.io.on("reconnect", () => setConectado(true));
     socket.on("bus:ubicacion", (data: BusLocation) => {
       const bus = busesRef.current.find((b) => b.id === data.busId);
-      updateBusMarker(data.busId, data.lat, data.lng, bus?.color_ruta ?? "#1757C2", bus?.placa ?? "BUS", data.rutaId);
+      updateBusMarker(data.busId, data.lat, data.lng, bus?.color_ruta ?? "#2558A5", bus?.placa ?? "BUS", data.rutaId);
       queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
     });
     socket.on("bus:novedad", (data: Novedad) => {
@@ -340,7 +373,7 @@ export default function Pasajero() {
       className: "",
       html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;width:40px;height:40px">
           <span class="tp-destino-pulse"></span>
-          <span style="font-size:28px;line-height:1;position:relative;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))">📍</span>
+          <span style="position:relative;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))"><svg width="30" height="30" viewBox="0 0 24 24" fill="#F5B731" stroke="#1B3B6F" stroke-width="1.5"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Z"/><circle cx="12" cy="9" r="2.5" fill="#1B3B6F" stroke="none"/></svg></span>
         </div>`,
       iconSize: [40, 40], iconAnchor: [20, 36],
     });
@@ -380,6 +413,8 @@ export default function Pasajero() {
 
   // Mantener el ref sincronizado para el pan dentro de updateBusMarker.
   useEffect(() => { siguiendoBusRef.current = siguiendoBusId; }, [siguiendoBusId]);
+  // Espejo del ETA para el popup del bus (updateBusMarker no depende del estado).
+  useEffect(() => { etaRef.current = etaPorParada; }, [etaPorParada]);
 
   // Activar/desactivar el seguimiento de un bus; al activarlo centra el mapa.
   const seguirBus = (busId: number) => {
@@ -431,14 +466,16 @@ export default function Pasajero() {
     setSheetState((s) => s === "collapsed" ? "half" : s === "half" ? "full" : "collapsed");
   };
 
-  const sheetTranslate = sheetState === "collapsed" ? "calc(100% - 136px)" : sheetState === "half" ? "45%" : "0%";
+  // En "full" el sheet se detiene debajo de la barra superior móvil (navbar+búsqueda+chips).
+  const SHEET_TOP = 152;
+  const sheetTranslate = sheetState === "collapsed" ? "calc(100% - 136px)" : sheetState === "half" ? "45%" : `${SHEET_TOP}px`;
 
   // ── Arrastre del bottom sheet (swipe up/down) ──────────────────────────────
   const snapPx = (state: SheetState): number => {
     const h = window.innerHeight;
     if (state === "collapsed") return h - 136;
     if (state === "half") return h * 0.45;
-    return 0;
+    return SHEET_TOP;
   };
 
   const onSheetTouchStart = (e: React.TouchEvent) => {
@@ -452,7 +489,7 @@ export default function Pasajero() {
     const delta = e.touches[0]!.clientY - d.startY;
     if (Math.abs(delta) > 4) d.moved = true;
     const h = window.innerHeight;
-    setDragOffset(Math.min(h - 136, Math.max(0, d.startPx + delta)));
+    setDragOffset(Math.min(h - 136, Math.max(SHEET_TOP, d.startPx + delta)));
   };
   const onSheetTouchEnd = () => {
     const d = dragRef.current;
@@ -462,7 +499,7 @@ export default function Pasajero() {
     suppressClickRef.current = true; // evita que el click posterior cicle el sheet
     const h = window.innerHeight;
     const current = dragOffset ?? d.startPx;
-    const points: [SheetState, number][] = [["full", 0], ["half", h * 0.45], ["collapsed", h - 136]];
+    const points: [SheetState, number][] = [["full", SHEET_TOP], ["half", h * 0.45], ["collapsed", h - 136]];
     let best = points[0]!;
     for (const p of points) if (Math.abs(p[1] - current) < Math.abs(best[1] - current)) best = p;
     setSheetState(best[0]);
@@ -485,7 +522,7 @@ export default function Pasajero() {
         if (!map) { setLocating(false); return; }
         const icon = L.divIcon({
           className: "",
-          html: `<div style="width:16px;height:16px;border-radius:50%;background:#1757C2;border:3px solid white;box-shadow:0 0 0 6px rgba(23,87,194,.25)"></div>`,
+          html: `<div style="width:16px;height:16px;border-radius:50%;background:#2558A5;border:3px solid white;box-shadow:0 0 0 6px rgba(37,88,165,.25)"></div>`,
           iconSize: [16, 16], iconAnchor: [8, 8],
         });
         if (userMarkerRef.current) userMarkerRef.current.setLatLng([latitude, longitude]);
@@ -509,7 +546,7 @@ export default function Pasajero() {
       <button
         onClick={armarDestino}
         className="w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl font-semibold text-sm transition-colors"
-        style={{ background: "rgba(245,194,0,0.12)", color: "var(--tp-yellow)", border: "1px solid rgba(245,194,0,0.3)" }}
+        style={{ background: "rgba(245,183,49,0.12)", color: "var(--tp-yellow)", border: "1px solid rgba(245,183,49,0.3)" }}
       >
         <Navigation className="w-4 h-4" />
         ¿A dónde vas? Elige tu destino en el mapa
@@ -547,7 +584,7 @@ export default function Pasajero() {
             className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold flex-shrink-0"
             style={siguiendoBusId === busSugerido.bus.id
               ? { background: "var(--tp-sky)", color: "#001018" }
-              : { background: "rgba(75,169,216,0.15)", color: "var(--tp-sky)" }}
+              : { background: "rgba(123,184,213,0.15)", color: "var(--tp-sky)" }}
           >
             <LocateFixed className="w-3 h-3" />{siguiendoBusId === busSugerido.bus.id ? "Siguiendo" : "Seguir"}
           </button>
@@ -645,7 +682,7 @@ export default function Pasajero() {
         <div className="ml-auto flex items-center gap-3">
           <span className="text-muted-foreground">{rutas.length} rutas</span>
           <span className="font-bold px-2 py-0.5 rounded-md text-[10px]"
-            style={{ background: "rgba(245,194,0,0.12)", color: "var(--tp-yellow)" }}>
+            style={{ background: "rgba(245,183,49,0.12)", color: "var(--tp-yellow)" }}>
             {TARIFA_COP}
           </span>
         </div>
@@ -675,7 +712,7 @@ export default function Pasajero() {
       <div className="flex-1 overflow-y-auto py-2">
         {!selectedRutaId && rutas.length > 0 && (
           <div className="mx-3 mb-1 rounded-xl border p-3 flex items-start gap-2.5"
-            style={{ borderColor: "rgba(75,169,216,0.35)", background: "rgba(23,87,194,0.10)" }}>
+            style={{ borderColor: "rgba(123,184,213,0.35)", background: "rgba(37,88,165,0.10)" }}>
             <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "var(--tp-sky)" }} />
             <div>
               <p className="text-xs font-bold text-foreground">Elige tu ruta para empezar</p>
@@ -841,7 +878,7 @@ export default function Pasajero() {
                 className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg font-semibold transition-colors"
                 style={siguiendoBusId === b.id
                   ? { background: "var(--tp-sky)", color: "#001018" }
-                  : { background: "rgba(75,169,216,0.15)", color: "var(--tp-sky)" }}
+                  : { background: "rgba(123,184,213,0.15)", color: "var(--tp-sky)" }}
               >
                 <LocateFixed className="w-3.5 h-3.5" />
                 {siguiendoBusId === b.id ? "Siguiendo este bus" : "Seguir este bus"}
@@ -928,98 +965,53 @@ export default function Pasajero() {
   );
 
   // ─── MOBILE BOTTOM SHEET ─────────────────────────────────────────────────────
-  const MobileSheet = () => (
-    <div
-      className="md:hidden flex flex-col tp-bottom-sheet"
-      style={{
-        transform: sheetTransform,
-        height: "100dvh",
-        transition: dragOffset !== null ? "none" : undefined,
-      }}
-    >
-      {/* Handle + quick stats (arrastrable) */}
-      <button
-        onClick={onHandleClick}
-        onTouchStart={onSheetTouchStart}
-        onTouchMove={onSheetTouchMove}
-        onTouchEnd={onSheetTouchEnd}
-        className="w-full flex flex-col items-center pt-2.5 pb-3 px-4 shrink-0"
-        style={{ touchAction: "none" }}
+  // Card compacto de detalle: aparece SOLO al seleccionar una ruta/bus o al pedir
+  // una recomendación de destino. Sin arrastre, sin lista de rutas (eso vive en
+  // las vistas de chips). Mapa limpio el resto del tiempo.
+  const MobileSheet = () => {
+    if (!selectedRuta && !destino) return null;
+    return (
+      <div
+        className="md:hidden fixed left-0 right-0 bottom-0 z-[1000] max-h-[62vh] overflow-y-auto rounded-t-3xl px-4 pt-2 pb-6 animate-in slide-in-from-bottom-8 fade-in duration-300 ease-out"
+        style={{ background: "var(--color-white)", boxShadow: "0 -8px 28px rgba(27,59,111,0.18)" }}
       >
-        <div className="w-12 h-1.5 rounded-full bg-muted-foreground/40 mb-2.5" />
-        <div className="w-full flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <div className={`w-2 h-2 rounded-full ${activeBuses.length > 0 ? "bg-green-500 animate-pulse" : "bg-muted"}`} />
-              <span className="text-sm font-semibold text-foreground">
-                {activeBuses.length > 0 ? `${activeBuses.length} en vivo` : "Sin buses ahora"}
-              </span>
-            </div>
-            {demorasBuses.length > 0 && (
-              <span className="text-sm font-semibold" style={{ color: "var(--tp-yellow)" }}>· {demorasBuses.length} demora</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {sheetState === "collapsed" && !selectedRutaId ? (
-              <span className="text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 animate-pulse"
-                style={{ background: "rgba(75,169,216,0.18)", color: "var(--tp-sky)" }}>
-                Elige tu ruta <ChevronUp className="w-3.5 h-3.5" />
-              </span>
-            ) : (
-              <>
-                <span className="text-xs text-muted-foreground">{rutas.length} rutas</span>
-                <ChevronUp className={`w-4 h-4 text-muted-foreground transition-transform ${sheetState === "full" ? "rotate-180" : ""}`} />
-              </>
-            )}
-          </div>
-        </div>
-      </button>
-
-      {/* Buscador SIEMPRE visible en el peek (entrada principal, tipo app de transporte) */}
-      <div className="px-4 pb-3 shrink-0">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            onFocus={() => setSheetState("full")}
-            placeholder="¿A dónde vas? Busca tu ruta"
-            className="pl-10 h-11 text-base bg-background border-border rounded-xl"
-          />
-          {busqueda && (
-            <button onClick={() => setBusqueda("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Contenido del sheet (scrollable) */}
-      <div className="flex-1 overflow-y-auto px-4 pb-safe min-h-0 flex flex-col">
+        {/* Barrita de arrastre (indicador visual) */}
+        <div className="mx-auto mb-3 h-1.5 w-11 rounded-full" style={{ background: "rgba(27,59,111,0.18)" }} />
         {/* ¿A dónde vas? — recomendación por destino */}
         {panelDestino && <div className="mb-3">{panelDestino}</div>}
         {/* Ruta seleccionada */}
         {selectedRuta && (
-          <div className="mb-3 rounded-xl border p-3" style={{ borderColor: selectedRuta.color + "60", background: selectedRuta.color + "0D" }}>
-            <div className="flex items-center justify-between mb-2.5">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: selectedRuta.color }} />
-                <span className="font-bold text-sm text-foreground truncate">{selectedRuta.nombre}</span>
-              </div>
-              <button onClick={() => setSelectedRutaId(null)} aria-label="Cerrar ruta" className="text-muted-foreground hover:text-foreground p-1 -mr-1">
+          <div className="mb-3 rounded-xl border overflow-hidden" style={{ borderColor: selectedRuta.color + "60", background: selectedRuta.color + "0D" }}>
+            {/* Franja de color de la ruta (estilo TransMi) */}
+            <div className="h-1.5 w-full" style={{ background: selectedRuta.color }} />
+            <div className="p-3">
+            <div className="flex items-start justify-between mb-2.5 gap-2">
+              <span className="font-bold text-base text-foreground leading-tight min-w-0">{selectedRuta.nombre}</span>
+              <button onClick={() => setSelectedRutaId(null)} aria-label="Cerrar ruta" className="text-muted-foreground hover:text-foreground p-1 -mr-1 -mt-1 flex-shrink-0">
                 <X className="w-4 h-4" />
               </button>
             </div>
+            {/* Banner de novedad activa de la ruta */}
+            {(() => {
+              const nov = busesRutaSel.find((x) => x.bus.novedad)?.bus.novedad;
+              return nov ? (
+                <div className="flex items-start gap-2 mb-3 px-3 py-2 rounded-lg" style={{ background: "rgba(245,183,49,0.14)", border: "1px solid rgba(245,183,49,0.4)" }}>
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "var(--tp-yellow)" }} />
+                  <span className="text-xs font-semibold leading-snug" style={{ color: "var(--tp-yellow)" }}>{nov}</span>
+                </div>
+              ) : null;
+            })()}
             {/* Hero: el tiempo de llegada del próximo bus es lo principal */}
             {proximoBus ? (
-              <div className="flex items-end justify-between mb-3 px-3 py-2.5 rounded-xl" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest mb-0.5 text-green-400/80">Próximo bus</p>
+              <div className="flex items-center justify-between mb-3 px-3 py-2.5 rounded-xl" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-6 h-6 text-green-400 flex-shrink-0" />
                   {proximoBus.eta <= 0 ? (
                     <span className="text-2xl font-black text-green-400 leading-none">¡Llegando!</span>
                   ) : (
                     <span className="flex items-baseline gap-1 text-green-400">
-                      <span className="text-4xl font-black leading-none">{proximoBus.eta}</span>
+                      <span className="text-sm font-bold">Llega en</span>
+                      <span className="text-3xl font-black leading-none">{proximoBus.eta}</span>
                       <span className="text-sm font-bold">min</span>
                     </span>
                   )}
@@ -1077,9 +1069,19 @@ export default function Pasajero() {
                 <p className="text-xs text-muted-foreground py-1">No hay buses en circulación ahora.</p>
               ) : (
                 <div className="space-y-1.5">
-                  {busesRutaSel.map(({ bus: b, distKm, etaMin }) => (
+                  {busesRutaSel.map(({ bus: b, distKm, etaMin }) => {
+                    const oc = b.ocupacion
+                      ? ({ vacio: { l: "Vacío", c: "#22c55e" }, medio: { l: "Medio", c: "#F5C200" }, lleno: { l: "Lleno", c: "#ef4444" } } as Record<string, { l: string; c: string }>)[b.ocupacion]
+                      : null;
+                    return (
                     <div key={b.id} className="flex items-center gap-2 py-1 text-xs">
                       <span className="font-mono font-bold text-foreground">{b.placa}</span>
+                      {oc && (
+                        <span className="flex items-center gap-1 flex-shrink-0" title={`Ocupación: ${oc.l}`}>
+                          <span className="w-2 h-2 rounded-full" style={{ background: oc.c }} />
+                          <span className="text-[10px] font-semibold" style={{ color: oc.c }}>{oc.l}</span>
+                        </span>
+                      )}
                       {b.estado === "demora" && <span className="px-1.5 py-0.5 rounded-full font-bold bg-amber-500/20 text-amber-400">demora</span>}
                       {distKm != null ? (
                         <span className="text-muted-foreground">
@@ -1091,173 +1093,27 @@ export default function Pasajero() {
                       )}
                       <button
                         onClick={() => seguirBus(b.id)}
-                        className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg font-semibold transition-colors"
+                        className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg font-semibold text-white transition-colors"
                         style={siguiendoBusId === b.id
                           ? { background: "var(--tp-sky)", color: "#001018" }
-                          : { background: "rgba(75,169,216,0.15)", color: "var(--tp-sky)" }}
+                          : { background: "#2558A5" }}
                       >
                         <LocateFixed className="w-3 h-3" />
                         {siguiendoBusId === b.id ? "Siguiendo" : "Seguir"}
                       </button>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
+            </div>
             </div>
           </div>
         )}
 
-        {/* Lista de rutas */}
-        {!selectedRutaId && rutas.length > 0 && (
-          <div className="mb-3 rounded-xl border p-3 flex items-start gap-2.5"
-            style={{ borderColor: "rgba(75,169,216,0.35)", background: "rgba(23,87,194,0.10)" }}>
-            <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "var(--tp-sky)" }} />
-            <div>
-              <p className="text-sm font-bold text-foreground">Elige tu ruta para empezar</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Toca una ruta y verás el bus en vivo y en cuántos minutos llega.</p>
-              {activeBuses.length === 0 && (
-                <p className="text-xs mt-1.5" style={{ color: "var(--tp-yellow)" }}>
-                  Aún no hay buses en ruta — aparecerán en el mapa apenas un conductor inicie su recorrido.
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-          {selectedRutaId ? "Otras rutas" : "Rutas disponibles"}
-        </p>
-        {rutasError ? <div className="-mx-1">{errorCarga}</div>
-          : rutasLoading && rutas.length === 0 ? <div className="-mx-1">{skeletonRutas}</div>
-          : rutas.length === 0 ? <p className="text-xs text-muted-foreground text-center py-6">No hay rutas configuradas todavía.</p>
-          : null}
-        <div className="space-y-2">
-          {rutasFiltradas.filter((r) => r.id !== selectedRutaId).map((ruta) => {
-            const rutaBuses = buses.filter((b) => b.ruta_id === ruta.id && b.estado !== "inactivo");
-            const enVivo = rutaBuses.length > 0;
-            return (
-              <div
-                key={ruta.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => handleSelectRuta(ruta.id)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelectRuta(ruta.id); } }}
-                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl bg-card border border-border hover:border-primary/30 active:bg-primary/5 transition-all text-left active:scale-[0.98] cursor-pointer"
-              >
-                {/* Indicador de color de la ruta */}
-                <div
-                  className="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center"
-                  style={{ background: ruta.color + "22" }}
-                >
-                  <Bus className="w-4.5 h-4.5" style={{ color: ruta.color, width: 18, height: 18 }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">{ruta.nombre}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[11px] text-muted-foreground">{ruta.paradas.length} paradas</span>
-                    {enVivo ? (
-                      <span className="flex items-center gap-1 text-[11px] font-semibold text-green-400">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                        {rutaBuses.length} en vivo
-                      </span>
-                    ) : (
-                      <span className="text-[11px] text-muted-foreground/60">sin buses ahora</span>
-                    )}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); toggleFavorito(ruta.id); }}
-                  className="p-2 -m-1 flex-shrink-0"
-                  aria-label={favoritos.includes(ruta.id) ? "Quitar de favoritas" : "Marcar como favorita"}
-                >
-                  <Star
-                    className="w-5 h-5"
-                    style={favoritos.includes(ruta.id)
-                      ? { color: "var(--tp-yellow)", fill: "var(--tp-yellow)" }
-                      : { color: "var(--muted-foreground, #94a3b8)" }}
-                  />
-                </button>
-                <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Atención al cliente mobile */}
-        <div className="mt-4 mb-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Atención al cliente</p>
-          <div className="flex gap-2">
-            <a
-              href={`https://wa.me/${WHATSAPP_NUMERO}?text=Hola%20TransPadilla%2C%20necesito%20ayuda`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-semibold"
-              style={{ background: "rgba(37,211,102,0.12)", color: "#25D366", border: "1px solid rgba(37,211,102,0.25)" }}
-            >
-              <MessageCircle className="w-4 h-4" />WhatsApp
-            </a>
-            <a
-              href={INSTAGRAM_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-semibold text-muted-foreground bg-card border border-border"
-            >
-              <Instagram className="w-4 h-4" />Instagram
-            </a>
-          </div>
-          <p className="text-[10px] text-muted-foreground text-center mt-2">
-            Tarifa: <span style={{ color: "var(--tp-yellow)" }} className="font-bold">{TARIFA_COP} COP</span> · Muévete siempre con seguridad
-          </p>
-        </div>
-
-        {/* Footer usuario mobile */}
-        <div className="pb-6">
-          {user ? (
-            <div className="flex items-center justify-between p-3 rounded-xl bg-card border border-border">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
-                  <span className="text-sm font-bold text-primary">{user.nombre.charAt(0).toUpperCase()}</span>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{user.nombre}</p>
-                  <p className="text-[11px] text-muted-foreground capitalize">{user.rol}</p>
-                </div>
-              </div>
-              <div className="flex gap-1">
-                {(user.rol === "admin" || user.rol === "conductor") && (
-                  <Button variant="ghost" size="sm" onClick={() => setLocation(user.rol === "admin" ? "/admin" : "/conductor")} className="h-9 px-3 text-muted-foreground hover:text-primary">
-                    <Shield className="w-4 h-4" />
-                  </Button>
-                )}
-                <Button variant="ghost" size="sm" onClick={() => { clearAuth(); window.location.reload(); }} className="h-9 px-3 text-muted-foreground">
-                  <LogOut className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setLocation("/login")}
-              className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl bg-primary/10 border border-primary/25 hover:bg-primary/15 active:bg-primary/20 transition-colors"
-            >
-              <div className="flex items-center gap-2.5">
-                <LogIn className="w-5 h-5 text-primary" />
-                <span className="text-sm font-semibold text-foreground">Iniciar sesión</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-primary" />
-            </button>
-          )}
-        </div>
-
-        {/* Pie de marca: ancla el fondo para que el espacio sobrante no se vea vacío */}
-        <div className="mt-auto pt-6 pb-8 flex flex-col items-center gap-1.5 opacity-40">
-          <LogoTP size={26} />
-          <p className="text-[10px] font-semibold tracking-widest text-muted-foreground">
-            TRANSPADILLA · RIOHACHA
-          </p>
-        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -1266,6 +1122,16 @@ export default function Pasajero() {
       {/* Mapa */}
       <div className="flex-1 relative">
         <div ref={mapContainerRef} className="w-full h-full" data-testid="map-container" />
+
+        {/* ── Estado vacío: chip no intrusivo (no tapa el mapa) ── */}
+        {activeBuses.length === 0 && (
+          <div className="absolute top-[160px] md:top-6 left-1/2 -translate-x-1/2 z-[600] pointer-events-none w-full flex justify-center px-4">
+            <div className="flex items-center gap-2 rounded-full shadow-lg px-4 py-2 text-center" style={{ background: "var(--tp-sky)", color: "var(--tp-navy)" }}>
+              <Bus className="w-4 h-4 flex-shrink-0" />
+              <span className="text-xs font-semibold leading-tight">Sin buses activos ahora · 5:00 am – 10:00 pm</span>
+            </div>
+          </div>
+        )}
 
         {/* ── Controles desktop ── */}
         <button
@@ -1290,46 +1156,98 @@ export default function Pasajero() {
           <button
             onClick={() => setLocation("/login")}
             className="hidden md:flex absolute top-3 right-3 z-[1000] items-center gap-2 text-white rounded-xl px-4 py-2.5 text-xs font-semibold shadow-lg hover:opacity-90 transition-opacity"
-            style={{ background: "linear-gradient(135deg, #1757C2, var(--tp-sky))" }}
+            style={{ background: "linear-gradient(135deg, #2558A5, var(--tp-sky))" }}
           >
             <LogIn className="w-3.5 h-3.5" />Iniciar sesión
           </button>
         )}
 
-        {/* ── Header mobile ── */}
-        <div className="md:hidden absolute top-0 left-0 right-0 z-[999] flex items-center justify-between px-3 pt-3 pb-2 pointer-events-none">
-          <div className="flex items-center gap-2 bg-card/95 backdrop-blur-md border border-border rounded-xl px-3 py-2 shadow-lg pointer-events-auto">
-            <LogoTP size={32} />
-            <div>
-              <span className="text-sm font-black tracking-widest text-foreground">
-                Trans<span style={{ color: "var(--tp-sky)" }}>Padilla</span>
-              </span>
-              <p className="text-[9px] font-semibold leading-none" style={{ color: "var(--tp-yellow)" }}>Buses en vivo · Riohacha</p>
+        {/* ── Barra superior móvil: navbar navy + búsqueda + chips ── */}
+        <div className="md:hidden fixed top-0 left-0 right-0 z-[1001]" style={{ background: "linear-gradient(180deg, #20457E 0%, #1B3B6F 60%, #173357 100%)", boxShadow: "0 4px 14px rgba(27,59,111,0.35)" }}>
+          {/* Navbar: logo + EN VIVO + acciones como íconos */}
+          <div className="flex items-center gap-2 px-3" style={{ height: 56 }}>
+            <LogoTP size={30} />
+            {/* Badge EN VIVO (gold, punto parpadeante) */}
+            <span
+              className="flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full"
+              style={conectado
+                ? { background: "rgba(245,183,49,0.2)", color: "var(--color-gold)" }
+                : { background: "rgba(255,255,255,0.15)", color: "#fff" }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: conectado ? "var(--color-gold)" : "#fbbf24" }} />
+              {conectado ? "EN VIVO" : "···"}
+            </span>
+            <div className="flex-grow" />
+            {/* Acciones (íconos) */}
+            <div className="flex items-center gap-0.5">
+              <button onClick={locateMe} disabled={locating} className="w-9 h-9 rounded-full flex items-center justify-center text-white active:scale-90 active:bg-white/10 transition-all disabled:opacity-60" aria-label="Centrar en mi ubicación" title="Mi ubicación">
+                {locating ? <Loader2 className="w-5 h-5 animate-spin" /> : <LocateFixed className="w-5 h-5" />}
+              </button>
+              <button onClick={armarDestino} className="w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition-all" style={destino || modoDestino ? { background: "var(--color-gold)", color: "var(--color-navy)" } : { color: "#fff" }} aria-label="¿A dónde vas? Toca el mapa para tu ruta más cercana" title="¿A dónde vas?">
+                <Navigation className="w-5 h-5" />
+              </button>
+              <a href={`https://wa.me/${WHATSAPP_NUMERO}?text=Hola%20TransPadilla%2C%20necesito%20ayuda`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full flex items-center justify-center text-white active:scale-90 active:bg-white/10 transition-all" aria-label="Atención al cliente por WhatsApp" title="Atención al cliente">
+                <MessageCircle className="w-5 h-5" />
+              </a>
+              <button onClick={() => setShowAyuda(true)} className="w-9 h-9 rounded-full flex items-center justify-center text-white active:scale-90 active:bg-white/10 transition-all" aria-label="¿Cómo funciona?" title="Info">
+                <HelpCircle className="w-5 h-5" />
+              </button>
+              <span className="w-px h-5 mx-0.5" style={{ background: "rgba(255,255,255,0.2)" }} />
+              <button onClick={() => setLocation(user ? (user.rol === "admin" ? "/admin" : "/conductor") : "/login")} className="w-9 h-9 rounded-full flex items-center justify-center text-white active:scale-90 transition-all" style={{ background: "rgba(255,255,255,0.15)" }} aria-label={user ? "Mi panel" : "Iniciar sesión"} title={user ? "Mi panel" : "Iniciar sesión"}>
+                <User className="w-5 h-5" />
+              </button>
             </div>
           </div>
-          {!user ? (
-            <button
-              onClick={() => setLocation("/login")}
-              className="flex items-center gap-1.5 text-white rounded-xl px-3 py-2 text-xs font-bold shadow-lg pointer-events-auto"
-              style={{ background: "linear-gradient(135deg, #1757C2, var(--tp-sky))" }}
-            >
-              <LogIn className="w-3.5 h-3.5" />Entrar
-            </button>
-          ) : (
-            <button
-              onClick={() => setLocation(user.rol === "admin" ? "/admin" : "/conductor")}
-              className="flex items-center gap-1.5 bg-card/95 backdrop-blur-md border border-border rounded-xl px-3 py-2 text-xs font-semibold text-foreground shadow-lg pointer-events-auto"
-            >
-              <Shield className="w-3.5 h-3.5 text-primary" />Panel
-            </button>
-          )}
+          {/* Búsqueda */}
+          <div className="px-4 pb-2.5">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--color-blue)" }} />
+              <input
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                onFocus={() => setVista("rutas")}
+                placeholder="¿A dónde vas o qué ruta buscas?"
+                aria-label="Buscar ruta"
+                className="w-full h-11 pl-10 pr-10 text-sm rounded-full outline-none border-0 transition-shadow focus:shadow-[0_0_0_3px_rgba(123,184,213,0.6)]"
+                style={{ background: "var(--color-white)", color: "var(--color-navy)" }}
+              />
+              {busqueda && (
+                <button onClick={() => setBusqueda("")} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--color-gray-text)" }} aria-label="Limpiar búsqueda">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+          {/* Chips de menú (deslizables) */}
+          <div className="flex gap-2 overflow-x-auto px-4 pb-3" style={{ scrollbarWidth: "none" }}>
+            {([
+              { id: "mapa", label: "Mapa en vivo", icon: <MapIcon className="w-3.5 h-3.5" /> },
+              { id: "favoritos", label: "Mis favoritos", icon: <Star className="w-3.5 h-3.5" /> },
+              { id: "rutas", label: "Rutas", icon: <RouteIcon className="w-3.5 h-3.5" /> },
+              { id: "paraderos", label: "Paraderos", icon: <MapPin className="w-3.5 h-3.5" /> },
+            ] as const).map((c) => {
+              const activo = vista === c.id;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setVista(c.id)}
+                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-semibold transition-all duration-200 shrink-0 active:scale-95 ${activo ? "scale-105 shadow-md" : ""}`}
+                  style={activo
+                    ? { background: "var(--color-gold)", color: "var(--color-navy)" }
+                    : { background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)" }}
+                >
+                  {c.icon}{c.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Guía de bienvenida (primera visita) */}
         {showWelcome && (
           <div className="absolute inset-0 z-[1001] flex items-end md:items-center justify-center p-4 pb-28 md:pb-4 pointer-events-none">
             <div className="pointer-events-auto w-full max-w-sm rounded-2xl border shadow-2xl p-5"
-              style={{ background: "rgba(12,18,32,0.96)", borderColor: "rgba(75,169,216,0.3)", backdropFilter: "blur(16px)" }}>
+              style={{ background: "rgba(12,18,32,0.96)", borderColor: "rgba(123,184,213,0.3)", backdropFilter: "blur(16px)" }}>
               <div className="flex items-center gap-3 mb-3">
                 <LogoTP size={40} />
                 <div>
@@ -1348,7 +1266,7 @@ export default function Pasajero() {
                 ].map((step) => (
                   <div key={step.n} className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-black text-white"
-                      style={{ background: "linear-gradient(135deg, #1757C2 0%, var(--tp-sky) 100%)" }}>
+                      style={{ background: "linear-gradient(135deg, #2558A5 0%, var(--tp-sky) 100%)" }}>
                       {step.n}
                     </div>
                     <p className="text-sm text-white/90">{step.txt}</p>
@@ -1358,7 +1276,7 @@ export default function Pasajero() {
               <Button
                 onClick={dismissWelcome}
                 className="w-full h-12 rounded-xl font-bold text-white border-0 text-base"
-                style={{ background: "linear-gradient(135deg, #1757C2 0%, var(--tp-sky) 100%)" }}
+                style={{ background: "linear-gradient(135deg, #2558A5 0%, var(--tp-sky) 100%)" }}
               >
                 Elegir mi ruta →
               </Button>
@@ -1372,7 +1290,7 @@ export default function Pasajero() {
           <div className="absolute inset-0 z-[1003] flex items-end md:items-center justify-center p-3 md:p-4" style={{ background: "rgba(0,0,0,0.5)" }}>
             <div
               className="pointer-events-auto w-full max-w-md rounded-2xl border shadow-2xl flex flex-col max-h-[85vh]"
-              style={{ background: "rgba(12,18,32,0.98)", borderColor: "rgba(75,169,216,0.3)", backdropFilter: "blur(16px)" }}
+              style={{ background: "rgba(12,18,32,0.98)", borderColor: "rgba(123,184,213,0.3)", backdropFilter: "blur(16px)" }}
             >
               {/* Header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0">
@@ -1403,7 +1321,7 @@ export default function Pasajero() {
                     { icon: <MessageCircle className="w-4 h-4" />, t: "Atención al cliente", d: "Escríbenos por WhatsApp ante cualquier duda o reclamo." },
                   ].map((f, i) => (
                     <div key={i} className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "rgba(23,87,194,0.2)", color: "var(--tp-sky)" }}>
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "rgba(37,88,165,0.2)", color: "var(--tp-sky)" }}>
                         {f.icon}
                       </div>
                       <div>
@@ -1422,6 +1340,7 @@ export default function Pasajero() {
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: "#F5C200" }} /> Medio lleno</span>
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: "#ef4444" }} /> Lleno</span>
                   </div>
+                  <p className="text-[11px] text-white/45 mt-2 leading-snug">El borde de color de cada bus en el mapa indica su ocupación.</p>
                 </div>
 
                 {/* Leyenda de estado / alertas */}
@@ -1441,7 +1360,7 @@ export default function Pasajero() {
 
               {/* Footer */}
               <div className="px-5 py-3 border-t border-white/10 shrink-0">
-                <Button onClick={() => setShowAyuda(false)} className="w-full h-11 rounded-xl font-bold text-white border-0" style={{ background: "linear-gradient(135deg, #1757C2 0%, var(--tp-sky) 100%)" }}>
+                <Button onClick={() => setShowAyuda(false)} className="w-full h-11 rounded-xl font-bold text-white border-0" style={{ background: "linear-gradient(135deg, #2558A5 0%, var(--tp-sky) 100%)" }}>
                   Entendido
                 </Button>
               </div>
@@ -1454,7 +1373,7 @@ export default function Pasajero() {
           <div
             role="alert"
             className="absolute top-16 left-3 right-3 md:top-4 md:left-1/2 md:-translate-x-1/2 md:right-auto md:max-w-md z-[1002] rounded-2xl px-4 py-3.5 flex items-start gap-3 animate-in slide-in-from-top-4 fade-in duration-300"
-            style={{ background: "var(--tp-yellow)", color: "#1a1300", boxShadow: "0 12px 40px rgba(245,194,0,0.55)" }}
+            style={{ background: "var(--tp-yellow)", color: "#1a1300", boxShadow: "0 12px 40px rgba(245,183,49,0.55)" }}
           >
             <AlertTriangle className="w-6 h-6 flex-shrink-0 mt-0.5 animate-pulse" style={{ color: "#1a1300" }} />
             <div className="flex-1 min-w-0">
@@ -1474,21 +1393,19 @@ export default function Pasajero() {
           </div>
         )}
 
-        {/* Botón de ayuda "¿Cómo funciona?" (móvil: sobre el peek del sheet) */}
+        {/* Botón de ayuda y ubicación — SOLO escritorio (en móvil están en la fila de acciones) */}
         <button
           onClick={() => setShowAyuda(true)}
-          className="absolute bottom-[262px] md:bottom-36 left-3 z-[1000] flex items-center justify-center w-11 h-11 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg hover:bg-secondary active:scale-95 transition-all"
+          className="hidden md:flex absolute md:bottom-36 left-3 z-[1000] items-center justify-center w-11 h-11 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg hover:bg-secondary active:scale-95 transition-all"
           title="¿Cómo funciona?"
           aria-label="¿Cómo funciona?"
         >
           <HelpCircle className="w-5 h-5" style={{ color: "var(--tp-sky)" }} />
         </button>
-
-        {/* Botón "Mi ubicación" (GPS del pasajero) */}
         <button
           onClick={locateMe}
           disabled={locating}
-          className="absolute bottom-[206px] md:bottom-20 left-3 z-[1000] flex items-center justify-center w-11 h-11 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg hover:bg-secondary active:scale-95 transition-all disabled:opacity-60"
+          className="hidden md:flex absolute md:bottom-20 left-3 z-[1000] items-center justify-center w-11 h-11 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg hover:bg-secondary active:scale-95 transition-all disabled:opacity-60"
           title="Centrar en mi ubicación"
           aria-label="Centrar en mi ubicación"
         >
@@ -1497,23 +1414,9 @@ export default function Pasajero() {
             : <LocateFixed className="w-5 h-5 text-primary" />}
         </button>
 
-        {/* FAB "Elegir destino" — SOLO móvil (en desktop está en el sidebar); en la
-            zona del pulgar (abajo-derecha) y siempre accesible aunque el sheet esté colapsado. */}
-        <button
-          onClick={destino ? limpiarDestino : armarDestino}
-          className={`md:hidden absolute bottom-[150px] right-3 z-[1000] flex items-center justify-center w-12 h-12 rounded-full shadow-xl active:scale-95 transition-all border ${modoDestino ? "animate-pulse" : ""}`}
-          style={ destino || modoDestino
-            ? { background: "var(--tp-yellow)", color: "#1a1300", borderColor: "transparent" }
-            : { background: "hsl(var(--card))", color: "var(--tp-yellow)", borderColor: "rgba(245,194,0,0.4)" } }
-          title={destino ? "Quitar destino" : "¿A dónde vas? Elige tu destino"}
-          aria-label={destino ? "Quitar destino" : "Elegir destino en el mapa"}
-        >
-          {destino ? <X className="w-5 h-5" /> : <Navigation className="w-5 h-5" />}
-        </button>
-
         {/* Pill de carga inicial del mapa */}
         {rutasLoading && rutas.length === 0 && (
-          <div className="absolute top-16 md:top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-lg">
+          <div className="absolute top-[160px] md:top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-lg">
             <Loader2 className="w-4 h-4 animate-spin text-primary" />
             <span className="text-xs text-muted-foreground font-medium">Cargando el mapa…</span>
           </div>
@@ -1521,7 +1424,7 @@ export default function Pasajero() {
 
         {/* Aviso flotante: modo "elegir destino" armado */}
         {modoDestino && (
-          <div className="absolute top-16 md:top-3 left-1/2 -translate-x-1/2 z-[1001] flex items-center gap-2 rounded-xl px-3.5 py-2 shadow-xl"
+          <div className="absolute top-[160px] md:top-3 left-1/2 -translate-x-1/2 z-[1001] flex items-center gap-2 rounded-xl px-3.5 py-2 shadow-xl"
             style={{ background: "var(--tp-yellow)", color: "#1a1300" }}
           >
             <Navigation className="w-4 h-4" />
@@ -1535,7 +1438,7 @@ export default function Pasajero() {
         {/* Chip "siguiendo bus" */}
         {busSeguido && (
           <div
-            className="absolute top-16 md:top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 rounded-xl px-3 py-2 shadow-lg"
+            className="absolute top-[160px] md:top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 rounded-xl px-3 py-2 shadow-lg"
             style={{ background: "var(--tp-sky)", color: "#001018" }}
           >
             <LocateFixed className="w-4 h-4 animate-pulse" />
@@ -1546,21 +1449,18 @@ export default function Pasajero() {
           </div>
         )}
 
-        {/* Indicador de conexión: honesto sobre si los datos llegan en vivo. */}
-        <div className="absolute bottom-[150px] md:bottom-4 left-3 z-[1000] flex items-center gap-2 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-lg">
-          <div className="relative">
-            <Radio className={`w-3.5 h-3.5 ${conectado ? "text-primary" : "text-amber-500"}`} />
-            <div className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${conectado ? "bg-green-500 animate-pulse" : "bg-amber-500"}`} />
-          </div>
-          <span className="text-xs text-muted-foreground font-medium">{conectado ? "En vivo" : "Reconectando…"}</span>
+        {/* En escritorio: indicador de conexión abajo-izquierda (en móvil está el badge EN VIVO en la TopBar) */}
+        <div className="hidden md:flex absolute md:bottom-4 left-3 z-[600] items-center gap-1.5 rounded-full px-3 py-1.5 shadow-md" style={{ background: "var(--color-white)" }}>
+          <span className={`w-2 h-2 rounded-full ${conectado ? "animate-pulse" : ""}`} style={{ background: conectado ? "var(--color-success)" : "var(--color-gold)" }} />
+          <span className="text-xs font-bold" style={{ color: "var(--color-navy)" }}>{conectado ? "En vivo" : "Reconectando…"}</span>
         </div>
 
-        {/* FAB de soporte por WhatsApp (compacto, no compite con el mapa) */}
+        {/* FAB de soporte por WhatsApp — SOLO escritorio (en móvil está en la fila de acciones) */}
         <a
           href={`https://wa.me/${WHATSAPP_NUMERO}?text=Hola%20TransPadilla%2C%20necesito%20informaci%C3%B3n%20sobre%20el%20servicio`}
           target="_blank"
           rel="noopener noreferrer"
-          className="absolute bottom-[206px] md:bottom-4 right-3 z-[1000] flex items-center justify-center w-12 h-12 rounded-full shadow-xl transition-transform active:scale-95 hover:scale-105"
+          className="hidden md:flex absolute md:bottom-4 md:right-3 z-[1000] items-center justify-center w-12 h-12 rounded-full shadow-xl transition-transform active:scale-95 hover:scale-105"
           style={{ background: "#25D366", color: "white" }}
           title="Atención al cliente por WhatsApp"
           aria-label="Atención al cliente por WhatsApp"
@@ -1574,7 +1474,159 @@ export default function Pasajero() {
         </div>
       </div>
 
-      {MobileSheet()}
+      {/* Drawer del mapa (tema claro, solo en la vista "Mapa en vivo") */}
+      {vista === "mapa" && <div className="tp-light">{MobileSheet()}</div>}
+
+      {/* ── Vistas de los chips: Favoritos / Rutas / Paraderos ── */}
+      {vista !== "mapa" && (
+        <div
+          key={vista}
+          className="tp-light md:hidden fixed left-0 right-0 bottom-0 z-[1000] overflow-y-auto animate-in fade-in slide-in-from-bottom-3 duration-300 ease-out"
+          style={{ top: 160, background: "var(--color-gray-light)" }}
+        >
+          <div className="px-4 pt-3 pb-24 space-y-3">
+            {(() => {
+              // Encabezado de sección reutilizable (título grande + contador + subtítulo).
+              const Header = (titulo: string, subtitulo: string, n?: number) => (
+                <div className="pt-1 pb-1">
+                  <div className="flex items-center gap-2.5">
+                    <h2 className="text-xl font-extrabold leading-tight" style={{ color: "var(--color-navy)" }}>{titulo}</h2>
+                    {n != null && (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(123,184,213,0.25)", color: "var(--color-blue)" }}>{n}</span>
+                    )}
+                  </div>
+                  <p className="text-sm mt-0.5" style={{ color: "var(--color-gray-text)" }}>{subtitulo}</p>
+                </div>
+              );
+
+              // Pill de estado en vivo / sin buses.
+              const EstadoPill = (vivos: boolean) => (
+                <span
+                  className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full"
+                  style={vivos
+                    ? { background: "rgba(56,161,105,0.14)", color: "var(--color-success)" }
+                    : { background: "rgba(107,114,128,0.12)", color: "var(--color-gray-text)" }}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${vivos ? "animate-pulse" : ""}`} style={{ background: vivos ? "var(--color-success)" : "var(--color-gray-text)" }} />
+                  {vivos ? "En vivo" : "Sin buses"}
+                </span>
+              );
+
+              // Tarjeta de ruta amplia y táctil (estilo apps de movilidad).
+              const RouteCard = (r: typeof rutas[number]) => (
+                <div
+                  key={r.id}
+                  role="button"
+                  onClick={() => { setSelectedRutaId(r.id); setVista("mapa"); setSheetState("half"); }}
+                  className="w-full flex items-center gap-3.5 rounded-2xl p-4 min-h-[68px] shadow-sm active:scale-[0.98] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+                  style={{ background: "var(--color-white)" }}
+                >
+                  <span className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: r.color }}>
+                    <Bus className="w-6 h-6 text-white" />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-base font-bold truncate" style={{ color: "var(--color-navy)" }}>{r.nombre}</span>
+                    <span className="mt-1 block">{EstadoPill(rutaTieneVivos(r.id))}</span>
+                  </span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleFavorito(r.id); }}
+                    className="p-2.5 -mr-1 flex-shrink-0 rounded-full active:scale-90 transition-transform"
+                    aria-label={favoritos.includes(r.id) ? "Quitar de favoritas" : "Marcar favorita"}
+                  >
+                    <Star className="w-6 h-6" style={favoritos.includes(r.id) ? { color: "var(--color-gold)", fill: "var(--color-gold)" } : { color: "#cbd5e1" }} />
+                  </button>
+                  <ChevronRight className="w-5 h-5 flex-shrink-0 -ml-1" style={{ color: "#cbd5e1" }} />
+                </div>
+              );
+
+              // Estado vacío / informativo elegante (ícono en círculo + CTA grande).
+              const Estado = (icon: React.ReactNode, titulo: string, desc: string, cta?: React.ReactNode) => (
+                <div className="text-center pt-16 px-6">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: "rgba(123,184,213,0.18)" }}>
+                    {icon}
+                  </div>
+                  <p className="text-lg font-bold" style={{ color: "var(--color-navy)" }}>{titulo}</p>
+                  <p className="text-sm mt-1.5 leading-relaxed" style={{ color: "var(--color-gray-text)" }}>{desc}</p>
+                  {cta && <div className="mt-5">{cta}</div>}
+                </div>
+              );
+
+              if (vista === "favoritos") {
+                const favs = rutas.filter((r) => favoritos.includes(r.id));
+                return favs.length === 0
+                  ? Estado(
+                      <Star className="w-8 h-8" style={{ color: "var(--color-sky)" }} />,
+                      "Aún no tienes favoritas",
+                      "Toca la estrella en cualquier ruta y aparecerá aquí para acceso rápido.",
+                      <button onClick={() => setVista("rutas")} className="inline-flex items-center gap-2 px-6 h-12 rounded-2xl text-white font-bold shadow-sm active:scale-95 transition-transform" style={{ background: "var(--color-blue)" }}>
+                        <RouteIcon className="w-4 h-4" /> Ver todas las rutas
+                      </button>,
+                    )
+                  : <>{Header("Mis favoritos", "Tus rutas guardadas para acceso rápido", favs.length)}{favs.map(RouteCard)}</>;
+              }
+
+              if (vista === "rutas") {
+                return rutasFiltradas.length === 0
+                  ? Estado(
+                      <Search className="w-8 h-8" style={{ color: "var(--color-sky)" }} />,
+                      busqueda ? "Sin resultados" : "No hay rutas",
+                      busqueda ? `No encontramos rutas para "${busqueda}".` : "Aún no hay rutas configuradas.",
+                    )
+                  : <>{Header("Rutas", "Toca una para verla en el mapa", rutasFiltradas.length)}{rutasFiltradas.map(RouteCard)}</>;
+              }
+
+              // Paraderos cercanos (usa la ubicación del pasajero)
+              const paraderos = (() => {
+                const m = new Map<number, { parada: typeof rutas[number]["paradas"][number]; rutas: typeof rutas }>();
+                for (const r of rutas) for (const p of r.paradas) {
+                  const e = m.get(p.id);
+                  if (e) e.rutas.push(r); else m.set(p.id, { parada: p, rutas: [r] });
+                }
+                const arr = [...m.values()].map((x) => ({
+                  ...x,
+                  dist: userPos ? distanciaKm(userPos.lat, userPos.lng, x.parada.latitud, x.parada.longitud) : null,
+                }));
+                if (userPos) arr.sort((a, b) => (a.dist ?? 0) - (b.dist ?? 0));
+                return arr;
+              })();
+
+              if (!userPos) {
+                return Estado(
+                  <MapPin className="w-8 h-8" style={{ color: "var(--color-sky)" }} />,
+                  "Activa tu ubicación",
+                  "Para mostrarte los paraderos más cercanos a ti, ordenados por distancia.",
+                  <button onClick={locateMe} disabled={locating} className="inline-flex items-center gap-2 px-6 h-12 rounded-2xl text-white font-bold shadow-sm active:scale-95 transition-transform disabled:opacity-60" style={{ background: "var(--color-blue)" }}>
+                    {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />} Usar mi ubicación
+                  </button>,
+                );
+              }
+              return <>{Header("Paraderos cercanos", "Ordenados por distancia a ti", paraderos.length)}{paraderos.slice(0, 30).map((x) => (
+                <div
+                  key={x.parada.id}
+                  role="button"
+                  onClick={() => { if (x.rutas[0]) setSelectedRutaId(x.rutas[0].id); setVista("mapa"); setSheetState("half"); }}
+                  className="w-full flex items-center gap-3.5 rounded-2xl p-4 min-h-[68px] shadow-sm active:scale-[0.98] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+                  style={{ background: "var(--color-white)" }}
+                >
+                  <span className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(123,184,213,0.25)" }}>
+                    <MapPin className="w-6 h-6" style={{ color: "var(--color-navy)" }} />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-base font-bold truncate" style={{ color: "var(--color-navy)" }}>{x.parada.nombre}</span>
+                    <span className="text-xs truncate block mt-0.5" style={{ color: "var(--color-gray-text)" }}>{x.rutas.length} {x.rutas.length === 1 ? "ruta" : "rutas"} · {x.rutas.map((r) => r.nombre).join(" · ")}</span>
+                  </span>
+                  {x.dist != null && (
+                    <span className="text-xs font-bold flex-shrink-0 px-2.5 py-1 rounded-full" style={{ background: "rgba(245,183,49,0.18)", color: "#9a6a00" }}>
+                      {x.dist < 1 ? `${Math.round(x.dist * 1000)} m` : `${x.dist.toFixed(1)} km`}
+                    </span>
+                  )}
+                  <ChevronRight className="w-5 h-5 flex-shrink-0" style={{ color: "#cbd5e1" }} />
+                </div>
+              ))}</>;
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

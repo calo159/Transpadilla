@@ -36,7 +36,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <button
               onClick={() => window.location.reload()}
               className="w-full h-11 rounded-xl font-bold text-white border-0"
-              style={{ background: "linear-gradient(135deg, #1757C2 0%, var(--tp-sky) 100%)" }}
+              style={{ background: "linear-gradient(135deg, #2558A5 0%, var(--tp-sky) 100%)" }}
             >
               Recargar
             </button>

@@ -17,12 +17,12 @@ export const NOVEDAD_OPCIONES: { label: string; texto: string }[] = [
 
 // Paleta para asignar color a las rutas nuevas (panel Admin).
 export const COLORES: { label: string; value: string }[] = [
-  { label: "Azul TransPadilla", value: "#1757C2" },
+  { label: "Azul TransPadilla", value: "#2558A5" },
   { label: "Rojo",    value: "#e74c3c" },
   { label: "Verde",   value: "#2ecc71" },
   { label: "Naranja", value: "#f39c12" },
   { label: "Púrpura", value: "#9b59b6" },
   { label: "Cian",    value: "#1abc9c" },
   { label: "Rosa",    value: "#e91e63" },
-  { label: "Amarillo TransPadilla", value: "#F5C200" },
+  { label: "Amarillo TransPadilla", value: "#F5B731" },
 ];

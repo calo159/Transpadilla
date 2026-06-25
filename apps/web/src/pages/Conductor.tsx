@@ -77,7 +77,7 @@ export default function Conductor() {
     if (mapRef.current) {
       const icon = L.divIcon({
         className: "",
-        html: `<div style="background:#1757C2;color:white;padding:5px 10px;border-radius:10px;font-size:13px;font-weight:700;box-shadow:0 2px 12px rgba(23,87,194,.6);white-space:nowrap;border:2px solid rgba(255,255,255,.3)">📍 TU BUS</div>`,
+        html: `<div style="background:#2558A5;color:white;padding:5px 10px;border-radius:10px;font-size:13px;font-weight:700;box-shadow:0 2px 12px rgba(37,88,165,.6);white-space:nowrap;border:2px solid rgba(255,255,255,.3)">📍 TU BUS</div>`,
         iconSize: [90, 30], iconAnchor: [45, 15],
       });
       if (busMarkerRef.current) busMarkerRef.current.setLatLng([lat, lng]);

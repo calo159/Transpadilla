@@ -206,7 +206,7 @@ export default function ConductoresTab({ buses, setConfirmar }: Props) {
               return (
                 <div key={c.id} className="p-3 bg-secondary/30 border border-border rounded-xl space-y-2">
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold" style={{ background: "rgba(23,87,194,0.2)", color: "var(--tp-sky)" }}>
+                    <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold" style={{ background: "rgba(37,88,165,0.2)", color: "var(--tp-sky)" }}>
                       {c.nombre.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
