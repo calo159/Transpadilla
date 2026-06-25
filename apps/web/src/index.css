@@ -75,14 +75,26 @@
   --elevate-2: rgba(255,255,255, .09);
 
   /* ── TransPadilla brand palette ── */
-  --tp-yellow: #F5C200;         /* Amarillo Guajiro — color icónico de la marca */
-  --tp-yellow-rgb: 245, 194, 0;
-  --tp-amber: #F5C200;          /* alias para compatibilidad */
-  --tp-amber-rgb: 245, 194, 0;
-  --tp-navy: #0D2461;           /* Azul marino profundo — fondo logo */
-  --tp-sky: #4BA9D8;            /* Azul cielo Caribe — círculo del logo */
-  --tp-sky-rgb: 75, 169, 216;
+  --tp-yellow: #F5B731;         /* Gold de marca (solo acciones/alertas) */
+  --tp-yellow-rgb: 245, 183, 49;
+  --tp-amber: #F5B731;          /* alias para compatibilidad */
+  --tp-amber-rgb: 245, 183, 49;
+  --tp-navy: #1B3B6F;           /* Azul marino de marca */
+  --tp-sky: #7BB8D5;            /* Azul cielo de marca */
+  --tp-sky-rgb: 123, 184, 213;
+  --tp-blue: #2558A5;           /* Azul medio de marca (primary) */
   --tp-whatsapp: #25D366;       /* Verde WhatsApp para botón de atención */
+
+  /* ── Sistema de color del rediseño Pasajero (vista pública, tema claro) ── */
+  --color-navy: #1B3B6F;        /* estructura: navbar, headers, texto principal */
+  --color-blue: #2558A5;        /* acción: botones, links, íconos activos */
+  --color-sky: #7BB8D5;         /* decorativo: fondos suaves, chips, bordes */
+  --color-gold: #F5B731;        /* urgencia/info: ETA, alertas, novedades */
+  --color-white: #FFFFFF;       /* drawer, tarjetas, inputs */
+  --color-gray-light: #F4F6F9;  /* fondo general de pantallas no-mapa */
+  --color-gray-text: #6B7280;   /* texto secundario, placeholders */
+  --color-danger: #E53E3E;      /* bus lleno, error, novedad crítica */
+  --color-success: #38A169;     /* bus disponible, estado activo */
 
   /* ── Fondos oscuros en tono marino TransPadilla ── */
   --background:     225 65% 5%;     /* Navy profundo TransPadilla */
@@ -90,29 +102,29 @@
 
   --border:         225 50% 14%;
   --input:          225 50% 16%;
-  --ring:           219 73% 40%;    /* Azul marino para focus rings */
+  --ring:           216 63% 40%;    /* Azul medio de marca para focus rings */
 
   /* Cards */
   --card:           225 55% 9%;     /* Navy oscuro */
   --card-foreground:215 22% 93%;
   --card-border:    225 48% 15%;
 
-  /* Sidebar — navy #0D2461 oscurecido */
+  /* Sidebar — navy de marca oscurecido */
   --sidebar:        225 65% 7%;
   --sidebar-foreground:   215 20% 88%;
   --sidebar-border:       225 50% 12%;
-  --sidebar-primary:      219 73% 40%;
+  --sidebar-primary:      216 63% 40%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent:       221 26% 13%;
   --sidebar-accent-foreground:  215 18% 88%;
-  --sidebar-ring:         219 73% 40%;
+  --sidebar-ring:         216 63% 40%;
 
   --popover:        221 30% 8%;
   --popover-foreground:   215 22% 93%;
   --popover-border:       220 24% 15%;
 
-  /* ── Primary: Azul TransPadilla (#0D2461 profundo, aclarado para UI) ── */
-  --primary:        219 73% 40%;   /* #1757C2 — azul marino brillante */
+  /* ── Primary: Azul medio de marca (#2558A5) ── */
+  --primary:        216 63% 40%;   /* #2558A5 — azul medio TransPadilla */
   --primary-foreground: 0 0% 100%;
 
   --secondary:      221 26% 13%;
@@ -121,15 +133,15 @@
   --muted:          221 22% 15%;
   --muted-foreground: 216 16% 62%;   /* +contraste para legibilidad (antes 50%) */
 
-  --accent:         219 70% 35%;
+  --accent:         216 60% 35%;
   --accent-foreground: 0 0% 100%;
 
   --destructive:    0 72% 50%;
   --destructive-foreground: 0 0% 100%;
 
-  --chart-1:        219 73% 40%;
+  --chart-1:        216 63% 40%;
   --chart-2:        160 65% 42%;
-  --chart-3:        48 100% 48%;    /* amarillo TransPadilla */
+  --chart-3:        41 91% 58%;     /* gold TransPadilla */
   --chart-4:        270 70% 58%;
   --chart-5:        0 72% 50%;
 
@@ -163,6 +175,36 @@
   --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
   --destructive-border: hsl(var(--destructive));
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+}
+
+/* ── Tema CLARO para la vista pública del pasajero (rediseño) ──────────────────
+   Redefine los tokens del tema a valores claros; envolver un subárbol en
+   `.tp-light` hace que todos los componentes basados en tokens se rendericen
+   claros (blanco/gris/navy) sin reescribir cada uno. */
+.tp-light {
+  --background: 210 33% 97%;        /* gray-light #F4F6F9 */
+  --foreground: 214 60% 27%;        /* navy #1B3B6F */
+  --border: 214 24% 90%;
+  --input: 214 24% 90%;
+  --ring: 216 63% 40%;
+  --card: 0 0% 100%;                /* white */
+  --card-foreground: 214 60% 27%;
+  --card-border: 214 24% 92%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 214 60% 27%;
+  --popover-border: 214 24% 92%;
+  --primary: 216 63% 40%;           /* blue #2558A5 */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 25% 94%;
+  --secondary-foreground: 214 60% 27%;
+  --muted: 210 25% 95%;
+  --muted-foreground: 220 9% 46%;   /* gray-text #6B7280 */
+  --accent: 210 25% 94%;
+  --accent-foreground: 214 60% 27%;
+  --sidebar: 0 0% 100%;             /* drawer blanco (.tp-bottom-sheet) */
+  --sidebar-foreground: 214 60% 27%;
+  --sidebar-border: 214 24% 90%;
+  color: hsl(var(--foreground));
 }
 
 @layer base {
@@ -255,7 +297,7 @@
 .tp-navy          { color: var(--tp-navy); }
 
 /* Primary glow para estados activos */
-.tp-primary-glow { box-shadow: 0 0 16px rgba(23, 87, 194, 0.45); }
+.tp-primary-glow { box-shadow: 0 0 16px rgba(37, 88, 165, 0.45); }
 
 /* Pulso de confirmación del marcador de destino (micro-interacción). */
 .tp-destino-pulse {
@@ -266,17 +308,17 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: rgba(245, 194, 0, 0.55);
+  background: rgba(245, 183, 49, 0.55);
   animation: tp-pin-pulse 1.4s ease-out infinite;
 }
 @keyframes tp-pin-pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(245, 194, 0, 0.5); opacity: 1; }
-  100% { box-shadow: 0 0 0 16px rgba(245, 194, 0, 0); opacity: 0.4; }
+  0%   { box-shadow: 0 0 0 0 rgba(245, 183, 49, 0.5); opacity: 1; }
+  100% { box-shadow: 0 0 0 16px rgba(245, 183, 49, 0); opacity: 0.4; }
 }
 
 /* Gradiente de marca TransPadilla */
-.tp-gradient { background: linear-gradient(135deg, var(--tp-navy) 0%, #1757C2 100%); }
-.tp-gradient-sky { background: linear-gradient(135deg, #1757C2 0%, var(--tp-sky) 100%); }
+.tp-gradient { background: linear-gradient(135deg, var(--tp-navy) 0%, var(--tp-blue) 100%); }
+.tp-gradient-sky { background: linear-gradient(135deg, var(--tp-blue) 0%, var(--tp-sky) 100%); }
 
 @layer utilities {
   input[type="search"]::-webkit-search-cancel-button { @apply hidden; }

@@ -78,7 +78,7 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
     paradas.forEach((p) => {
       const icon = L.divIcon({
         className: "",
-        html: `<div style="width:10px;height:10px;border-radius:50%;background:#4BA9D8;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>`,
+        html: `<div style="width:10px;height:10px;border-radius:50%;background:#7BB8D5;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>`,
         iconSize: [10, 10], iconAnchor: [5, 5],
       });
       L.marker([p.latitud, p.longitud], { icon, interactive: false }).bindTooltip(p.nombre).addTo(grupo);

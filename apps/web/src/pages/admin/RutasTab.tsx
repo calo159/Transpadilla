@@ -29,7 +29,7 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
   const deleteRuta = useDeleteRuta();
 
   const [nombre, setNombre] = useState("");
-  const [color, setColor] = useState("#1757C2");
+  const [color, setColor] = useState("#2558A5");
 
   const crear = async () => {
     if (!nombre.trim()) { toast({ title: "El nombre de la ruta es obligatorio", variant: "destructive" }); return; }
@@ -37,7 +37,7 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
       await createRuta.mutateAsync({ data: { nombre: nombre.trim(), color } });
       queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
       queryClient.invalidateQueries({ queryKey: ["stats"] });
-      setNombre(""); setColor("#1757C2");
+      setNombre(""); setColor("#2558A5");
       toast({ title: "Ruta creada exitosamente" });
     } catch {
       toast({ title: "Error al crear la ruta", variant: "destructive" });

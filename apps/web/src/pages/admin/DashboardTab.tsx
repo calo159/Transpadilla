@@ -31,9 +31,9 @@ export default function DashboardTab({
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {[
-            { label: "Total Buses",  value: stats?.totalBuses ?? 0,     icon: <BusIcon className="w-5 h-5" />,  tint: "#4BA9D8" },
+            { label: "Total Buses",  value: stats?.totalBuses ?? 0,     icon: <BusIcon className="w-5 h-5" />,  tint: "#7BB8D5" },
             { label: "Activos",      value: stats?.busesActivos ?? 0,   icon: <Activity className="w-5 h-5" />, tint: "#22c55e" },
-            { label: "Con Demora",   value: stats?.busesConDemora ?? 0, icon: <Clock className="w-5 h-5" />,    tint: "#F5C200" },
+            { label: "Con Demora",   value: stats?.busesConDemora ?? 0, icon: <Clock className="w-5 h-5" />,    tint: "#F5B731" },
             { label: "Rutas",        value: stats?.totalRutas ?? 0,     icon: <Map className="w-5 h-5" />,      tint: "#a78bfa" },
             { label: "Paradas",      value: stats?.totalParadas ?? 0,   icon: <MapPin className="w-5 h-5" />,   tint: "#38bdf8" },
           ].map((stat) => (
@@ -119,7 +119,7 @@ export default function DashboardTab({
 
       {/* Novedades activas */}
       {buses.filter((b) => b.novedad).length > 0 && (
-        <div className="rounded-xl p-4 md:p-5 border" style={{ borderColor: "rgba(245,194,0,0.3)", background: "rgba(245,194,0,0.05)" }}>
+        <div className="rounded-xl p-4 md:p-5 border" style={{ borderColor: "rgba(245,183,49,0.3)", background: "rgba(245,183,49,0.05)" }}>
           <h3 className="text-sm font-semibold flex items-center gap-2 mb-3" style={{ color: "var(--tp-yellow)" }}>
             <AlertTriangle className="w-4 h-4" /> Novedades activas
           </h3>
