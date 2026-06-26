@@ -16,11 +16,5 @@
   "devDependencies": {
     "prettier": "^3.8.3",
     "typescript": "~5.9.3"
-  },
-  "pnpm": {
-    "overrides": {
-      "ws": "8.21.0",
-      "qs": "6.15.2"
-    }
   }
 }

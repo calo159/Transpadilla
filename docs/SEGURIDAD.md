@@ -6,8 +6,15 @@ abuso y ataques de denegación de servicio (DoS/DDoS).
 ## Autenticación y autorización
 - **JWT** firmado con `JWT_SECRET` (obligatorio en producción; el arranque falla
   si no está). Tokens con expiración de 7 días.
-- Contraseñas con **bcrypt** (10 rondas). Cambio de clave self-service que
+- Contraseñas con **bcrypt** (10 rondas), **mínimo 8 caracteres** (registro,
+  alta de conductor y cambio de clave). Cambio de clave self-service que
   verifica la contraseña actual (`POST /auth/cambiar-password`).
+- **Login resistente a enumeración de usuarios**: respuesta genérica
+  ("Credenciales inválidas") y **tiempo constante** (compara contra un hash
+  bcrypt señuelo si el correo no existe) → no filtra qué cuentas existen.
+- **Anti-XSS almacenado**: los datos de la BD/usuario (novedad del conductor,
+  placa, nombres de ruta/parada) se **escapan** antes de inyectarse por
+  `innerHTML` en los popups de Leaflet (además de la CSP `script-src 'self'`).
 - **Toda la autorización vive en el backend**, no en el cliente:
   - El registro público SIEMPRE crea rol `pasajero` (el `rol` del cliente se
     ignora) → nadie puede auto-otorgarse permisos. Los conductores los crea un

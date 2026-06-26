@@ -25,6 +25,10 @@ import { recomendarRuta, busMasCercano } from "@/lib/sugerencia";
 
 type SheetState = "collapsed" | "half" | "full";
 
+/** Escapa HTML para inyectar texto (de la BD/usuario) en los popups de Leaflet
+ *  por innerHTML sin riesgo de XSS almacenado (p. ej. la novedad del conductor). */
+const escHtml = (s: string) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+
 export default function Pasajero() {
   const [, setLocation] = useLocation();
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -147,9 +151,9 @@ export default function Pasajero() {
             <div style="min-width:140px;font-family:'Inter',system-ui,sans-serif">
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
                 <div style="width:10px;height:10px;border-radius:50%;background:${ruta.color}"></div>
-                <b style="font-size:13px">${p.nombre}</b>
+                <b style="font-size:13px">${escHtml(p.nombre)}</b>
               </div>
-              <span style="color:#94a3b8;font-size:11px">${ruta.nombre}</span>
+              <span style="color:#94a3b8;font-size:11px">${escHtml(ruta.nombre)}</span>
             </div>`)
           .addTo(map);
         // Tocar una parada también selecciona su ruta (coherente con tocar un bus).
@@ -190,7 +194,10 @@ export default function Pasajero() {
     (busId: number, lat: number, lng: number, color = "#2558A5", placa = "", rutaId?: number) => {
       if (!mapRef.current) return;
       const bus = busesRef.current.find((b) => b.id === busId);
-      const routeName = bus?.nombre_ruta ?? "";
+      // Valores de BD/usuario escapados (innerHTML del popup) → anti-XSS.
+      const routeName = escHtml(bus?.nombre_ruta ?? "");
+      const placaSafe = escHtml(placa || "BUS");
+      const novedadSafe = bus?.novedad ? escHtml(bus.novedad) : "";
       const vel = bus?.velocidad ?? 0;
       // Colores de OCUPACIÓN (paleta del brief): disponible/medio/lleno.
       const ocupMap: Record<string, { label: string; color: string }> = {
@@ -219,7 +226,7 @@ export default function Pasajero() {
         className: seguido ? "tp-bus-seguido" : "",
         html: `<div style="display:flex;flex-direction:column;align-items:center;font-family:'Inter',system-ui,sans-serif">
             <div style="position:relative;display:flex;align-items:center;gap:4px;background:${color};color:#fff;min-height:30px;padding:4px 9px;border-radius:12px;font-size:11px;font-weight:800;white-space:nowrap;${haloRing}border:2px solid #fff;letter-spacing:.3px">
-              <span style="display:flex;line-height:0">${svgBus}</span>${placa || "BUS"}
+              <span style="display:flex;line-height:0">${svgBus}</span>${placaSafe}
               <span style="position:absolute;bottom:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:${ocupDot};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.45)"></span>
               ${novBadge}
             </div>
@@ -242,13 +249,13 @@ export default function Pasajero() {
         : "";
       const novHtml = bus?.novedad
         ? `<div style="display:flex;gap:5px;align-items:flex-start;background:rgba(245,183,49,.14);border-left:3px solid #F5B731;border-radius:6px;padding:5px 8px;margin-top:7px">
-             <span style="font-size:12px;line-height:1.3">⚠</span><span style="font-size:11px;color:#9a6a00;font-weight:600;line-height:1.3">${bus.novedad}</span>
+             <span style="font-size:12px;line-height:1.3">⚠</span><span style="font-size:11px;color:#9a6a00;font-weight:600;line-height:1.3">${novedadSafe}</span>
            </div>`
         : "";
       const popupContent = `
         <div style="min-width:180px;font-family:'Inter',system-ui,sans-serif">
           <div style="display:flex;align-items:center;gap:6px">
-            <b style="font-size:15px;letter-spacing:0.5px">${placa || "BUS"}</b>
+            <b style="font-size:15px;letter-spacing:0.5px">${placaSafe}</b>
             ${vel > 0 ? `<span style="color:#16a34a;font-size:11px;font-weight:600">● ${Math.round(vel)} km/h</span>` : ""}
           </div>
           <div style="color:#64748b;font-size:12px;margin-top:1px">${routeName}</div>
@@ -1005,7 +1012,7 @@ export default function Pasajero() {
             <div className="flex items-center gap-3 px-4 py-3" style={{ background: "var(--color-navy)" }}>
               <div className="w-12 h-12 rounded-xl flex items-center justify-center font-extrabold text-xl shrink-0" style={{ background: "#fff", color: "var(--color-navy)" }}>{rutaNumero}</div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-white leading-tight truncate">{selectedRuta.nombre}</h3>
+                <h3 className="font-display font-bold text-lg text-white leading-tight truncate">{selectedRuta.nombre}</h3>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="w-2 h-2 rounded-full" style={{ background: selectedRuta.color }} />
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-white/70">Ruta</span>
@@ -1061,7 +1068,7 @@ export default function Pasajero() {
                       </div>
                       {eta != null && (
                         <div className="text-right shrink-0 ml-2">
-                          <div className={(current ? "text-2xl" : "text-base") + " font-extrabold tabular-nums leading-none"} style={{ color: current ? "var(--color-navy)" : "var(--color-gray-text)" }}>{eta <= 0 ? "•" : eta}</div>
+                          <div className={"font-display " + (current ? "text-3xl" : "text-lg") + " font-extrabold tabular-nums leading-none"} style={{ color: current ? "var(--color-gold)" : "var(--color-gray-text)" }}>{eta <= 0 ? "•" : eta}</div>
                           <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--color-gray-text)" }}>{eta <= 0 ? "llegando" : "min"}</div>
                         </div>
                       )}
@@ -1097,13 +1104,13 @@ export default function Pasajero() {
       <div className="flex-1 relative">
         <div ref={mapContainerRef} className="w-full h-full" data-testid="map-container" />
 
-        {/* FAB ubicación (estilo Stitch: sky, abajo-derecha sobre el bottom nav) — solo móvil/vista mapa */}
+        {/* FAB ubicación (sky) — abajo-derecha sobre el bottom nav */}
         {vista === "mapa" && (
           <button
             onClick={locateMe}
             disabled={locating}
-            className="md:hidden absolute right-4 bottom-[88px] z-[900] flex items-center justify-center w-12 h-12 rounded-full shadow-lg active:scale-95 transition-transform disabled:opacity-60"
-            style={{ background: "var(--color-sky)", color: "var(--color-navy)" }}
+            className="md:hidden absolute right-4 bottom-[88px] z-[900] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform disabled:opacity-60"
+            style={{ background: "var(--color-sky)", color: "var(--color-navy)", border: "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
             aria-label="Centrar en mi ubicación"
           >
             {locating ? <Loader2 className="w-5 h-5 animate-spin" /> : <LocateFixed className="w-5 h-5" />}
@@ -1152,12 +1159,12 @@ export default function Pasajero() {
         {/* ── Header móvil (estilo Stitch): tarjeta navy flotante + búsqueda + menú ── */}
         <div className="md:hidden fixed top-0 left-0 right-0 z-[1001] px-3 pt-3 flex flex-col gap-2">
           {/* Tarjeta navy */}
-          <div className="rounded-2xl px-3 py-2.5 shadow-lg" style={{ background: "var(--color-navy)" }}>
+          <div className="rounded-2xl px-3 py-2.5" style={{ background: "linear-gradient(135deg, #24487e 0%, #1B3B6F 60%, #16335f 100%)", boxShadow: "0 8px 24px rgba(15,30,60,0.35)" }}>
             <div className="flex items-center justify-between">
               <button onClick={() => setMenuAbierto((o) => !o)} className="p-1 rounded-full text-white active:scale-90 transition-transform" aria-label="Menú">
                 {menuAbierto ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
-              <span className="font-extrabold text-lg tracking-wide text-white">TRANSPADILLA</span>
+              <span className="font-display font-extrabold text-xl tracking-wide text-white">TRANSPADILLA</span>
               <button onClick={() => setLocation(user ? (user.rol === "admin" ? "/admin" : "/conductor") : "/login")} className="p-1 rounded-full text-white active:scale-90 transition-transform" aria-label={user ? "Mi panel" : "Cuenta"}>
                 <User className="w-6 h-6" />
               </button>
@@ -1172,7 +1179,7 @@ export default function Pasajero() {
           </div>
           {/* Búsqueda (tarjeta blanca) */}
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: "var(--color-gray-text)" }} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: "var(--color-blue)" }} />
             <input
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
@@ -1214,7 +1221,7 @@ export default function Pasajero() {
           ] as const).map((t) => {
             const activo = vista === t.id;
             return (
-              <button key={t.id} onClick={() => setVista(t.id)} className="flex flex-col items-center gap-0.5 rounded-2xl px-4 py-1.5 active:scale-90 transition-all" style={activo ? { background: "var(--color-gold)", color: "var(--color-navy)" } : { color: "var(--color-gray-text)" }}>
+              <button key={t.id} onClick={() => setVista(t.id)} className="flex flex-col items-center gap-1 rounded-2xl px-4 py-2 active:scale-90 transition-all" style={activo ? { background: "var(--color-gold)", color: "var(--color-navy)", boxShadow: "0 4px 12px rgba(245,183,49,0.4)" } : { color: "var(--color-blue)" }}>
                 {t.icon}
                 <span className="text-[10px] font-bold">{t.label}</span>
               </button>
@@ -1461,20 +1468,21 @@ export default function Pasajero() {
         <div
           key={vista}
           className="tp-light md:hidden fixed left-0 right-0 bottom-0 z-[1000] overflow-y-auto animate-in fade-in slide-in-from-bottom-3 duration-300 ease-out"
-          style={{ top: 140, bottom: 72, background: "var(--color-gray-light)" }}
+          style={{ top: 140, bottom: 72, background: "linear-gradient(180deg,#eaf1fb 0%, #f6f9fc 55%)" }}
         >
-          <div className="px-4 pt-3 pb-24 space-y-3">
+          <div className="px-4 pt-4 pb-24 space-y-4">
             {(() => {
               // Encabezado de sección reutilizable (título grande + contador + subtítulo).
               const Header = (titulo: string, subtitulo: string, n?: number) => (
-                <div className="pt-1 pb-1">
+                <div className="pt-1 pb-1 mb-1">
                   <div className="flex items-center gap-2.5">
-                    <h2 className="text-xl font-extrabold leading-tight" style={{ color: "var(--color-navy)" }}>{titulo}</h2>
+                    <span className="w-1.5 h-7 rounded-full flex-shrink-0" style={{ background: "var(--color-gold)" }} />
+                    <h2 className="font-display text-2xl font-extrabold leading-tight" style={{ color: "var(--color-navy)" }}>{titulo}</h2>
                     {n != null && (
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(123,184,213,0.25)", color: "var(--color-blue)" }}>{n}</span>
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full text-white shadow-sm" style={{ background: "var(--color-blue)" }}>{n}</span>
                     )}
                   </div>
-                  <p className="text-sm mt-0.5" style={{ color: "var(--color-gray-text)" }}>{subtitulo}</p>
+                  <p className="text-sm mt-1 ml-4" style={{ color: "var(--color-gray-text)" }}>{subtitulo}</p>
                 </div>
               );
 
@@ -1497,14 +1505,15 @@ export default function Pasajero() {
                   key={r.id}
                   role="button"
                   onClick={() => { setSelectedRutaId(r.id); setVista("mapa"); setSheetState("half"); }}
-                  className="w-full flex items-center gap-3.5 rounded-2xl p-4 min-h-[68px] shadow-sm active:scale-[0.98] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
-                  style={{ background: "var(--color-white)" }}
+                  className="relative w-full flex items-center gap-4 rounded-2xl p-4 pl-5 min-h-[78px] overflow-hidden active:scale-[0.98] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+                  style={{ background: `linear-gradient(100deg, ${r.color}14 0%, #ffffff 60%)`, boxShadow: "0 6px 16px rgba(27,59,111,0.10)" }}
                 >
-                  <span className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: r.color }}>
+                  <span className="absolute left-0 top-0 bottom-0 w-1.5" style={{ background: r.color }} />
+                  <span className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md" style={{ background: r.color }}>
                     <Bus className="w-6 h-6 text-white" />
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="block text-base font-bold truncate" style={{ color: "var(--color-navy)" }}>{r.nombre}</span>
+                    <span className="font-display block text-[17px] font-bold truncate" style={{ color: "var(--color-navy)" }}>{r.nombre}</span>
                     <span className="mt-1 block">{EstadoPill(rutaTieneVivos(r.id))}</span>
                   </span>
                   <button
@@ -1584,10 +1593,11 @@ export default function Pasajero() {
                   key={x.parada.id}
                   role="button"
                   onClick={() => { if (x.rutas[0]) setSelectedRutaId(x.rutas[0].id); setVista("mapa"); setSheetState("half"); }}
-                  className="w-full flex items-center gap-3.5 rounded-2xl p-4 min-h-[68px] shadow-sm active:scale-[0.98] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
-                  style={{ background: "var(--color-white)" }}
+                  className="relative w-full flex items-center gap-4 rounded-2xl p-4 pl-5 min-h-[78px] overflow-hidden active:scale-[0.98] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+                  style={{ background: "var(--color-white)", boxShadow: "0 6px 16px rgba(27,59,111,0.10)" }}
                 >
-                  <span className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(123,184,213,0.25)" }}>
+                  <span className="absolute left-0 top-0 bottom-0 w-1.5" style={{ background: "var(--color-sky)" }} />
+                  <span className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm" style={{ background: "var(--color-sky)" }}>
                     <MapPin className="w-6 h-6" style={{ color: "var(--color-navy)" }} />
                   </span>
                   <span className="flex-1 min-w-0">

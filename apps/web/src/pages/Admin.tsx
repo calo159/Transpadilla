@@ -88,7 +88,7 @@ export default function Admin() {
         <div className="flex items-center gap-2.5 px-5 py-5">
           <LogoTP size={34} />
           <div>
-            <p className="text-base font-extrabold tracking-wide text-white">TRANSPADILLA</p>
+            <p className="font-display text-lg font-extrabold tracking-wide text-white">TRANSPADILLA</p>
             <p className="text-[10px] font-semibold text-white/60">Administración · Riohacha</p>
           </div>
         </div>
@@ -136,7 +136,7 @@ export default function Admin() {
 
         {/* ── MOBILE HEADER (navy) ── */}
         <div className="md:hidden flex items-center justify-between px-4 shrink-0 text-white" style={{ background: "var(--color-navy)", height: 56 }}>
-          <span className="font-extrabold text-lg tracking-wide text-white">TRANSPADILLA</span>
+          <span className="font-display font-extrabold text-xl tracking-wide text-white">TRANSPADILLA</span>
           <div className="flex items-center gap-1">
             <button onClick={() => setLocation("/")} className="p-2 text-white" title="Ir al mapa" aria-label="Ir al mapa"><Map style={{ width: 18, height: 18 }} /></button>
             <button onClick={() => setCambiarPass(true)} className="p-2 text-white" title="Cambiar contraseña" aria-label="Cambiar contraseña"><KeyRound style={{ width: 18, height: 18 }} /></button>
@@ -166,7 +166,7 @@ export default function Admin() {
         {/* ── DESKTOP TOPBAR (claro) ── */}
         <div className="hidden md:flex items-center justify-between px-6 py-3 shrink-0 bg-white border-b" style={{ borderColor: "#e8edf4" }}>
           <div>
-            <h1 className="text-lg font-bold" style={{ color: "var(--color-navy)" }}>{tabTitle[tab]}</h1>
+            <h1 className="font-display text-xl font-extrabold" style={{ color: "var(--color-navy)" }}>{tabTitle[tab]}</h1>
             <p className="text-xs" style={{ color: "var(--color-gray-text)" }}>Riohacha, La Guajira · TransPadilla</p>
           </div>
           <div className="flex items-center gap-2">
