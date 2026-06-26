@@ -10,6 +10,10 @@ import { rateLimit } from "../middleware/rate-limit";
 
 const router = Router();
 
+// Hash bcrypt "señuelo" para comparar cuando el usuario no existe: así el login
+// tarda lo mismo exista o no la cuenta → evita enumeración de usuarios por timing.
+const DUMMY_HASH = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+
 // Frena fuerza bruta: máx. 10 intentos de login por IP cada 5 minutos.
 const loginLimiter = rateLimit({ ventanaMs: 5 * 60_000, max: 10 });
 // El registro también se limita: evita que un bot cree cuentas en masa.
@@ -31,6 +35,7 @@ router.post(
     .from(usuarios)
     .where(eq(usuarios.correo, correo.trim().toLowerCase()));
   if (!usuario) {
+    await bcrypt.compare(password, DUMMY_HASH); // equaliza el tiempo (anti-enumeración)
     res.status(401).json({ error: "Credenciales inválidas" });
     return;
   }
@@ -65,7 +70,7 @@ router.post(
   validarBody(
     requerido("nombre"), texto("nombre", 2, 100),
     requerido("correo"), correoValido("correo"),
-    requerido("password"), texto("password", 6, 200),
+    requerido("password"), texto("password", 8, 200),
   ),
   async (req, res) => {
   const { nombre, correo, password } = req.body as {
@@ -99,7 +104,7 @@ router.post(
   authMiddleware,
   validarBody(
     requerido("actual"),
-    requerido("nueva"), texto("nueva", 6, 200),
+    requerido("nueva"), texto("nueva", 8, 200),
   ),
   async (req, res) => {
     const { actual, nueva } = req.body as { actual: string; nueva: string };

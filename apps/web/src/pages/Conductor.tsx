@@ -208,7 +208,7 @@ export default function Conductor() {
           <button onClick={() => setLocation("/")} className="text-white p-1.5 active:scale-90 transition-transform" aria-label="Volver al mapa" title="Volver al mapa">
             <ChevronLeft className="w-6 h-6" />
           </button>
-          <span className="font-extrabold text-lg tracking-wide text-white">TRANSPADILLA</span>
+          <span className="font-display font-extrabold text-xl tracking-wide text-white">TRANSPADILLA</span>
           <div className="flex items-center gap-1">
             <button onClick={() => setCambiarPass(true)} className="text-white p-1.5 active:scale-90 transition-transform" aria-label="Cambiar contraseña" title="Cambiar contraseña"><KeyRound className="w-5 h-5" /></button>
             <button onClick={() => { clearAuth(); setLocation("/"); }} className="text-white p-1.5 active:scale-90 transition-transform" data-testid="button-salir" aria-label="Cerrar sesión" title="Cerrar sesión"><LogOut className="w-5 h-5" /></button>
@@ -225,7 +225,7 @@ export default function Conductor() {
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-white/60">Asignación actual</p>
-                <h2 className="font-bold text-white leading-tight truncate" data-testid="text-conductor">
+                <h2 className="font-display font-bold text-lg text-white leading-tight truncate" data-testid="text-conductor">
                   {selectedBus?.nombre_ruta ? selectedBus.nombre_ruta : selectedBus ? `Bus ${selectedBus.placa}` : "Sin asignación"}
                 </h2>
                 {selectedBus && <p className="text-xs text-white/70 mt-0.5">Bus <span className="font-mono font-bold">{selectedBus.placa}</span> · {user?.nombre}</p>}

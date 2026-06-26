@@ -34,7 +34,7 @@ export function CambiarPasswordDialog({
 
   const guardar = async () => {
     if (!actual || !nueva) { toast({ title: "Completa todos los campos", variant: "destructive" }); return; }
-    if (nueva.length < 6) { toast({ title: "La nueva contraseña debe tener al menos 6 caracteres", variant: "destructive" }); return; }
+    if (nueva.length < 8) { toast({ title: "La nueva contraseña debe tener al menos 8 caracteres", variant: "destructive" }); return; }
     if (nueva !== confirmar) { toast({ title: "Las contraseñas no coinciden", variant: "destructive" }); return; }
     setPending(true);
     try {
@@ -85,7 +85,7 @@ export function CambiarPasswordDialog({
                 type={verNueva ? "text" : "password"}
                 value={nueva}
                 onChange={(e) => setNueva(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 8 caracteres"
                 className="h-11 rounded-xl pr-11"
                 autoComplete="new-password"
               />

@@ -154,7 +154,7 @@ export default function ConductoresTab({ buses, setConfirmar }: Props) {
               <Input
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 8 caracteres"
                 className={`${inputCls} pr-11`}
                 type={showPass ? "text" : "password"}
               />

@@ -36,7 +36,7 @@ router.post(
   validarBody(
     requerido("nombre"), texto("nombre", 2, 100),
     requerido("correo"), correoValido("correo"),
-    requerido("password"), texto("password", 6, 200),
+    requerido("password"), texto("password", 8, 200),
     requerido("identificacion"), texto("identificacion", 3, 30),
   ),
   async (req, res) => {

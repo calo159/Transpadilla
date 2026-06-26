@@ -207,6 +207,9 @@
   color: hsl(var(--foreground));
 }
 
+/* Fuente de títulos (marca): Plus Jakarta Sans con caída a Inter. */
+.font-display { font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif; letter-spacing: -0.015em; }
+
 @layer base {
   * { @apply border-border; }
   body {
@@ -269,6 +272,11 @@
   color: #6B7280 !important;
   font-size: 10px;
   border-radius: 8px 0 0 0;
+}
+/* En móvil se navega con pinch-zoom; el control +/- choca con el FAB de
+   ubicación, así que se oculta. En escritorio se mantiene. */
+@media (max-width: 767px) {
+  .leaflet-control-zoom { display: none !important; }
 }
 
 /* Scrollbar */
