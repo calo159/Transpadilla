@@ -43,6 +43,7 @@ export default function Pasajero() {
   const socketRef = useRef<Socket | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
   const destinoMarkerRef = useRef<L.Marker | null>(null);
+  const miParadaMarkerRef = useRef<L.Marker | null>(null);
   const queryClient = useQueryClient();
 
   const [selectedRutaId, setSelectedRutaId] = useState<number | null>(null);
@@ -477,6 +478,36 @@ export default function Pasajero() {
     if (destinoMarkerRef.current) destinoMarkerRef.current.setLatLng([destino.lat, destino.lng]);
     else destinoMarkerRef.current = L.marker([destino.lat, destino.lng], { icon }).bindPopup("Tu destino").addTo(map);
   }, [destino]);
+
+  // Marcador "Súbete aquí": resalta en el mapa la parada más cercana al pasajero
+  // de la ruta seleccionada (solo con ubicación activa). Se quita si no aplica.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const quitar = () => { miParadaMarkerRef.current?.remove(); miParadaMarkerRef.current = null; };
+    const ruta = rutas.find((r) => r.id === selectedRutaId);
+    if (!userPos || !ruta || ruta.paradas.length === 0) { quitar(); return; }
+    let mejor = ruta.paradas[0]!, dMin = Infinity;
+    for (const p of ruta.paradas) {
+      const d = distanciaKm(userPos.lat, userPos.lng, p.latitud, p.longitud);
+      if (d < dMin) { dMin = d; mejor = p; }
+    }
+    const dTxt = dMin < 1 ? `${Math.round(dMin * 1000)} m` : `${dMin.toFixed(1)} km`;
+    const icon = L.divIcon({
+      className: "",
+      html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;width:34px;height:34px">
+          <span class="animate-ping" style="position:absolute;width:30px;height:30px;border-radius:50%;background:rgba(56,161,105,.45)"></span>
+          <span style="position:relative;display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#38A169;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)"><svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"/></svg></span>
+        </div>`,
+      iconSize: [34, 34], iconAnchor: [17, 17],
+    });
+    const popup = `<div style="font-family:'Inter',system-ui,sans-serif"><b style="font-size:13px;color:#16a34a">Súbete aquí</b><br><span style="font-size:12px">${escHtml(mejor.nombre)}</span><br><span style="font-size:11px;color:#64748b">a ${dTxt} de ti</span></div>`;
+    if (miParadaMarkerRef.current) {
+      miParadaMarkerRef.current.setLatLng([mejor.latitud, mejor.longitud]).setIcon(icon).setPopupContent(popup);
+    } else {
+      miParadaMarkerRef.current = L.marker([mejor.latitud, mejor.longitud], { icon, zIndexOffset: 500 }).bindPopup(popup).addTo(map);
+    }
+  }, [selectedRutaId, userPos, rutas]);
 
   // ETA del próximo bus por parada de la ruta seleccionada (lo calcula el API Node).
   useEffect(() => {
