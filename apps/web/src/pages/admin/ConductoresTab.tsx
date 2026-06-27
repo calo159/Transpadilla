@@ -208,9 +208,13 @@ export default function ConductoresTab({ buses, setConfirmar }: Props) {
             {[1, 2, 3].map((i) => <div key={i} className="h-16 bg-muted/40 rounded-xl animate-pulse" />)}
           </div>
         ) : conductores.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            No hay conductores registrados. Crea el primero.
-          </p>
+          <div className="text-center py-10">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center bg-muted/40">
+              <UserCheck className="w-6 h-6 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-medium text-foreground">Aún no hay conductores</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Crea el primero con el formulario de la izquierda.</p>
+          </div>
         ) : (
           <div className="space-y-2 max-h-[500px] overflow-y-auto">
             {conductores.map((c) => {
