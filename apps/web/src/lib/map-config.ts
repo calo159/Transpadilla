@@ -16,8 +16,12 @@
 
 const env = import.meta.env as Record<string, string | undefined>;
 
-// Protomaps (vectorial, auto-hospedado). Si está vacío, el mapa cae a tiles OSM.
-export const PMTILES_URL = env.VITE_MAP_PMTILES_URL ?? "";
+// Protomaps (vectorial, auto-hospedado). Por defecto sirve el mapa de Riohacha
+// incluido en /public (apps/web/public/riohacha.pmtiles), servido en el mismo
+// dominio — sin API key, sin tarjeta, sin costo por petición. Se puede apuntar a
+// otro archivo (p. ej. en Cloudflare R2) con VITE_MAP_PMTILES_URL, o forzar el
+// fallback a tiles OSM poniendo VITE_MAP_PMTILES_URL="".
+export const PMTILES_URL = env.VITE_MAP_PMTILES_URL ?? "/riohacha.pmtiles";
 export const MAP_FLAVOR = env.VITE_MAP_FLAVOR ?? "light";
 
 export const TILES_URL =
