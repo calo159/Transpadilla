@@ -58,7 +58,7 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
       setLng(e.latlng.lng.toFixed(6));
       const icon = L.divIcon({
         className: "",
-        html: `<div style="font-size:26px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))">📍</div>`,
+        html: `<div style="line-height:0;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))"><svg width="26" height="26" viewBox="0 0 24 24" fill="#F5B731" stroke="#1B3B6F" stroke-width="1.5"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Z"/><circle cx="12" cy="9" r="2.5" fill="#1B3B6F" stroke="none"/></svg></div>`,
         iconSize: [26, 26], iconAnchor: [13, 26],
       });
       if (nuevoMarkerRef.current) nuevoMarkerRef.current.setLatLng(e.latlng);

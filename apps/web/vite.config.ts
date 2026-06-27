@@ -65,6 +65,19 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        // Separa las librerías grandes (que cambian poco) en chunks cacheables,
+        // así un redeploy de la app no invalida el caché del vendor del navegador.
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("leaflet")) return "leaflet";
+          if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return "react-vendor";
+          if (id.includes("@tanstack") || id.includes("socket.io")) return "data-vendor";
+          return "vendor";
+        },
+      },
+    },
   },
   server: {
     port,

@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useCreateBus, useDeleteBus, getGetBusesQueryKey, type Bus, type Ruta,
 } from "@workspace/api-client";
-import { Plus, Bus as BusIcon, Trash2 } from "lucide-react";
+import { Plus, Bus as BusIcon, Trash2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -109,7 +109,7 @@ export default function BusesTab({ buses, busesLoading, rutas, setConfirmar }: P
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase ${b.estado === "activo" ? "bg-green-500/20 text-green-400" : b.estado === "demora" ? "bg-amber-500/20 text-amber-400" : "bg-muted/20 text-muted-foreground"}`}>{b.estado}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">{b.nombre_ruta ?? "Sin ruta"}{b.velocidad && b.velocidad > 0 ? ` · ${Math.round(b.velocidad)} km/h` : ""}</p>
-                  {b.novedad && <p className="text-xs mt-0.5" style={{ color: "var(--tp-yellow)" }}>⚠ {b.novedad}</p>}
+                  {b.novedad && <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "var(--tp-yellow)" }}><AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />{b.novedad}</p>}
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => eliminar(b.id, b.placa)} className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive flex-shrink-0" data-testid={`delete-bus-${b.id}`}>
                   <Trash2 className="w-4 h-4" />
