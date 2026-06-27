@@ -74,7 +74,7 @@ export default function BusesTab({ buses, busesLoading, rutas, setConfirmar }: P
             <Input value={placa} onChange={(e) => setPlaca(e.target.value.toUpperCase())} placeholder="Ej: GUA-001" className={`${inputCls} font-mono`} data-testid="input-bus-placa" maxLength={10} />
           </div>
           <div>
-            <Label className="text-xs mb-1.5">Asignar a ruta (opcional)</Label>
+            <Label className="text-xs mb-1.5">Asignar a ruta (opcional — la puedes cambiar después)</Label>
             <Select value={rutaId} onValueChange={setRutaId}>
               <SelectTrigger className={selectTriggerCls} data-testid="select-bus-ruta"><SelectValue placeholder="Sin ruta asignada" /></SelectTrigger>
               <SelectContent>

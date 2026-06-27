@@ -50,6 +50,12 @@ export default function ConductoresTab({ buses, setConfirmar }: Props) {
     if (!nombre.trim() || !identificacion.trim() || !correo.trim() || !password.trim()) {
       toast({ title: "Completa todos los campos", variant: "destructive" }); return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) {
+      toast({ title: "El correo no es válido", description: "Ej: conductor@transpadilla.co", variant: "destructive" }); return;
+    }
+    if (password.length < 8) {
+      toast({ title: "La contraseña debe tener al menos 8 caracteres", variant: "destructive" }); return;
+    }
     setPending(true);
     try {
       const res = await apiFetch("/api/conductores", {
