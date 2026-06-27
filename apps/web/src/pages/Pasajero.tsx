@@ -159,6 +159,8 @@ export default function Pasajero() {
 
   // Ruta con buses circulando ahora (lo más accionable para el pasajero).
   const rutaTieneVivos = (id: number) => buses.some((b) => b.ruta_id === id && b.estado !== "inactivo");
+  // Cuántos buses de una ruta están circulando ahora (para mostrarlo en la tarjeta).
+  const rutaBusesVivos = (id: number) => buses.filter((b) => b.ruta_id === id && b.estado !== "inactivo").length;
   // Orden de la lista (más fácil de usar): favoritas → con buses en vivo → resto,
   // y dentro de cada grupo, alfabético.
   const rutasFiltradas = useMemo(
@@ -1393,9 +1395,17 @@ export default function Pasajero() {
             { id: "paraderos", label: "Paraderos", icon: <MapPin className="w-5 h-5" /> },
           ] as const).map((t) => {
             const activo = vista === t.id;
+            const badge = t.id === "favoritos" && favoritos.length > 0 ? favoritos.length : null;
             return (
-              <button key={t.id} onClick={() => setVista(t.id)} className="flex flex-col items-center gap-1 rounded-2xl px-4 py-2 active:scale-90 transition-all" style={activo ? { background: "var(--color-gold)", color: "var(--color-navy)", boxShadow: "0 4px 12px rgba(245,183,49,0.4)" } : { color: "var(--color-blue)" }}>
-                {t.icon}
+              <button key={t.id} onClick={() => setVista(t.id)} className="relative flex flex-col items-center gap-1 rounded-2xl px-4 py-2 active:scale-90 transition-all" style={activo ? { background: "var(--color-gold)", color: "var(--color-navy)", boxShadow: "0 4px 12px rgba(245,183,49,0.4)" } : { color: "var(--color-blue)" }}>
+                <span className="relative">
+                  {t.icon}
+                  {badge !== null && (
+                    <span className="absolute -top-1.5 -right-2 min-w-[15px] h-[15px] px-1 rounded-full flex items-center justify-center text-[9px] font-black text-white" style={{ background: "var(--color-danger)", border: "1.5px solid #fff" }}>
+                      {badge}
+                    </span>
+                  )}
+                </span>
                 <span className="text-[10px] font-bold">{t.label}</span>
               </button>
             );
@@ -1659,18 +1669,21 @@ export default function Pasajero() {
                 </div>
               );
 
-              // Pill de estado en vivo / sin buses.
-              const EstadoPill = (vivos: boolean) => (
-                <span
-                  className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full"
-                  style={vivos
-                    ? { background: "rgba(56,161,105,0.14)", color: "var(--color-success)" }
-                    : { background: "rgba(107,114,128,0.12)", color: "var(--color-gray-text)" }}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${vivos ? "animate-pulse" : ""}`} style={{ background: vivos ? "var(--color-success)" : "var(--color-gray-text)" }} />
-                  {vivos ? "En vivo" : "Sin buses"}
-                </span>
-              );
+              // Pill de estado: cuántos buses en vivo, o "sin buses".
+              const EstadoPill = (n: number) => {
+                const vivos = n > 0;
+                return (
+                  <span
+                    className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full"
+                    style={vivos
+                      ? { background: "rgba(56,161,105,0.14)", color: "var(--color-success)" }
+                      : { background: "rgba(107,114,128,0.12)", color: "var(--color-gray-text)" }}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${vivos ? "animate-pulse" : ""}`} style={{ background: vivos ? "var(--color-success)" : "var(--color-gray-text)" }} />
+                    {vivos ? `${n} en vivo` : "Sin buses"}
+                  </span>
+                );
+              };
 
               // Tarjeta de ruta amplia y táctil (estilo apps de movilidad).
               const RouteCard = (r: typeof rutas[number]) => (
@@ -1690,7 +1703,7 @@ export default function Pasajero() {
                   <span className="flex-1 min-w-0">
                     <span className="font-display block text-[17px] font-bold truncate" style={{ color: "var(--color-navy)" }}>{r.nombre}</span>
                     <span className="mt-1 flex items-center gap-2 flex-wrap">
-                      {EstadoPill(rutaTieneVivos(r.id))}
+                      {EstadoPill(rutaBusesVivos(r.id))}
                       {r.paradas.length > 0 && <span className="text-xs" style={{ color: "var(--color-gray-text)" }}>{r.paradas.length} paradas</span>}
                     </span>
                   </span>
