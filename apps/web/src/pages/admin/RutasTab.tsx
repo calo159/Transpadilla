@@ -139,7 +139,13 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
         {rutasLoading ? (
           <div className="space-y-2">{[1,2,3].map((i) => <div key={i} className="h-12 bg-muted/40 rounded-xl animate-pulse" />)}</div>
         ) : rutas.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">No hay rutas. Crea la primera.</p>
+          <div className="text-center py-10">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center bg-muted/40">
+              <Route className="w-6 h-6 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-medium text-foreground">Aún no hay rutas</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Crea la primera con el formulario de la izquierda.</p>
+          </div>
         ) : (
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {rutas.map((ruta) => (

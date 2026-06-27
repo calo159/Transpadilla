@@ -176,11 +176,18 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
               <Label className="text-xs mb-1.5 flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5 text-sky-400" /> Ubicación — toca el mapa donde está la parada
               </Label>
-              <div
-                ref={mapContainerRef}
-                className="w-full h-64 rounded-xl overflow-hidden border border-border"
-                data-testid="map-parada-picker"
-              />
+              <div className="relative">
+                <div
+                  ref={mapContainerRef}
+                  className="w-full h-64 rounded-xl overflow-hidden border border-border"
+                  data-testid="map-parada-picker"
+                />
+                {!(lat && lng) && (
+                  <div className="pointer-events-none absolute top-2 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-md animate-pulse" style={{ background: "var(--color-navy, #1B3B6F)", color: "#fff" }}>
+                    <MapPin className="w-3.5 h-3.5" /> Toca el mapa para ubicar la parada
+                  </div>
+                )}
+              </div>
             </div>
             {lat && lng ? (
               <p className="text-xs text-muted-foreground">
@@ -280,7 +287,13 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
           <span className="text-xs text-muted-foreground font-normal">{paradas.length} en total</span>
         </h3>
         {paradas.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">No hay paradas. Crea la primera.</p>
+          <div className="text-center py-10">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center bg-muted/40">
+              <MapPin className="w-6 h-6 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-medium text-foreground">Aún no hay paradas</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Crea la primera tocando el mapa de la izquierda.</p>
+          </div>
         ) : (
           <div className="space-y-2 max-h-[500px] overflow-y-auto">
             {paradas.map((p) => (
