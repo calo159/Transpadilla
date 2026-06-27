@@ -445,6 +445,18 @@ export default function Pasajero() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modoDestino, rutas, userPos]);
 
+  // Tocar el mapa (zona vacía) deselecciona la ruta y cierra el panel — gesto
+  // natural en apps de mapas. Los toques en buses/paradas/recorrido no llegan
+  // aquí (tienen su propio handler). No aplica en modo destino.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || modoDestino || selectedRutaId === null) return;
+    const onClick = () => cerrarCard();
+    map.on("click", onClick);
+    return () => { map.off("click", onClick); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modoDestino, selectedRutaId]);
+
   // Marcador del destino elegido (bandera). Se crea/mueve/elimina según `destino`.
   useEffect(() => {
     const map = mapRef.current;
@@ -1163,7 +1175,10 @@ export default function Pasajero() {
             {/* Estado en vivo + barra de progreso con bus dorado */}
             <div className="px-4 py-3 bg-white border-b" style={{ borderColor: "#eef2f7" }}>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: "var(--color-gray-text)" }}><Radio className="w-3.5 h-3.5" /> Estado en vivo</span>
+                <span className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: "var(--color-gray-text)" }}>
+                  <Radio className="w-3.5 h-3.5" /> Estado en vivo
+                  {proxBus?.actualizado && <span className="font-medium normal-case tracking-normal opacity-80">· {tiempoRelativo(proxBus.actualizado)}</span>}
+                </span>
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded" style={hayDemora ? { background: "rgba(229,62,62,0.12)", color: "var(--color-danger)" } : { background: "rgba(123,184,213,0.25)", color: "var(--color-navy)" }}>{hayDemora ? "CON DEMORA" : "A TIEMPO"}</span>
               </div>
               {proximoBus ? (
