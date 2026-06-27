@@ -1,4 +1,4 @@
-import { OSRM_URL } from "./mapConfig";
+import { OSRM_URL } from "./map-config";
 
 interface StopCoord {
   latitud: number;

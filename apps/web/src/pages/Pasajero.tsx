@@ -16,7 +16,7 @@ import { io, type Socket } from "socket.io-client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { fetchStreetRoute } from "@/lib/routing";
-import { useLeafletMap } from "@/hooks/useLeafletMap";
+import { useLeafletMap } from "@/hooks/use-leaflet-map";
 import { WHATSAPP_NUMERO, INSTAGRAM_URL, TARIFA_COP } from "@/lib/constants";
 import type { BusLocation, Novedad } from "@/lib/types";
 import { tiempoRelativo } from "@/lib/format";

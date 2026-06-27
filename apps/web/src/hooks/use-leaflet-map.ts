@@ -1,7 +1,7 @@
 import { useEffect, useRef, type RefObject } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { TILES_URL, TILES_ATTRIBUTION } from "@/lib/mapConfig";
+import { TILES_URL, TILES_ATTRIBUTION } from "@/lib/map-config";
 
 /** Centro por defecto del mapa: Riohacha, La Guajira. */
 export const RIOHACHA_CENTRO: [number, number] = [11.5444, -72.9072];
