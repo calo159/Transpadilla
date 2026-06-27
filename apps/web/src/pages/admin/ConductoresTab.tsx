@@ -33,18 +33,24 @@ export default function ConductoresTab({ buses, setConfirmar }: Props) {
   const [showPass, setShowPass] = useState(false);
   const [pending, setPending] = useState(false);
 
-  const fetchConductores = useCallback(async () => {
-    setLoading(true);
+  // silent=true para el refresco en segundo plano (no muestra el esqueleto de carga).
+  const fetchConductores = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await apiFetch("/api/conductores");
       if (res.ok) setConductores(await res.json() as Conductor[]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
-  // El componente solo se monta cuando el tab está activo: cargar al entrar.
-  useEffect(() => { fetchConductores(); }, [fetchConductores]);
+  // El componente solo se monta cuando el tab está activo: cargar al entrar y
+  // refrescar cada 20 s (silencioso) para reflejar cambios de otra sesión.
+  useEffect(() => {
+    fetchConductores();
+    const t = setInterval(() => fetchConductores(true), 20000);
+    return () => clearInterval(t);
+  }, [fetchConductores]);
 
   const registrar = async () => {
     if (!nombre.trim() || !identificacion.trim() || !correo.trim() || !password.trim()) {
@@ -193,7 +199,7 @@ export default function ConductoresTab({ buses, setConfirmar }: Props) {
           <span className="flex items-center gap-2">
             <Users className="w-4 h-4 text-primary" /> Conductores registrados
           </span>
-          <button onClick={fetchConductores} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+          <button onClick={() => fetchConductores()} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
             <RefreshCw className="w-3 h-3" /> Actualizar
           </button>
         </h3>

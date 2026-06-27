@@ -109,10 +109,10 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
         <div className="space-y-3">
           <div>
             <Label className="text-xs mb-1.5">Nombre de la ruta</Label>
-            <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Ruta A — Centro a Marbella" className={inputCls} data-testid="input-ruta-nombre" />
+            <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Ruta A — Centro a Marbella" maxLength={50} className={inputCls} data-testid="input-ruta-nombre" />
           </div>
           <div>
-            <Label className="text-xs mb-1.5">Color en el mapa</Label>
+            <Label className="text-xs mb-1.5">Color en el mapa (con este color se verá la ruta y sus buses)</Label>
             <div className="flex flex-wrap gap-2.5 mt-1">
               {COLORES.map((c) => (
                 <button

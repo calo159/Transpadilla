@@ -170,7 +170,7 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
           <div className="space-y-3">
             <div>
               <Label className="text-xs mb-1.5">Nombre de la parada</Label>
-              <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Terminal Central" className={inputCls} data-testid="input-parada-nombre" />
+              <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Terminal Central" maxLength={50} className={inputCls} data-testid="input-parada-nombre" />
             </div>
             <div>
               <Label className="text-xs mb-1.5 flex items-center gap-1.5">
@@ -197,11 +197,15 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
           </div>
         </div>
 
-        {rutas.length > 0 && paradas.length > 0 && (
-          <div className="bg-card border border-border rounded-xl p-4 md:p-5">
-            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-              <Route className="w-4 h-4 text-purple-400" /> Asignar parada a ruta
-            </h3>
+        <div className="bg-card border border-border rounded-xl p-4 md:p-5">
+          <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Route className="w-4 h-4 text-purple-400" /> Asignar parada a ruta
+          </h3>
+          {rutas.length === 0 || paradas.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              {rutas.length === 0 ? "Crea al menos una ruta (pestaña Rutas)" : "Crea al menos una parada arriba"} para poder asignarla a una ruta.
+            </p>
+          ) : (
             <div className="space-y-3">
               <div>
                 <Label className="text-xs mb-1.5">Ruta</Label>
@@ -249,9 +253,6 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
                                 {incluida && (
                                   <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-400 flex-shrink-0">ya en ruta</span>
                                 )}
-                                <span className="text-[10px] font-mono text-muted-foreground flex-shrink-0">
-                                  {p.latitud.toFixed(3)}, {p.longitud.toFixed(3)}
-                                </span>
                               </button>
                             );
                           })}
@@ -269,8 +270,8 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
                 <Route className="w-4 h-4 mr-2" />Asignar parada
               </Button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="bg-card border border-border rounded-xl p-4 md:p-5">
