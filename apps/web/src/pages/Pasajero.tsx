@@ -717,7 +717,7 @@ export default function Pasajero() {
             className="pl-8 h-9 text-xs bg-background border-border rounded-lg"
           />
           {busqueda && (
-            <button onClick={() => setBusqueda("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+            <button onClick={() => setBusqueda("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground">
               <X className="w-3 h-3" />
             </button>
           )}
@@ -890,7 +890,11 @@ export default function Pasajero() {
                   <Clock className="w-3 h-3" />{tiempoRelativo(b.actualizado)}
                 </p>
               )}
-              {b.novedad && <p className="mt-1" style={{ color: "var(--tp-yellow)" }}>⚠ {b.novedad}</p>}
+              {b.novedad && (
+                <p className="mt-1 flex items-center gap-1" style={{ color: "var(--tp-yellow)" }}>
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />{b.novedad}
+                </p>
+              )}
               <button
                 onClick={() => seguirBus(b.id)}
                 className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg font-semibold transition-colors"
@@ -1228,13 +1232,13 @@ export default function Pasajero() {
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               onFocus={() => setVista("rutas")}
-              placeholder="¿A dónde vas?"
+              placeholder="Buscar ruta…"
               aria-label="Buscar ruta"
               className="w-full h-12 pl-12 pr-10 text-sm rounded-2xl outline-none border-0 shadow-md"
               style={{ background: "#fff", color: "var(--color-navy)" }}
             />
             {busqueda && (
-              <button onClick={() => setBusqueda("")} className="absolute right-3.5 top-1/2 -translate-y-1/2" style={{ color: "var(--color-gray-text)" }} aria-label="Limpiar búsqueda">
+              <button onClick={() => setBusqueda("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5" style={{ color: "var(--color-gray-text)" }} aria-label="Limpiar búsqueda">
                 <X className="w-4 h-4" />
               </button>
             )}
@@ -1251,6 +1255,26 @@ export default function Pasajero() {
               <button onClick={() => setShowAyuda(true)} className="w-full flex items-center gap-3 px-4 py-3.5 text-left border-t border-gray-100 active:bg-gray-100" style={{ color: "var(--color-navy)" }}>
                 <HelpCircle className="w-5 h-5 flex-shrink-0" style={{ color: "var(--color-sky)" }} /><span className="font-semibold text-sm">¿Cómo funciona?</span>
               </button>
+              {user && (
+                <>
+                  <div className="flex items-center gap-3 px-4 py-3 border-t border-gray-100">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(37,88,165,0.12)" }}>
+                      <span className="text-sm font-bold" style={{ color: "var(--color-navy)" }}>{user.nombre.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate" style={{ color: "var(--color-navy)" }}>{user.nombre}</p>
+                      <p className="text-xs capitalize" style={{ color: "var(--color-gray-text)" }}>{user.rol}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { clearAuth(); window.location.reload(); }}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 border-t border-gray-100 active:bg-red-50 text-left"
+                  >
+                    <LogOut className="w-5 h-5 flex-shrink-0" style={{ color: "#ef4444" }} />
+                    <span className="font-semibold text-sm" style={{ color: "#ef4444" }}>Cerrar sesión</span>
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -1593,7 +1617,7 @@ export default function Pasajero() {
                       <Star className="w-8 h-8" style={{ color: "var(--color-sky)" }} />,
                       "Aún no tienes favoritas",
                       "Toca la estrella en cualquier ruta y aparecerá aquí para acceso rápido.",
-                      <button onClick={() => setVista("rutas")} className="inline-flex items-center gap-2 px-6 h-12 rounded-2xl text-white font-bold shadow-sm active:scale-95 transition-transform" style={{ background: "var(--color-blue)" }}>
+                      <button onClick={() => { setVista("rutas"); setBusqueda(""); }} className="inline-flex items-center gap-2 px-6 h-12 rounded-2xl text-white font-bold shadow-sm active:scale-95 transition-transform" style={{ background: "var(--color-blue)" }}>
                         <RouteIcon className="w-4 h-4" /> Ver todas las rutas
                       </button>,
                     )
