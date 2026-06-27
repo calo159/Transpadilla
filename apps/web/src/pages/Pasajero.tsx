@@ -7,7 +7,7 @@ import {
   Bus, MapPin, LogOut, Radio, AlertTriangle, X,
   Search, Clock, LogIn, Shield, ChevronRight, ChevronUp,
   Menu, MessageCircle, Instagram, LocateFixed, Loader2, Star, HelpCircle, Navigation, RefreshCw,
-  User, Map as MapIcon, Route as RouteIcon, Check, History, Download, Smartphone,
+  User, Map as MapIcon, Route as RouteIcon, Check, History, Download, Smartphone, Maximize2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -419,6 +419,16 @@ export default function Pasajero() {
       socketRef.current?.emit("subscribe_ruta", { rutaId: next });
       setSheetSnap("half");
     }
+  };
+
+  // Reencuadra el mapa sobre la ruta seleccionada (útil tras hacer zoom/pan lejos).
+  const encuadrarRuta = () => {
+    const ruta = rutas.find((r) => r.id === selectedRutaId);
+    if (!ruta || !mapRef.current) return;
+    if (ruta.paradas.length >= 2)
+      mapRef.current.fitBounds(L.latLngBounds(ruta.paradas.map((p) => [p.latitud, p.longitud])), { padding: [40, 40] });
+    else if (ruta.paradas.length === 1)
+      mapRef.current.setView([ruta.paradas[0]!.latitud, ruta.paradas[0]!.longitud], 14);
   };
 
   useEffect(() => {
@@ -1334,6 +1344,19 @@ export default function Pasajero() {
       {/* Mapa */}
       <div className="flex-1 relative">
         <div ref={mapContainerRef} className="w-full h-full" data-testid="map-container" />
+
+        {/* FAB "ver ruta completa" — solo con una ruta seleccionada, encima del de ubicación */}
+        {vista === "mapa" && selectedRutaId !== null && (
+          <button
+            onClick={encuadrarRuta}
+            className="md:hidden absolute right-4 bottom-[148px] z-[900] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform"
+            style={{ background: "var(--color-white)", color: "var(--color-navy)", border: "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
+            aria-label="Ver la ruta completa en el mapa"
+            title="Ver ruta completa"
+          >
+            <Maximize2 className="w-5 h-5" />
+          </button>
+        )}
 
         {/* FAB ubicación (sky) — abajo-derecha sobre el bottom nav */}
         {vista === "mapa" && (
