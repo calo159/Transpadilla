@@ -728,7 +728,7 @@ export default function Pasajero() {
 
       {/* Lista de rutas */}
       <div className="flex-1 overflow-y-auto py-2">
-        {!selectedRutaId && rutas.length > 0 && (
+        {!selectedRutaId && rutas.length > 0 && !busqueda && (
           <div className="mx-3 mb-1 rounded-xl border p-3 flex items-start gap-2.5"
             style={{ borderColor: "rgba(123,184,213,0.35)", background: "rgba(37,88,165,0.10)" }}>
             <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "var(--tp-sky)" }} />
@@ -1341,8 +1341,9 @@ export default function Pasajero() {
 
         {/* Panel de ayuda "¿Cómo funciona?" */}
         {showAyuda && (
-          <div className="absolute inset-0 z-[1003] flex items-end md:items-center justify-center p-3 md:p-4" style={{ background: "rgba(0,0,0,0.5)" }}>
+          <div onClick={() => setShowAyuda(false)} className="absolute inset-0 z-[1003] flex items-end md:items-center justify-center p-3 md:p-4" style={{ background: "rgba(0,0,0,0.5)" }}>
             <div
+              onClick={(e) => e.stopPropagation()}
               className="pointer-events-auto w-full max-w-md rounded-2xl border shadow-2xl flex flex-col max-h-[85vh]"
               style={{ background: "rgba(12,18,32,0.98)", borderColor: "rgba(123,184,213,0.3)", backdropFilter: "blur(16px)" }}
             >
@@ -1371,7 +1372,7 @@ export default function Pasajero() {
                     { icon: <LocateFixed className="w-4 h-4" />, t: "Mi ubicación", d: "Centra el mapa en ti. Así los buses se ordenan del más cercano y ves cuánto tardan en llegar a ti." },
                     { icon: <Clock className="w-4 h-4" />, t: "Tiempo de llegada (ETA)", d: "Minutos estimados que falta para que el bus llegue a tu ubicación o parada." },
                     { icon: <LocateFixed className="w-4 h-4" />, t: "Seguir un bus", d: "Elige un bus y el mapa lo seguirá automáticamente mientras se mueve." },
-                    { icon: <Star className="w-4 h-4" />, t: "Favoritos", d: "Marca con ⭐ tus rutas frecuentes; quedan siempre arriba." },
+                    { icon: <Star className="w-4 h-4" />, t: "Favoritos", d: "Toca la estrella en cualquier ruta para guardarla; siempre aparece arriba en la lista." },
                     { icon: <MessageCircle className="w-4 h-4" />, t: "Atención al cliente", d: "Escríbenos por WhatsApp ante cualquier duda o reclamo." },
                   ].map((f, i) => (
                     <div key={i} className="flex items-start gap-3">
@@ -1571,7 +1572,9 @@ export default function Pasajero() {
                 <div
                   key={r.id}
                   role="button"
+                  tabIndex={0}
                   onClick={() => handleSelectRuta(r.id)}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelectRuta(r.id); } }}
                   className="relative w-full flex items-center gap-4 rounded-2xl p-4 pl-5 min-h-[78px] overflow-hidden active:scale-[0.98] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
                   style={{ background: `linear-gradient(100deg, ${r.color}14 0%, #ffffff 60%)`, boxShadow: "0 6px 16px rgba(27,59,111,0.10)" }}
                 >
@@ -1666,13 +1669,15 @@ export default function Pasajero() {
                 <div
                   key={x.parada.id}
                   role="button"
+                  tabIndex={0}
                   onClick={() => { if (x.rutas[0]) handleSelectRuta(x.rutas[0].id); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (x.rutas[0]) handleSelectRuta(x.rutas[0].id); } }}
                   className="relative w-full flex items-center gap-4 rounded-2xl p-4 pl-5 min-h-[78px] overflow-hidden active:scale-[0.98] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
                   style={{ background: "var(--color-white)", boxShadow: "0 6px 16px rgba(27,59,111,0.10)" }}
                 >
-                  <span className="absolute left-0 top-0 bottom-0 w-1.5" style={{ background: "var(--color-sky)" }} />
-                  <span className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm" style={{ background: "var(--color-sky)" }}>
-                    <MapPin className="w-6 h-6" style={{ color: "var(--color-navy)" }} />
+                  <span className="absolute left-0 top-0 bottom-0 w-1.5" style={{ background: x.rutas[0]?.color ?? "var(--color-sky)" }} />
+                  <span className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm" style={{ background: (x.rutas[0]?.color ?? "var(--color-sky)") + "22" }}>
+                    <MapPin className="w-6 h-6" style={{ color: x.rutas[0]?.color ?? "var(--color-navy)" }} />
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="block text-base font-bold truncate" style={{ color: "var(--color-navy)" }}>{x.parada.nombre}</span>
