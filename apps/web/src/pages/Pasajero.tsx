@@ -23,8 +23,6 @@ import { tiempoRelativo } from "@/lib/format";
 import { distanciaKm, velEfectiva } from "@/lib/geo";
 import { recomendarRuta, busMasCercano } from "@/lib/sugerencia";
 
-type SheetState = "collapsed" | "half" | "full";
-
 /** Escapa HTML para inyectar texto (de la BD/usuario) en los popups de Leaflet
  *  por innerHTML sin riesgo de XSS almacenado (p. ej. la novedad del conductor). */
 const escHtml = (s: string) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
@@ -50,7 +48,8 @@ export default function Pasajero() {
   const etaRef = useRef<Record<number, { eta: number; placa: string }>>({});
   const [novedad, setNovedad] = useState<Novedad | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [sheetState, setSheetState] = useState<SheetState>("collapsed");
+  // Card de detalle inferior (móvil): colapsado (58vh) o expandido (88vh).
+  const [cardExpanded, setCardExpanded] = useState(false);
   // Vista activa (bottom nav móvil): mapa | favoritos | rutas | paraderos.
   const [vista, setVista] = useState<"mapa" | "favoritos" | "rutas" | "paraderos">("mapa");
   // Menú ☰ del header (acciones: destino, atención, info).
@@ -84,13 +83,13 @@ export default function Pasajero() {
     setShowWelcome(false);
     try { localStorage.setItem("tp_welcome_visto", "1"); } catch { /* ignore */ }
     // Tras cerrar la guía, deja la lista de rutas abierta y a la vista (móvil).
-    setSheetState("full");
+    setVista("rutas");
   };
   // Panel de ayuda "¿Cómo funciona?" — accesible en cualquier momento con el botón ?.
   const [showAyuda, setShowAyuda] = useState(false);
-  // Arrastre del bottom sheet (swipe). dragOffset = px en vivo durante el gesto.
+  // Arrastre del card de detalle (swipe). dragOffset = px en vivo durante el gesto.
   const [dragOffset, setDragOffset] = useState<number | null>(null);
-  const dragRef = useRef<{ startY: number; startPx: number; moved: boolean } | null>(null);
+  const dragRef = useRef<{ startY: number; moved: boolean; lastDelta: number } | null>(null);
   const suppressClickRef = useRef(false);
   const user = getUser();
 
@@ -343,14 +342,14 @@ export default function Pasajero() {
           mapRef.current.setView([ruta.paradas[0]!.latitud, ruta.paradas[0]!.longitud], 14);
       }
       socketRef.current?.emit("subscribe_ruta", { rutaId: next });
-      setSheetState("half");
+      setCardExpanded(false);
     }
   };
 
   useEffect(() => {
     const t = setTimeout(() => mapRef.current?.invalidateSize(), 310);
     return () => clearTimeout(t);
-  }, [sidebarOpen, sheetState]);
+  }, [sidebarOpen]);
 
   // Modo destino: mientras está armado, el siguiente toque en el mapa fija el
   // destino, recomienda la ruta (la resalta/encuadra) y desarma el modo.
@@ -365,7 +364,7 @@ export default function Pasajero() {
       setModoDestino(false);
       const sug = recomendarRuta(rutas, p, userPos ?? undefined);
       if (sug && selectedRutaId !== sug.ruta.id) handleSelectRuta(sug.ruta.id);
-      setSheetState("half");
+      setCardExpanded(false);
     };
     map.on("click", onClick);
     return () => { map.off("click", onClick); container.style.cursor = ""; };
@@ -465,8 +464,7 @@ export default function Pasajero() {
   }, [sugerencia, buses]);
 
   const armarDestino = () => {
-    setModoDestino(true);
-    setSheetState("collapsed"); // libera el mapa para tocarlo (móvil)
+    setModoDestino(true); // el card se oculta solo (no hay ruta/destino aún); el mapa queda libre
   };
   const limpiarDestino = () => {
     setModoDestino(false);
@@ -474,52 +472,41 @@ export default function Pasajero() {
     setSelectedRutaId(null);
   };
 
-  const cycleSheet = () => {
-    setSheetState((s) => s === "collapsed" ? "half" : s === "half" ? "full" : "collapsed");
+  // ── Card de detalle: cerrar y gesto de arrastre (swipe ↓ cierra/colapsa, ↑ expande) ──
+  const cerrarCard = () => {
+    if (destino) limpiarDestino();
+    setSelectedRutaId(null);
+    setCardExpanded(false);
   };
-
-  // En "full" el sheet se detiene debajo de la barra superior móvil (navbar+búsqueda+chips).
-  const SHEET_TOP = 152;
-  const sheetTranslate = sheetState === "collapsed" ? "calc(100% - 136px)" : sheetState === "half" ? "45%" : `${SHEET_TOP}px`;
-
-  // ── Arrastre del bottom sheet (swipe up/down) ──────────────────────────────
-  const snapPx = (state: SheetState): number => {
-    const h = window.innerHeight;
-    if (state === "collapsed") return h - 136;
-    if (state === "half") return h * 0.45;
-    return SHEET_TOP;
-  };
-
-  const onSheetTouchStart = (e: React.TouchEvent) => {
+  const onCardTouchStart = (e: React.TouchEvent) => {
     suppressClickRef.current = false;
-    const t = e.touches[0]!;
-    dragRef.current = { startY: t.clientY, startPx: snapPx(sheetState), moved: false };
+    dragRef.current = { startY: e.touches[0]!.clientY, moved: false, lastDelta: 0 };
+    setDragOffset(0);
   };
-  const onSheetTouchMove = (e: React.TouchEvent) => {
+  const onCardTouchMove = (e: React.TouchEvent) => {
     const d = dragRef.current;
     if (!d) return;
     const delta = e.touches[0]!.clientY - d.startY;
+    d.lastDelta = delta;
     if (Math.abs(delta) > 4) d.moved = true;
-    const h = window.innerHeight;
-    setDragOffset(Math.min(h - 136, Math.max(SHEET_TOP, d.startPx + delta)));
+    // Sigue el dedo hacia abajo; al subir aplica resistencia (no se despega del fondo).
+    setDragOffset(delta > 0 ? delta : delta * 0.35);
   };
-  const onSheetTouchEnd = () => {
+  const onCardTouchEnd = () => {
     const d = dragRef.current;
     dragRef.current = null;
-    if (!d) return;
-    if (!d.moved) { setDragOffset(null); return; } // tap puro → lo maneja onClick
-    suppressClickRef.current = true; // evita que el click posterior cicle el sheet
-    const h = window.innerHeight;
-    const current = dragOffset ?? d.startPx;
-    const points: [SheetState, number][] = [["full", SHEET_TOP], ["half", h * 0.45], ["collapsed", h - 136]];
-    let best = points[0]!;
-    for (const p of points) if (Math.abs(p[1] - current) < Math.abs(best[1] - current)) best = p;
-    setSheetState(best[0]);
     setDragOffset(null);
+    if (!d || !d.moved) return; // tap puro → lo maneja onClick de la barrita
+    suppressClickRef.current = true; // evita que el click posterior alterne el card
+    if (d.lastDelta > 70) {
+      if (cardExpanded) setCardExpanded(false); else cerrarCard();
+    } else if (d.lastDelta < -70) {
+      setCardExpanded(true);
+    }
   };
-  const onHandleClick = () => {
+  const onHandleTap = () => {
     if (suppressClickRef.current) { suppressClickRef.current = false; return; }
-    cycleSheet();
+    setCardExpanded((v) => !v);
   };
 
   // ── Centrar el mapa en la ubicación del pasajero ───────────────────────────
@@ -546,8 +533,6 @@ export default function Pasajero() {
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
     );
   };
-
-  const sheetTransform = dragOffset !== null ? `translateY(${dragOffset}px)` : `translateY(${sheetTranslate})`;
 
   const fmtDist = (km: number) => (km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`);
 
@@ -977,20 +962,46 @@ export default function Pasajero() {
   );
 
   // ─── MOBILE BOTTOM SHEET ─────────────────────────────────────────────────────
-  // Card compacto de detalle: aparece SOLO al seleccionar una ruta/bus o al pedir
-  // una recomendación de destino. Sin arrastre, sin lista de rutas (eso vive en
-  // las vistas de chips). Mapa limpio el resto del tiempo.
+  // Card de detalle deslizable: aparece SOLO al seleccionar una ruta/bus o al pedir
+  // una recomendación de destino. Se arrastra desde la barrita (swipe ↓ cierra/colapsa,
+  // ↑ expande, tap alterna); el contenido scrollea aparte. Mapa limpio el resto del tiempo.
   const MobileSheet = () => {
     if (!selectedRuta && !destino) return null;
     return (
       <div
-        className="md:hidden fixed left-0 right-0 bottom-[72px] z-[1000] max-h-[58vh] overflow-y-auto rounded-t-3xl px-4 pt-2 pb-6 animate-in slide-in-from-bottom-8 fade-in duration-300 ease-out"
-        style={{ background: "var(--color-white)", boxShadow: "0 -8px 28px rgba(27,59,111,0.18)" }}
+        className="md:hidden fixed left-0 right-0 bottom-[72px] z-[1000] rounded-t-3xl overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-300 ease-out"
+        style={{
+          background: "var(--color-white)",
+          boxShadow: "0 -8px 28px rgba(27,59,111,0.18)",
+          transform: dragOffset !== null ? `translateY(${Math.max(0, dragOffset)}px)` : undefined,
+          transition: dragOffset !== null ? "none" : "transform 0.25s ease",
+        }}
       >
-        {/* Barrita de arrastre (indicador visual) */}
-        <div className="mx-auto mb-3 h-1.5 w-11 rounded-full" style={{ background: "rgba(27,59,111,0.18)" }} />
-        {/* ¿A dónde vas? — recomendación por destino */}
-        {panelDestino && <div className="mb-3">{panelDestino}</div>}
+        {/* Barrita de arrastre: swipe ↓ cierra/colapsa · swipe ↑ expande · tap alterna */}
+        <div
+          onTouchStart={onCardTouchStart}
+          onTouchMove={onCardTouchMove}
+          onTouchEnd={onCardTouchEnd}
+          onClick={onHandleTap}
+          className="flex items-center justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing touch-none select-none"
+          role="button"
+          aria-label="Arrastra para expandir o cerrar el detalle"
+        >
+          <div className="h-1.5 w-11 rounded-full" style={{ background: "rgba(27,59,111,0.30)" }} />
+        </div>
+        {/* Contenido scrolleable (altura según expandido/colapsado) */}
+        <div
+          className="overflow-y-auto px-4 pb-6"
+          style={{
+            maxHeight: cardExpanded ? "calc(88vh - 34px)" : "calc(58vh - 34px)",
+            transition: "max-height 0.25s ease",
+            touchAction: "pan-y",
+            overscrollBehavior: "contain",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          {/* ¿A dónde vas? — recomendación por destino */}
+          {panelDestino && <div className="mb-3 mt-1">{panelDestino}</div>}
         {/* Ruta seleccionada — diseño Stitch (Detalle de Ruta) */}
         {selectedRuta && (() => {
           const rutaNumero = rutas.findIndex((r) => r.id === selectedRuta.id) + 1;
@@ -1007,9 +1018,9 @@ export default function Pasajero() {
             ? ({ vacio: { l: "Disponible", c: "#38A169" }, medio: { l: "Medio lleno", c: "#F5B731" }, lleno: { l: "Lleno", c: "#E53E3E" } } as Record<string, { l: string; c: string }>)[proxBus.ocupacion]
             : null;
           return (
-          <div className="-mx-4 -mt-1 overflow-hidden">
-            {/* Header navy con número de ruta */}
-            <div className="flex items-center gap-3 px-4 py-3" style={{ background: "var(--color-navy)" }}>
+          <div className="-mx-4 -mt-1">
+            {/* Header navy con número de ruta (sticky: X y título siempre visibles al scrollear) */}
+            <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3" style={{ background: "var(--color-navy)" }}>
               <div className="w-12 h-12 rounded-xl flex items-center justify-center font-extrabold text-xl shrink-0" style={{ background: "#fff", color: "var(--color-navy)" }}>{rutaNumero}</div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-display font-bold text-lg text-white leading-tight truncate">{selectedRuta.nombre}</h3>
@@ -1091,7 +1102,7 @@ export default function Pasajero() {
           </div>
           );
         })()}
-
+        </div>
       </div>
     );
   };
@@ -1468,9 +1479,9 @@ export default function Pasajero() {
         <div
           key={vista}
           className="tp-light md:hidden fixed left-0 right-0 bottom-0 z-[1000] overflow-y-auto animate-in fade-in slide-in-from-bottom-3 duration-300 ease-out"
-          style={{ top: 140, bottom: 72, background: "linear-gradient(180deg,#eaf1fb 0%, #f6f9fc 55%)" }}
+          style={{ top: 140, bottom: 72, background: "linear-gradient(180deg,#eaf1fb 0%, #f6f9fc 55%)", touchAction: "pan-y", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}
         >
-          <div className="px-4 pt-4 pb-24 space-y-4">
+          <div className="px-4 pt-4 pb-6 space-y-4">
             {(() => {
               // Encabezado de sección reutilizable (título grande + contador + subtítulo).
               const Header = (titulo: string, subtitulo: string, n?: number) => (
@@ -1504,7 +1515,7 @@ export default function Pasajero() {
                 <div
                   key={r.id}
                   role="button"
-                  onClick={() => { setSelectedRutaId(r.id); setVista("mapa"); setSheetState("half"); }}
+                  onClick={() => { setSelectedRutaId(r.id); setVista("mapa"); setCardExpanded(false); }}
                   className="relative w-full flex items-center gap-4 rounded-2xl p-4 pl-5 min-h-[78px] overflow-hidden active:scale-[0.98] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
                   style={{ background: `linear-gradient(100deg, ${r.color}14 0%, #ffffff 60%)`, boxShadow: "0 6px 16px rgba(27,59,111,0.10)" }}
                 >
@@ -1592,7 +1603,7 @@ export default function Pasajero() {
                 <div
                   key={x.parada.id}
                   role="button"
-                  onClick={() => { if (x.rutas[0]) setSelectedRutaId(x.rutas[0].id); setVista("mapa"); setSheetState("half"); }}
+                  onClick={() => { if (x.rutas[0]) setSelectedRutaId(x.rutas[0].id); setVista("mapa"); setCardExpanded(false); }}
                   className="relative w-full flex items-center gap-4 rounded-2xl p-4 pl-5 min-h-[78px] overflow-hidden active:scale-[0.98] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
                   style={{ background: "var(--color-white)", boxShadow: "0 6px 16px rgba(27,59,111,0.10)" }}
                 >
