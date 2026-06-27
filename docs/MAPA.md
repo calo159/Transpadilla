@@ -69,6 +69,46 @@ tarjeta y sin costo por uso**, aguantando miles de usuarios.
 
 ---
 
+## Barrios (capa propia)
+
+OpenStreetMap **no tiene los barrios de Riohacha mapeados** (solo las calles), y
+los datos de Google no se pueden copiar (sus términos lo prohíben). Por eso los
+barrios se muestran con una **capa propia**: el mapa lee
+[`apps/web/public/barrios.geojson`](../apps/web/public/barrios.geojson) y dibuja
+los nombres encima. Es legal y gratis (los nombres de barrios son información
+pública de la ciudad).
+
+### Cómo llenar los barrios
+1. Entra a **<https://geojson.io>**.
+2. Por cada barrio: haz clic en su ubicación (o dibuja su polígono con la
+   herramienta de polígono) y, en el panel de la derecha, agrega una propiedad
+   **`name`** con el nombre del barrio.
+3. Cuando termines, menú **Save → GeoJSON**: descarga el archivo.
+4. Renómbralo a `barrios.geojson` y reemplázalo en `apps/web/public/`.
+5. `git add`, commit y push → al desplegar, los barrios aparecen en el mapa.
+
+Puedes empezar por los barrios principales e ir agregando más con el tiempo.
+También sirve cualquier **GeoJSON o KML** que te dé la Alcaldía (Planeación):
+si es KML, súbelo a geojson.io y expórtalo como GeoJSON.
+
+### Formato
+GeoJSON estándar; cada barrio es un `Feature` con una propiedad `name` y geometría
+de tipo `Point` (una etiqueta) o `Polygon` (límite + etiqueta al centro).
+**Importante:** las coordenadas van en orden **[longitud, latitud]**.
+
+```json
+{
+  "type": "FeatureCollection",
+  "features": [
+    { "type": "Feature", "properties": { "name": "Centro" },
+      "geometry": { "type": "Point", "coordinates": [-72.9075, 11.5447] } }
+  ]
+}
+```
+
+> El archivo que viene incluido trae 5 barrios de **ejemplo** con posiciones
+> aproximadas, solo para que veas cómo se ven. Reemplázalos por los reales.
+
 ## Detalles técnicos
 
 - Integración: [`apps/web/src/hooks/use-leaflet-map.ts`](../apps/web/src/hooks/use-leaflet-map.ts)
