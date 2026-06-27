@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useLeafletMap } from "@/hooks/useLeafletMap";
+import { useLeafletMap } from "@/hooks/use-leaflet-map";
 import { apiFetch } from "@/lib/api";
 import type { ConfirmOpts } from "@/components/ConfirmDialog";
 import type { PromptOpts } from "@/components/PromptDialog";

@@ -13,8 +13,8 @@ import { CambiarPasswordDialog } from "@/components/CambiarPasswordDialog";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useToast } from "@/hooks/use-toast";
-import { useElapsedTime } from "@/hooks/useElapsedTime";
-import { useLeafletMap } from "@/hooks/useLeafletMap";
+import { useElapsedTime } from "@/hooks/use-elapsed-time";
+import { useLeafletMap } from "@/hooks/use-leaflet-map";
 import { NOVEDAD_OPCIONES } from "@/lib/constants";
 
 export default function Conductor() {
