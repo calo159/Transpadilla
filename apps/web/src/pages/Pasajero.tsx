@@ -156,15 +156,29 @@ export default function Pasajero() {
               <span style="color:#94a3b8;font-size:11px">${escHtml(ruta.nombre)}</span>
             </div>`)
           .addTo(map);
-        // Tocar una parada también selecciona su ruta (coherente con tocar un bus).
-        m.on("click", () => setSelectedRutaId(ruta.id));
+        // Tocar una parada selecciona la ruta y abre el panel de detalle.
+        m.on("click", () => {
+          setSelectedRutaId(ruta.id);
+          setSheetSnap("half");
+          setVista("mapa");
+          socketRef.current?.emit("subscribe_ruta", { rutaId: ruta.id });
+        });
         stopMarkersRef.current.push({ rutaId: ruta.id, marker: m });
       });
 
       if (ruta.paradas.length < 2) return;
       const fallback: L.LatLngExpression[] = ruta.paradas.map((p) => [p.latitud, p.longitud]);
-      const polyline = L.polyline(fallback, { color: ruta.color, weight: 5, opacity: 0.65, dashArray: "6 6", lineCap: "round", lineJoin: "round" }).addTo(map);
+      const polyline = L.polyline(fallback, { color: ruta.color, weight: 5, opacity: 0.65, dashArray: "6 6", lineCap: "round", lineJoin: "round", interactive: true }).addTo(map);
       routeLayersRef.current[ruta.id] = polyline;
+      // Tocar la línea de ruta abre el panel de detalle sin mover el mapa.
+      polyline.on("click", (e: L.LeafletMouseEvent) => {
+        L.DomEvent.stopPropagation(e);
+        setSelectedRutaId(ruta.id);
+        setSheetSnap("half");
+        setVista("mapa");
+        setBusqueda("");
+        socketRef.current?.emit("subscribe_ruta", { rutaId: ruta.id });
+      });
       fetchStreetRoute(ruta.paradas).then((coords) => {
         polyline.setLatLngs(coords);
         polyline.setStyle({ opacity: 0.85, dashArray: undefined });
@@ -334,6 +348,8 @@ export default function Pasajero() {
     const next = selectedRutaId === rutaId ? null : rutaId;
     setSelectedRutaId(next);
     if (next !== null) {
+      setVista("mapa");
+      setBusqueda("");
       const ruta = rutas.find((r) => r.id === next);
       if (ruta && mapRef.current) {
         if (ruta.paradas.length >= 2)
@@ -1149,15 +1165,6 @@ export default function Pasajero() {
           </button>
         )}
 
-        {/* ── Estado vacío: chip no intrusivo (no tapa el mapa) ── */}
-        {activeBuses.length === 0 && !rutasLoading && rutas.length > 0 && (
-          <div className="absolute top-[140px] md:top-6 left-1/2 -translate-x-1/2 z-[600] pointer-events-none w-full flex justify-center px-4">
-            <div className="flex items-center gap-2 rounded-full shadow-md px-4 py-2" style={{ background: "var(--color-white)", border: "1px solid #e8edf4" }}>
-              <Bus className="w-4 h-4 flex-shrink-0" style={{ color: "var(--color-gold)" }} />
-              <span className="text-xs font-semibold" style={{ color: "var(--color-navy)" }}>Sin buses activos · <span style={{ color: "var(--color-gray-text)" }}>5:00 am – 10:00 pm</span></span>
-            </div>
-          </div>
-        )}
 
         {/* ── Controles desktop ── */}
         <button
@@ -1437,40 +1444,39 @@ export default function Pasajero() {
             : <LocateFixed className="w-5 h-5 text-primary" />}
         </button>
 
-        {/* Pill de carga inicial del mapa */}
-        {rutasLoading && rutas.length === 0 && (
-          <div className="absolute top-[140px] md:top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-lg">
-            <Loader2 className="w-4 h-4 animate-spin text-primary" />
-            <span className="text-xs text-muted-foreground font-medium">Cargando el mapa…</span>
-          </div>
-        )}
-
-        {/* Aviso flotante: modo "elegir destino" armado */}
-        {modoDestino && (
-          <div className="absolute top-[140px] md:top-3 left-1/2 -translate-x-1/2 z-[1001] flex items-center gap-2 rounded-xl px-3.5 py-2 shadow-xl"
-            style={{ background: "var(--tp-yellow)", color: "#1a1300" }}
-          >
-            <Navigation className="w-4 h-4" />
-            <span className="text-xs font-bold">Toca tu destino en el mapa</span>
-            <button onClick={() => setModoDestino(false)} className="ml-1 hover:opacity-70" aria-label="Cancelar">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* Chip "siguiendo bus" */}
-        {busSeguido && (
-          <div
-            className="absolute top-[140px] md:top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 rounded-xl px-3 py-2 shadow-lg"
-            style={{ background: "var(--tp-sky)", color: "#001018" }}
-          >
-            <LocateFixed className="w-4 h-4 animate-pulse" />
-            <span className="text-xs font-bold">Siguiendo {busSeguido.placa}</span>
-            <button onClick={() => setSiguiendoBusId(null)} className="ml-1 hover:opacity-70" aria-label="Dejar de seguir">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+        {/* Chips de estado — apilados verticalmente para no solaparse entre sí */}
+        <div className="absolute top-[140px] md:top-3 left-1/2 -translate-x-1/2 z-[1001] flex flex-col items-center gap-2 pointer-events-none">
+          {rutasLoading && rutas.length === 0 && (
+            <div className="pointer-events-none flex items-center gap-2 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-lg">
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              <span className="text-xs text-muted-foreground font-medium">Cargando el mapa…</span>
+            </div>
+          )}
+          {activeBuses.length === 0 && !rutasLoading && rutas.length > 0 && (
+            <div className="pointer-events-none flex items-center gap-2 rounded-full shadow-md px-4 py-2" style={{ background: "var(--color-white)", border: "1px solid #e8edf4" }}>
+              <Bus className="w-4 h-4 flex-shrink-0" style={{ color: "var(--color-gold)" }} />
+              <span className="text-xs font-semibold" style={{ color: "var(--color-navy)" }}>Sin buses activos · <span style={{ color: "var(--color-gray-text)" }}>5:00 am – 10:00 pm</span></span>
+            </div>
+          )}
+          {modoDestino && (
+            <div className="pointer-events-auto flex items-center gap-2 rounded-xl px-3.5 py-2 shadow-xl" style={{ background: "var(--tp-yellow)", color: "#1a1300" }}>
+              <Navigation className="w-4 h-4" />
+              <span className="text-xs font-bold">Toca tu destino en el mapa</span>
+              <button onClick={() => setModoDestino(false)} className="ml-1 p-1 hover:opacity-70" aria-label="Cancelar">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+          {busSeguido && (
+            <div className="pointer-events-auto flex items-center gap-2 rounded-xl px-3 py-2 shadow-lg" style={{ background: "var(--tp-sky)", color: "#001018" }}>
+              <LocateFixed className="w-4 h-4 animate-pulse" />
+              <span className="text-xs font-bold">Siguiendo {busSeguido.placa}</span>
+              <button onClick={() => setSiguiendoBusId(null)} className="ml-1 p-1 hover:opacity-70" aria-label="Dejar de seguir">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* En escritorio: indicador de conexión abajo-izquierda (en móvil está el badge EN VIVO en la TopBar) */}
         <div className="hidden md:flex absolute md:bottom-4 left-3 z-[600] items-center gap-1.5 rounded-full px-3 py-1.5 shadow-md" style={{ background: "var(--color-white)" }}>
@@ -1541,7 +1547,7 @@ export default function Pasajero() {
                 <div
                   key={r.id}
                   role="button"
-                  onClick={() => { setSelectedRutaId(r.id); setVista("mapa"); setSheetSnap("half"); }}
+                  onClick={() => handleSelectRuta(r.id)}
                   className="relative w-full flex items-center gap-4 rounded-2xl p-4 pl-5 min-h-[78px] overflow-hidden active:scale-[0.98] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
                   style={{ background: `linear-gradient(100deg, ${r.color}14 0%, #ffffff 60%)`, boxShadow: "0 6px 16px rgba(27,59,111,0.10)" }}
                 >
@@ -1636,7 +1642,7 @@ export default function Pasajero() {
                 <div
                   key={x.parada.id}
                   role="button"
-                  onClick={() => { if (x.rutas[0]) setSelectedRutaId(x.rutas[0].id); setVista("mapa"); setSheetSnap("half"); }}
+                  onClick={() => { if (x.rutas[0]) handleSelectRuta(x.rutas[0].id); }}
                   className="relative w-full flex items-center gap-4 rounded-2xl p-4 pl-5 min-h-[78px] overflow-hidden active:scale-[0.98] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
                   style={{ background: "var(--color-white)", boxShadow: "0 6px 16px rgba(27,59,111,0.10)" }}
                 >
