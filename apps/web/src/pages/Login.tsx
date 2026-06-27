@@ -203,6 +203,10 @@ export default function Login() {
             {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
             {loading ? "Ingresando..." : "Iniciar sesión"}
           </Button>
+
+          <p className="text-[11px] text-center text-white/45 leading-relaxed">
+            ¿Olvidaste tu contraseña? Pídele al administrador que te la restablezca.
+          </p>
         </form>
 
         {/* Footer */}

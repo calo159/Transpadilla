@@ -1,4 +1,4 @@
-import { Bus as BusIcon, Activity, Clock, Map, MapPin, Route, AlertTriangle } from "lucide-react";
+import { Bus as BusIcon, Activity, Clock, Map, MapPin, Route, AlertTriangle, UserCheck } from "lucide-react";
 import type { Bus, Ruta, Stats } from "@workspace/api-client";
 
 interface Props {
@@ -18,8 +18,35 @@ export default function DashboardTab({
   const inactiveBuses = buses.filter((b) => b.estado === "inactivo");
   const demoraBuses = buses.filter((b) => b.estado === "demora");
 
+  // Guía de primeros pasos: solo cuando aún no hay rutas (sistema recién creado).
+  const sinConfigurar = !rutasLoading && rutas.length === 0;
+
   return (
     <div className="space-y-5">
+      {sinConfigurar && (
+        <div className="bg-card border border-primary/30 rounded-xl p-4 md:p-5" style={{ background: "rgba(37,88,165,0.06)" }}>
+          <h3 className="text-sm font-bold text-foreground mb-1 flex items-center gap-2">
+            <Activity className="w-4 h-4 text-primary" /> Primeros pasos
+          </h3>
+          <p className="text-xs text-muted-foreground mb-3">Configura el sistema en este orden para que los pasajeros vean los buses en vivo:</p>
+          <ol className="space-y-2.5">
+            {[
+              { n: 1, icon: <Route className="w-4 h-4" />, t: "Crea las rutas", d: "Nombre y color de cada línea (ej. Centro – Aeropuerto)." },
+              { n: 2, icon: <MapPin className="w-4 h-4" />, t: "Agrega las paradas", d: "Tocando el mapa donde está cada paradero, y asígnalas a su ruta." },
+              { n: 3, icon: <BusIcon className="w-4 h-4" />, t: "Registra los buses", d: "Con su placa y la ruta que cubren." },
+              { n: 4, icon: <UserCheck className="w-4 h-4" />, t: "Crea los conductores", d: "Su cuenta de acceso y asígnale un bus a cada uno." },
+            ].map((s) => (
+              <li key={s.n} className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-black text-white" style={{ background: "var(--color-blue, #2558A5)" }}>{s.n}</span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">{s.icon}{s.t}</p>
+                  <p className="text-xs text-muted-foreground">{s.d}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
       {statsLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {Array.from({ length: 5 }).map((_, i) => (

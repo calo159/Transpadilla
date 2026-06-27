@@ -41,15 +41,21 @@ export default function Conductor() {
   const [confirmar, setConfirmar] = useState<ConfirmOpts | null>(null);
   const [cambiarPass, setCambiarPass] = useState(false);
   const [gpsError, setGpsError] = useState(false);
+  // Cuántos envíos de ubicación fallaron seguidos (red caída). Si es > 0, el
+  // conductor ve "SIN RED" para saber que su ubicación no está llegando.
+  const [gpsFallos, setGpsFallos] = useState(0);
 
   const elapsed = useElapsedTime(activo);
 
   const { data: buses = [] } = useGetBuses({ query: { queryKey: getGetBusesQueryKey() } });
-  const updateGps = useUpdateGps({ mutation: { onError: () => {} } });
+  const updateGps = useUpdateGps({ mutation: {
+    onError: () => setGpsFallos((n) => n + 1),
+    onSuccess: () => setGpsFallos(0),
+  } });
   const reportarNovedad = useReportarNovedad();
   const finalizarRecorrido = useFinalizarRecorrido();
 
-  const selectedBus = buses.find((b) => b.conductor_id === (user?.id ?? -1));
+  const selectedBus = user ? buses.find((b) => b.conductor_id === user.id) : null;
   const busId = selectedBus?.id ?? null;
 
   // Guard de rol: solo un conductor puede ver este panel. Cualquier otro usuario
@@ -143,10 +149,21 @@ export default function Conductor() {
   }, [activo, pedirWakeLock, iniciarWatch]);
 
   const finalizar = async () => {
+    // Primero confirmamos con el backend que el recorrido terminó. Si la red
+    // falla, NO limpiamos el estado local: el bus sigue activo y el conductor
+    // puede reintentar (evita que el front diga "finalizado" y el backend no).
+    if (busId) {
+      try {
+        await finalizarRecorrido.mutateAsync({ data: { bus_id: busId } });
+        queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
+      } catch {
+        toast({ title: "No se pudo finalizar — revisa tu conexión e inténtalo de nuevo", variant: "destructive" });
+        return;
+      }
+    }
     if (gpsWatchRef.current !== null) { navigator.geolocation.clearWatch(gpsWatchRef.current); gpsWatchRef.current = null; }
     liberarWakeLock();
-    if (busId) { await finalizarRecorrido.mutateAsync({ data: { bus_id: busId } }); queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() }); }
-    setActivo(false); setGpsLat(null); setGpsLng(null); setGpsCount(0); setGpsError(false);
+    setActivo(false); setGpsLat(null); setGpsLng(null); setGpsCount(0); setGpsError(false); setGpsFallos(0);
     busMarkerRef.current?.remove(); busMarkerRef.current = null;
     setShowCustom(false); setOcupacion(null);
     toast({ title: "Recorrido finalizado", description: `Duración: ${elapsed}` });
@@ -205,13 +222,13 @@ export default function Conductor() {
       <div className="max-w-md mx-auto flex flex-col min-h-screen">
         {/* Header navy (estilo Stitch) */}
         <header className="flex items-center justify-between px-3 shrink-0" style={{ background: "var(--color-navy)", height: 56 }}>
-          <button onClick={() => setLocation("/")} className="text-white p-1.5 active:scale-90 transition-transform" aria-label="Volver al mapa" title="Volver al mapa">
+          <button onClick={() => setLocation("/")} className="text-white p-2.5 -ml-1 active:scale-90 transition-transform" aria-label="Volver al mapa" title="Volver al mapa">
             <ChevronLeft className="w-6 h-6" />
           </button>
           <span className="font-display font-extrabold text-xl tracking-wide text-white">TRANSPADILLA</span>
           <div className="flex items-center gap-1">
-            <button onClick={() => setCambiarPass(true)} className="text-white p-1.5 active:scale-90 transition-transform" aria-label="Cambiar contraseña" title="Cambiar contraseña"><KeyRound className="w-5 h-5" /></button>
-            <button onClick={() => { clearAuth(); setLocation("/"); }} className="text-white p-1.5 active:scale-90 transition-transform" data-testid="button-salir" aria-label="Cerrar sesión" title="Cerrar sesión"><LogOut className="w-5 h-5" /></button>
+            <button onClick={() => setCambiarPass(true)} className="text-white p-2.5 active:scale-90 transition-transform" aria-label="Cambiar contraseña" title="Cambiar contraseña"><KeyRound className="w-5 h-5" /></button>
+            <button onClick={() => { clearAuth(); setLocation("/"); }} className="text-white p-2.5 -mr-1 active:scale-90 transition-transform" data-testid="button-salir" aria-label="Cerrar sesión" title="Cerrar sesión"><LogOut className="w-5 h-5" /></button>
           </div>
         </header>
 
@@ -232,11 +249,21 @@ export default function Conductor() {
               </div>
             </div>
             <div className="flex flex-col items-center gap-1 shrink-0 ml-2">
-              <span className="relative flex w-5 h-5 items-center justify-center">
-                {activo && !gpsError && <span className="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping" style={{ background: "var(--color-gold)" }} />}
-                <span className="relative inline-flex rounded-full h-3.5 w-3.5" style={{ background: activo && !gpsError ? "var(--color-gold)" : "rgba(255,255,255,0.4)" }} />
-              </span>
-              <span className="text-[10px] font-semibold text-white/80">{activo ? (gpsError ? "SIN GPS" : "GPS OK") : "GPS OFF"}</span>
+              {(() => {
+                const sinRed = activo && !gpsError && gpsFallos >= 2; // 2+ fallos seguidos = red caída
+                const ok = activo && !gpsError && !sinRed;
+                const dot = ok ? "var(--color-gold)" : sinRed || gpsError ? "#f87171" : "rgba(255,255,255,0.4)";
+                const txt = !activo ? "GPS OFF" : gpsError ? "SIN GPS" : sinRed ? "SIN RED" : "GPS OK";
+                return (
+                  <>
+                    <span className="relative flex w-5 h-5 items-center justify-center">
+                      {ok && <span className="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping" style={{ background: "var(--color-gold)" }} />}
+                      <span className="relative inline-flex rounded-full h-3.5 w-3.5" style={{ background: dot }} />
+                    </span>
+                    <span className="text-[10px] font-semibold text-white/80">{txt}</span>
+                  </>
+                );
+              })()}
               {activo && <span className="text-[11px] font-mono font-bold text-white flex items-center gap-1"><Clock className="w-3 h-3" />{elapsed}</span>}
             </div>
           </section>
@@ -246,7 +273,7 @@ export default function Conductor() {
             <div className="grid grid-cols-3 gap-2 -mt-1 text-xs font-mono px-1" style={{ color: "var(--color-gray-text)" }}>
               <div>Lat <span style={{ color: "var(--color-navy)" }}>{gpsLat.toFixed(4)}</span></div>
               <div>Lng <span style={{ color: "var(--color-navy)" }}>{gpsLng?.toFixed(4)}</span></div>
-              <div>Envíos <span style={{ color: "var(--color-navy)" }}>{gpsCount}</span>{gpsVel > 0 && <span className="ml-1" style={{ color: "var(--color-success)" }}>· {Math.round(gpsVel)} km/h</span>}</div>
+              <div>Envíos <span style={{ color: "var(--color-navy)" }}>{gpsCount}</span>{gpsVel > 0 && <span className="ml-1" style={{ color: "var(--color-success)" }}>· {Math.round(gpsVel)} km/h</span>}{gpsFallos > 0 && <span className="ml-1 font-bold" style={{ color: "var(--color-danger)" }}>· {gpsFallos} sin enviar</span>}</div>
             </div>
           )}
 
@@ -321,10 +348,13 @@ export default function Conductor() {
                 <div className="rounded-2xl p-4 shadow-sm" style={{ background: "rgba(245,183,49,0.12)", border: "1px solid rgba(245,183,49,0.45)" }}>
                   <div className="flex items-center gap-2 mb-1.5">
                     <AlertTriangle className="w-4 h-4" style={{ color: "var(--color-gold)" }} />
-                    <span className="text-xs font-black uppercase tracking-wide" style={{ color: "#9a6a00" }}>Reporte activo</span>
+                    <span className="text-xs font-black uppercase tracking-wide" style={{ color: "#7a5200" }}>Reporte activo</span>
                   </div>
                   <p className="text-sm mb-3" style={{ color: "var(--color-navy)" }}>{selectedBus.novedad}</p>
-                  <button onClick={limpiarNovedad} data-testid="button-quitar-reporte" className="w-full h-11 rounded-xl font-semibold flex items-center justify-center gap-1.5" style={{ background: "#fff", color: "var(--color-navy)", border: "1px solid #e2e8f0" }}>
+                  <button
+                    onClick={() => setConfirmar({ titulo: "Quitar reporte", descripcion: `¿Retirar el reporte "${selectedBus.novedad}"? El bus volverá a aparecer en estado normal.`, textoConfirmar: "Quitar", accion: limpiarNovedad })}
+                    data-testid="button-quitar-reporte"
+                    className="w-full h-11 rounded-xl font-semibold flex items-center justify-center gap-1.5" style={{ background: "#fff", color: "var(--color-navy)", border: "1px solid #e2e8f0" }}>
                     <X className="w-4 h-4" /> Quitar reporte (volver a normal)
                   </button>
                 </div>
