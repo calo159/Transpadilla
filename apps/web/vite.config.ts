@@ -71,6 +71,7 @@ export default defineConfig({
         // así un redeploy de la app no invalida el caché del vendor del navegador.
         manualChunks(id) {
           if (!id.includes("node_modules")) return undefined;
+          if (id.includes("protomaps") || id.includes("pmtiles")) return "protomaps";
           if (id.includes("leaflet")) return "leaflet";
           if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return "react-vendor";
           if (id.includes("@tanstack") || id.includes("socket.io")) return "data-vendor";
