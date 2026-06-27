@@ -77,7 +77,7 @@ export default function Conductor() {
     if (mapRef.current) {
       const icon = L.divIcon({
         className: "",
-        html: `<div style="background:#2558A5;color:white;padding:5px 10px;border-radius:10px;font-size:13px;font-weight:700;box-shadow:0 2px 12px rgba(37,88,165,.6);white-space:nowrap;border:2px solid rgba(255,255,255,.3)">📍 TU BUS</div>`,
+        html: `<div style="background:#2558A5;color:white;padding:5px 10px;border-radius:10px;font-size:13px;font-weight:700;box-shadow:0 2px 12px rgba(37,88,165,.6);white-space:nowrap;border:2px solid rgba(255,255,255,.3)">TU BUS</div>`,
         iconSize: [90, 30], iconAnchor: [45, 15],
       });
       if (busMarkerRef.current) busMarkerRef.current.setLatLng([lat, lng]);
@@ -337,7 +337,7 @@ export default function Conductor() {
                 <div className="bg-white rounded-2xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--color-gray-text)" }}>Reportar novedad</span>
-                    <button onClick={() => { setShowCustom(false); setNovedadCustom(""); }} aria-label="Cerrar" style={{ color: "var(--color-gray-text)" }}><X className="w-4 h-4" /></button>
+                    <button onClick={() => { setShowCustom(false); setNovedadCustom(""); }} aria-label="Cerrar" className="p-1.5 -mr-1 rounded-lg" style={{ color: "var(--color-gray-text)" }}><X className="w-4 h-4" /></button>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     {NOVEDAD_OPCIONES.map((o) => (
