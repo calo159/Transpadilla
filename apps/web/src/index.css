@@ -389,19 +389,3 @@
   .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after,
   .border.active-elevate-2:not(.no-active-interaction-elevate)::after { inset: -1px; }
 }
-
-/* Etiquetas de barrios (capa propia sobre el mapa — ver docs/MAPA.md). */
-.leaflet-tooltip.tp-barrio-label {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  padding: 0;
-  color: #12305c;
-  font-weight: 700;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 4px #fff, 0 0 4px #fff;
-  white-space: nowrap;
-}
-.leaflet-tooltip.tp-barrio-label::before { display: none; }

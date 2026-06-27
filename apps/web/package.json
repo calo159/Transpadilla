@@ -77,7 +77,6 @@
   },
   "dependencies": {
     "leaflet": "^1.9.4",
-    "protomaps-leaflet": "^5.1.0",
     "socket.io-client": "^4.8.3"
   }
 }
