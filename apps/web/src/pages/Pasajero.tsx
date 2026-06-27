@@ -1290,6 +1290,35 @@ export default function Pasajero() {
                 <div className="w-full h-12 rounded-2xl font-semibold flex items-center justify-center" style={{ background: "#eef2f7", color: "var(--color-gray-text)" }}>Sin buses ahora</div>
               )}
             </div>
+            {/* Otros buses de la ruta (además del próximo) — para verlos/seguir cualquiera */}
+            {(() => {
+              const otros = busesRutaSel.filter((x) => x.bus.id !== proxBus?.id);
+              if (otros.length === 0) return null;
+              const ocupCol: Record<string, string> = { vacio: "#38A169", medio: "#F5B731", lleno: "#E53E3E" };
+              return (
+                <div className="px-4 pb-3 pt-2 bg-white">
+                  <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--color-gray-text)" }}>Otros buses en esta ruta</p>
+                  <div className="space-y-2">
+                    {otros.map(({ bus: b, distKm, etaMin }) => {
+                      const sig = siguiendoBusId === b.id;
+                      return (
+                        <button key={b.id} onClick={() => seguirBus(b.id)} className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 active:scale-[0.98] transition-transform" style={{ background: sig ? "rgba(123,184,213,0.18)" : "var(--color-gray-light)", border: sig ? "1px solid var(--color-sky)" : "1px solid transparent" }}>
+                          <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: selectedRuta.color + "22" }}><Bus className="w-4 h-4" style={{ color: selectedRuta.color }} /></span>
+                          <span className="flex-1 min-w-0 text-left">
+                            <span className="font-mono font-bold text-sm block" style={{ color: "var(--color-navy)" }}>{b.placa}</span>
+                            <span className="text-[11px]" style={{ color: "var(--color-gray-text)" }}>
+                              {distKm != null ? `${distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${distKm.toFixed(1)} km`} · ${etaMin === 0 ? "llegando" : `~${etaMin} min`}` : "Activa tu ubicación para el tiempo"}
+                            </span>
+                          </span>
+                          {b.ocupacion && <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: ocupCol[b.ocupacion] }} title="Ocupación" />}
+                          <LocateFixed className="w-4 h-4 flex-shrink-0" style={{ color: sig ? "var(--color-sky)" : "#cbd5e1" }} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
           );
         })()}
