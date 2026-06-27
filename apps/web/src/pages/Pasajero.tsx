@@ -1148,6 +1148,17 @@ export default function Pasajero() {
           const ocupProx = proxBus?.ocupacion
             ? ({ vacio: { l: "Disponible", c: "#38A169" }, medio: { l: "Medio lleno", c: "#F5B731" }, lleno: { l: "Lleno", c: "#E53E3E" } } as Record<string, { l: string; c: string }>)[proxBus.ocupacion]
             : null;
+          // Parada más cercana a mi ubicación (para sugerir dónde subir).
+          const miParada = userPos
+            ? paradas.reduce(
+                (best, p, i) => {
+                  const d = distanciaKm(userPos.lat, userPos.lng, p.latitud, p.longitud);
+                  return best.i < 0 || d < best.d ? { i, d } : best;
+                },
+                { i: -1, d: Infinity },
+              )
+            : { i: -1, d: Infinity };
+          const miParadaI = miParada.i;
           return (
           <div className="-mx-4 -mt-1">
             {/* Header navy (sticky). En peek: tócalo para expandir; el panel no se cierra. */}
@@ -1212,14 +1223,19 @@ export default function Pasajero() {
                   const eta = etaPorParada[p.id]?.eta;
                   const past = nextI >= 0 && i < nextI;
                   const current = i === nextI;
+                  const cercana = i === miParadaI; // la más cercana a mi ubicación
                   return (
-                    <li key={p.id} className="relative flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "#f1f4f8", background: current ? "rgba(123,184,213,0.10)" : "transparent", opacity: past ? 0.55 : 1 }}>
+                    <li key={p.id} className="relative flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "#f1f4f8", background: current ? "rgba(123,184,213,0.10)" : cercana ? "rgba(56,161,105,0.07)" : "transparent", opacity: past ? 0.55 : 1 }}>
                       {current && <span className="absolute left-0 top-0 bottom-0 w-1" style={{ background: "var(--color-gold)" }} />}
+                      {cercana && !current && <span className="absolute left-0 top-0 bottom-0 w-1" style={{ background: "var(--color-success)" }} />}
                       <div className="flex items-center gap-3 min-w-0">
-                        <span className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={current ? { background: "rgba(37,88,165,0.12)" } : { background: "#eef2f7" }}>
-                          {past ? <Check className="w-4 h-4" style={{ color: "var(--color-gray-text)" }} /> : current ? <MapPin className="w-4 h-4" style={{ color: "var(--color-blue)" }} /> : <span className="w-2 h-2 rounded-full" style={{ background: "#cbd5e1" }} />}
+                        <span className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={current ? { background: "rgba(37,88,165,0.12)" } : cercana ? { background: "rgba(56,161,105,0.15)" } : { background: "#eef2f7" }}>
+                          {past ? <Check className="w-4 h-4" style={{ color: "var(--color-gray-text)" }} /> : current ? <MapPin className="w-4 h-4" style={{ color: "var(--color-blue)" }} /> : cercana ? <LocateFixed className="w-4 h-4" style={{ color: "var(--color-success)" }} /> : <span className="w-2 h-2 rounded-full" style={{ background: "#cbd5e1" }} />}
                         </span>
-                        <span className={"truncate text-sm " + (current ? "font-bold" : "font-medium")} style={{ color: "var(--color-navy)" }}>{p.nombre}</span>
+                        <div className="min-w-0">
+                          <span className={"truncate block text-sm " + (current || cercana ? "font-bold" : "font-medium")} style={{ color: "var(--color-navy)" }}>{p.nombre}</span>
+                          {cercana && <span className="text-[10px] font-bold" style={{ color: "var(--color-success)" }}>Súbete aquí · a {miParada.d < 1 ? `${Math.round(miParada.d * 1000)} m` : `${miParada.d.toFixed(1)} km`} de ti</span>}
+                        </div>
                       </div>
                       {eta != null && (
                         <div className="text-right shrink-0 ml-2">
