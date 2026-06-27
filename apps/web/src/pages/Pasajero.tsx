@@ -114,18 +114,23 @@ export default function Pasajero() {
   const rutaTieneVivos = (id: number) => buses.some((b) => b.ruta_id === id && b.estado !== "inactivo");
   // Orden de la lista (más fácil de usar): favoritas → con buses en vivo → resto,
   // y dentro de cada grupo, alfabético.
-  const rutasFiltradas = rutas
-    .filter((r) => r.nombre.toLowerCase().includes(busqueda.toLowerCase()))
-    .sort((a, b) => {
-      const fa = favoritos.includes(a.id), fb = favoritos.includes(b.id);
-      if (fa !== fb) return fa ? -1 : 1;
-      const la = rutaTieneVivos(a.id), lb = rutaTieneVivos(b.id);
-      if (la !== lb) return la ? -1 : 1;
-      return a.nombre.localeCompare(b.nombre);
-    });
-  const selectedRuta = rutas.find((r) => r.id === selectedRutaId);
-  const activeBuses = buses.filter((b) => b.estado === "activo");
-  const demorasBuses = buses.filter((b) => b.estado === "demora");
+  const rutasFiltradas = useMemo(
+    () =>
+      rutas
+        .filter((r) => r.nombre.toLowerCase().includes(busqueda.toLowerCase()))
+        .sort((a, b) => {
+          const fa = favoritos.includes(a.id), fb = favoritos.includes(b.id);
+          if (fa !== fb) return fa ? -1 : 1;
+          const la = rutaTieneVivos(a.id), lb = rutaTieneVivos(b.id);
+          if (la !== lb) return la ? -1 : 1;
+          return a.nombre.localeCompare(b.nombre);
+        }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rutas, buses, busqueda, favoritos],
+  );
+  const selectedRuta = useMemo(() => rutas.find((r) => r.id === selectedRutaId), [rutas, selectedRutaId]);
+  const activeBuses = useMemo(() => buses.filter((b) => b.estado === "activo"), [buses]);
+  const demorasBuses = useMemo(() => buses.filter((b) => b.estado === "demora"), [buses]);
 
   // El mapa lo crea y destruye useLeafletMap (ver declaración de mapRef arriba).
 
@@ -263,7 +268,7 @@ export default function Pasajero() {
         : "";
       const novHtml = bus?.novedad
         ? `<div style="display:flex;gap:5px;align-items:flex-start;background:rgba(245,183,49,.14);border-left:3px solid #F5B731;border-radius:6px;padding:5px 8px;margin-top:7px">
-             <span style="font-size:12px;line-height:1.3">⚠</span><span style="font-size:11px;color:#9a6a00;font-weight:600;line-height:1.3">${novedadSafe}</span>
+             <svg width="12" height="12" viewBox="0 0 24 24" fill="#F5B731" style="flex-shrink:0;margin-top:1px"><path d="M12 2 1 21h22L12 2Zm0 6a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0V9a1 1 0 0 1 1-1Zm0 9a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4Z"/></svg><span style="font-size:11px;color:#9a6a00;font-weight:600;line-height:1.3">${novedadSafe}</span>
            </div>`
         : "";
       const popupContent = `
@@ -290,7 +295,10 @@ export default function Pasajero() {
         markersRef.current[busId]!.setPopupContent(popupContent);
       } else {
         const marker = L.marker([lat, lng], { icon }).bindPopup(popupContent).addTo(mapRef.current!);
-        if (rutaId) marker.on("click", () => setSelectedRutaId((prev) => (prev === rutaId ? null : rutaId)));
+        if (rutaId) marker.on("click", () => {
+          setSelectedRutaId((prev) => (prev === rutaId ? null : rutaId));
+          setSheetSnap("half");
+        });
         markersRef.current[busId] = marker;
       }
     },
@@ -456,14 +464,18 @@ export default function Pasajero() {
 
   // Buses activos de la ruta seleccionada, ordenados del más cercano a mí, con
   // la distancia y el tiempo estimado de llegada a MI ubicación.
-  const busesRutaSel = (selectedRuta ? buses : [])
-    .filter((b) => b.ruta_id === selectedRuta?.id && b.estado !== "inactivo" && b.lat != null && b.lng != null)
-    .map((b) => {
-      const distKm = userPos ? distanciaKm(userPos.lat, userPos.lng, b.lat!, b.lng!) : null;
-      const etaMin = distKm != null ? Math.max(0, Math.round((distKm / velEfectiva(b.velocidad)) * 60)) : null;
-      return { bus: b, distKm, etaMin };
-    })
-    .sort((a, b) => (a.distKm ?? Infinity) - (b.distKm ?? Infinity));
+  const busesRutaSel = useMemo(
+    () =>
+      (selectedRuta ? buses : [])
+        .filter((b) => b.ruta_id === selectedRuta?.id && b.estado !== "inactivo" && b.lat != null && b.lng != null)
+        .map((b) => {
+          const distKm = userPos ? distanciaKm(userPos.lat, userPos.lng, b.lat!, b.lng!) : null;
+          const etaMin = distKm != null ? Math.max(0, Math.round((distKm / velEfectiva(b.velocidad)) * 60)) : null;
+          return { bus: b, distKm, etaMin };
+        })
+        .sort((a, b) => (a.distKm ?? Infinity) - (b.distKm ?? Infinity)),
+    [selectedRuta, buses, userPos],
+  );
 
   // ── "¿A dónde vas?": recomendación de ruta + bus más cercano ────────────────
   // Recalcula la ruta recomendada cuando cambia el destino, las rutas o el origen.
