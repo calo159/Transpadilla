@@ -1046,7 +1046,7 @@ export default function Pasajero() {
                   )}
                 </div>
               </div>
-              <button onClick={() => setSelectedRutaId(null)} aria-label="Cerrar" className="text-white/80 p-1"><X className="w-5 h-5" /></button>
+              <button onClick={cerrarCard} aria-label="Cerrar" className="text-white/80 p-1"><X className="w-5 h-5" /></button>
             </div>
             {/* Estado en vivo + barra de progreso con bus dorado */}
             <div className="px-4 py-3 bg-white border-b" style={{ borderColor: "#eef2f7" }}>
@@ -1146,7 +1146,7 @@ export default function Pasajero() {
         )}
 
         {/* ── Estado vacío: chip no intrusivo (no tapa el mapa) ── */}
-        {activeBuses.length === 0 && (
+        {activeBuses.length === 0 && !rutasLoading && rutas.length > 0 && (
           <div className="absolute top-[140px] md:top-6 left-1/2 -translate-x-1/2 z-[600] pointer-events-none w-full flex justify-center px-4">
             <div className="flex items-center gap-2 rounded-full shadow-md px-4 py-2" style={{ background: "var(--color-white)", border: "1px solid #e8edf4" }}>
               <Bus className="w-4 h-4 flex-shrink-0" style={{ color: "var(--color-gold)" }} />
@@ -1184,6 +1184,11 @@ export default function Pasajero() {
           </button>
         )}
 
+        {/* Backdrop para cerrar el menú ☰ al tocar fuera */}
+        {menuAbierto && (
+          <div className="md:hidden fixed inset-0 z-[1000]" onClick={() => setMenuAbierto(false)} aria-hidden="true" />
+        )}
+
         {/* ── Header móvil (estilo Stitch): tarjeta navy flotante + búsqueda + menú ── */}
         <div className="md:hidden fixed top-0 left-0 right-0 z-[1001] px-3 pt-3 flex flex-col gap-2">
           {/* Tarjeta navy */}
@@ -1200,7 +1205,7 @@ export default function Pasajero() {
             <div className="flex items-center justify-between mt-1 px-1">
               <span className="text-[11px] font-medium text-white/80">Moviendo la Ciudad</span>
               <span className="flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full" style={conectado ? { background: "rgba(245,183,49,0.2)", color: "var(--color-gold)" } : { background: "rgba(255,255,255,0.15)", color: "#fff" }}>
-                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: conectado ? "var(--color-gold)" : "#fcd34d" }} />
+                <span className={`w-1.5 h-1.5 rounded-full ${conectado ? "animate-pulse" : ""}`} style={{ background: conectado ? "var(--color-gold)" : "#fcd34d" }} />
                 {conectado ? "EN VIVO" : "SIN CONEXIÓN"}
               </span>
             </div>
@@ -1582,6 +1587,8 @@ export default function Pasajero() {
               }
 
               if (vista === "rutas") {
+                if (rutasError) return errorCarga;
+                if (rutasLoading && rutas.length === 0) return skeletonRutas;
                 return rutasFiltradas.length === 0
                   ? Estado(
                       <Search className="w-8 h-8" style={{ color: "var(--color-sky)" }} />,
