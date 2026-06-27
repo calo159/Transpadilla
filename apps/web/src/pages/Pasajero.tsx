@@ -7,7 +7,7 @@ import {
   Bus, MapPin, LogOut, Radio, AlertTriangle, X,
   Search, Clock, LogIn, Shield, ChevronRight, ChevronUp,
   Menu, MessageCircle, Instagram, LocateFixed, Loader2, Star, HelpCircle, Navigation, RefreshCw,
-  User, Map as MapIcon, Route as RouteIcon, Check,
+  User, Map as MapIcon, Route as RouteIcon, Check, History, Download, Smartphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,12 @@ import { recomendarRuta, busMasCercano } from "@/lib/sugerencia";
 /** Escapa HTML para inyectar texto (de la BD/usuario) en los popups de Leaflet
  *  por innerHTML sin riesgo de XSS almacenado (p. ej. la novedad del conductor). */
 const escHtml = (s: string) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+
+/** Evento `beforeinstallprompt` (no está en los tipos estándar del DOM). */
+interface BeforeInstallPrompt extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
 
 export default function Pasajero() {
   const [, setLocation] = useLocation();
@@ -76,6 +82,19 @@ export default function Pasajero() {
       return next;
     });
   };
+  // Rutas vistas recientemente (se recuerdan en localStorage). La última abierta
+  // va primera; se deduplican y se conservan máximo 4 para acceso rápido.
+  const [recientes, setRecientes] = useState<number[]>(() => {
+    try { return JSON.parse(localStorage.getItem("tp_recientes") ?? "[]") as number[]; }
+    catch { return []; }
+  });
+  const pushReciente = (id: number) => {
+    setRecientes((prev) => {
+      const next = [id, ...prev.filter((x) => x !== id)].slice(0, 4);
+      try { localStorage.setItem("tp_recientes", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
   // Guía de bienvenida: se muestra solo la primera vez (se recuerda en localStorage).
   const [showWelcome, setShowWelcome] = useState(
     () => typeof localStorage !== "undefined" && !localStorage.getItem("tp_welcome_visto"),
@@ -88,6 +107,34 @@ export default function Pasajero() {
   };
   // Panel de ayuda "¿Cómo funciona?" — accesible en cualquier momento con el botón ?.
   const [showAyuda, setShowAyuda] = useState(false);
+  // Banner "Instalar app" (PWA). El navegador dispara beforeinstallprompt cuando
+  // la app es instalable; lo guardamos para ofrecer la instalación a un toque.
+  const [installEvt, setInstallEvt] = useState<BeforeInstallPrompt | null>(null);
+  const [installOculto, setInstallOculto] = useState(
+    () => typeof localStorage !== "undefined" && !!localStorage.getItem("tp_install_dismissed"),
+  );
+  useEffect(() => {
+    const onPrompt = (e: Event) => { e.preventDefault(); setInstallEvt(e as BeforeInstallPrompt); };
+    const onInstalled = () => { setInstallEvt(null); setInstallOculto(true); };
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onPrompt);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+  const yaInstalada = typeof window !== "undefined" && window.matchMedia?.("(display-mode: standalone)").matches;
+  const mostrarInstall = !!installEvt && !installOculto && !yaInstalada;
+  const instalarApp = async () => {
+    if (!installEvt) return;
+    await installEvt.prompt();
+    try { await installEvt.userChoice; } catch { /* el usuario cerró el diálogo */ }
+    setInstallEvt(null); // el evento es de un solo uso
+  };
+  const descartarInstall = () => {
+    setInstallOculto(true);
+    try { localStorage.setItem("tp_install_dismissed", "1"); } catch { /* ignore */ }
+  };
   // Arrastre del card de detalle (swipe). dragOffset = px en vivo durante el gesto.
   const [dragOffset, setDragOffset] = useState<number | null>(null);
   const dragRef = useRef<{ startY: number; moved: boolean; lastDelta: number } | null>(null);
@@ -358,6 +405,7 @@ export default function Pasajero() {
     if (next !== null) {
       setVista("mapa");
       setBusqueda("");
+      pushReciente(next);
       const ruta = rutas.find((r) => r.id === next);
       if (ruta && mapRef.current) {
         if (ruta.paradas.length >= 2)
@@ -755,6 +803,32 @@ export default function Pasajero() {
             </div>
           </div>
         )}
+        {!busqueda && recientes.length > 0 && (() => {
+          const recientesRutas = recientes
+            .map((id) => rutas.find((r) => r.id === id))
+            .filter((r): r is typeof rutas[number] => !!r);
+          if (recientesRutas.length === 0) return null;
+          return (
+            <div className="px-4 pt-1 pb-2">
+              <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
+                <History className="w-3 h-3" /> Recientes
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {recientesRutas.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => handleSelectRuta(r.id)}
+                    className="flex items-center gap-1.5 max-w-full px-2.5 py-1.5 rounded-lg border border-border bg-card hover:border-primary/40 transition-colors"
+                    title={r.nombre}
+                  >
+                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: r.color }} />
+                    <span className="text-xs font-medium text-foreground truncate max-w-[120px]">{r.nombre}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-4 py-2">
           Rutas disponibles {rutasFiltradas.length !== rutas.length && `(${rutasFiltradas.length})`}
         </p>
@@ -1291,6 +1365,25 @@ export default function Pasajero() {
           )}
         </div>
 
+        {/* Banner "Instalar app" (PWA) — sobre el bottom nav, descartable */}
+        {mostrarInstall && (
+          <div className="md:hidden fixed left-3 right-3 bottom-[84px] z-[1001] flex items-center gap-3 rounded-2xl px-3.5 py-3 shadow-xl animate-in fade-in slide-in-from-bottom-3 duration-300" style={{ background: "var(--color-navy)" }}>
+            <span className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,255,255,0.12)" }}>
+              <Smartphone className="w-5 h-5 text-white" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white leading-tight">Instala TransPadilla</p>
+              <p className="text-[11px] text-white/70 leading-tight mt-0.5">Ábrela como app, sin abrir el navegador.</p>
+            </div>
+            <button onClick={instalarApp} className="flex items-center gap-1.5 px-3 h-9 rounded-xl text-sm font-bold flex-shrink-0 active:scale-95 transition-transform" style={{ background: "var(--color-gold)", color: "var(--color-navy)" }}>
+              <Download className="w-4 h-4" /> Instalar
+            </button>
+            <button onClick={descartarInstall} aria-label="Ahora no" className="p-1.5 -mr-1 flex-shrink-0 text-white/60 hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* ── Bottom nav (estilo Stitch): Inicio / Rutas / Favoritos / Perfil ── */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[1002] flex justify-around items-center px-2 pt-2 pb-3 bg-white" style={{ boxShadow: "0 -4px 16px rgba(15,30,60,0.10)" }}>
           {([
@@ -1612,6 +1705,14 @@ export default function Pasajero() {
                 </div>
               );
 
+              // Subencabezado compacto (ícono + título) para secciones dentro de una vista.
+              const SubHeader = (icon: React.ReactNode, titulo: string) => (
+                <div className="flex items-center gap-1.5 px-1 pt-1 pb-2" style={{ color: "var(--color-gray-text)" }}>
+                  {icon}
+                  <span className="text-[11px] font-bold uppercase tracking-widest">{titulo}</span>
+                </div>
+              );
+
               // Estado vacío / informativo elegante (ícono en círculo + CTA grande).
               const Estado = (icon: React.ReactNode, titulo: string, desc: string, cta?: React.ReactNode) => (
                 <div className="text-center pt-16 px-6">
@@ -1642,13 +1743,29 @@ export default function Pasajero() {
               if (vista === "rutas") {
                 if (rutasError) return errorCarga;
                 if (rutasLoading && rutas.length === 0) return skeletonRutas;
-                return rutasFiltradas.length === 0
-                  ? Estado(
-                      <Search className="w-8 h-8" style={{ color: "var(--color-sky)" }} />,
-                      busqueda ? "Sin resultados" : "No hay rutas",
-                      busqueda ? `No encontramos rutas para "${busqueda}".` : "Aún no hay rutas configuradas.",
-                    )
-                  : <>{Header("Rutas", "Toca una para verla en el mapa", rutasFiltradas.length)}{rutasFiltradas.map(RouteCard)}</>;
+                if (rutasFiltradas.length === 0)
+                  return Estado(
+                    <Search className="w-8 h-8" style={{ color: "var(--color-sky)" }} />,
+                    busqueda ? "Sin resultados" : "No hay rutas",
+                    busqueda ? `No encontramos rutas para "${busqueda}".` : "Aún no hay rutas configuradas.",
+                  );
+                // Rutas vistas recientemente (solo sin búsqueda activa).
+                const recientesRutas = busqueda
+                  ? []
+                  : recientes.map((id) => rutas.find((r) => r.id === id)).filter((r): r is typeof rutas[number] => !!r);
+                return (
+                  <>
+                    {recientesRutas.length > 0 && (
+                      <>
+                        {SubHeader(<History className="w-4 h-4" />, "Recientes")}
+                        {recientesRutas.map(RouteCard)}
+                        <div className="h-1" />
+                      </>
+                    )}
+                    {Header("Rutas", "Toca una para verla en el mapa", rutasFiltradas.length)}
+                    {rutasFiltradas.map(RouteCard)}
+                  </>
+                );
               }
 
               // Paraderos cercanos (usa la ubicación del pasajero)
