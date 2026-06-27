@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { clearAuth, getUser } from "@/lib/auth";
 import {
   Bus, MapPin, LogOut, Radio, AlertTriangle, X,
-  Search, Clock, LogIn, Shield, ChevronRight,
+  Search, Clock, LogIn, Shield, ChevronRight, ChevronUp,
   Menu, MessageCircle, Instagram, LocateFixed, Loader2, Star, HelpCircle, Navigation, RefreshCw,
   User, Map as MapIcon, Route as RouteIcon, Check,
 } from "lucide-react";
@@ -48,15 +48,16 @@ export default function Pasajero() {
   const etaRef = useRef<Record<number, { eta: number; placa: string }>>({});
   const [novedad, setNovedad] = useState<Novedad | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  // Card de detalle inferior (móvil): colapsado (58vh) o expandido (88vh).
-  const [cardExpanded, setCardExpanded] = useState(false);
+  // Card de detalle inferior (móvil): minimizado (barra), medio o expandido.
+  // Bajarlo NO lo cierra (solo la X); queda en "peek" dejando ver el mapa.
+  const [sheetSnap, setSheetSnap] = useState<"peek" | "half" | "full">("half");
   // Vista activa (bottom nav móvil): mapa | favoritos | rutas | paraderos.
   const [vista, setVista] = useState<"mapa" | "favoritos" | "rutas" | "paraderos">("mapa");
   // Menú ☰ del header (acciones: destino, atención, info).
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState("");
-  // Estado real de la conexión en vivo (Socket.IO). Para no mentir con "En vivo".
-  const [conectado, setConectado] = useState(true);
+  // Estado real de la conexión en vivo (Socket.IO). Empieza false; "connect" lo pone true.
+  const [conectado, setConectado] = useState(false);
   const [locating, setLocating] = useState(false);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
   // "¿A dónde vas?": el usuario arma el modo y toca el mapa para fijar su destino;
@@ -306,7 +307,6 @@ export default function Pasajero() {
   useEffect(() => {
     const socket = io({ path: "/socket.io", transports: ["websocket", "polling"] });
     socketRef.current = socket;
-    setConectado(socket.connected);
     socket.on("connect", () => setConectado(true));
     socket.on("disconnect", () => setConectado(false));
     socket.io.on("reconnect", () => setConectado(true));
@@ -342,7 +342,7 @@ export default function Pasajero() {
           mapRef.current.setView([ruta.paradas[0]!.latitud, ruta.paradas[0]!.longitud], 14);
       }
       socketRef.current?.emit("subscribe_ruta", { rutaId: next });
-      setCardExpanded(false);
+      setSheetSnap("half");
     }
   };
 
@@ -364,7 +364,7 @@ export default function Pasajero() {
       setModoDestino(false);
       const sug = recomendarRuta(rutas, p, userPos ?? undefined);
       if (sug && selectedRutaId !== sug.ruta.id) handleSelectRuta(sug.ruta.id);
-      setCardExpanded(false);
+      setSheetSnap("half");
     };
     map.on("click", onClick);
     return () => { map.off("click", onClick); container.style.cursor = ""; };
@@ -472,11 +472,13 @@ export default function Pasajero() {
     setSelectedRutaId(null);
   };
 
-  // ── Card de detalle: cerrar y gesto de arrastre (swipe ↓ cierra/colapsa, ↑ expande) ──
+  // ── Card de detalle: snap de 3 estados (peek/half/full). Bajarlo NO cierra ──
+  // (solo la X cierra). Orden de menor a mayor altura para el paso de los gestos.
+  const SNAPS = ["peek", "half", "full"] as const;
   const cerrarCard = () => {
     if (destino) limpiarDestino();
     setSelectedRutaId(null);
-    setCardExpanded(false);
+    setSheetSnap("half"); // resetea para el próximo abrir
   };
   const onCardTouchStart = (e: React.TouchEvent) => {
     suppressClickRef.current = false;
@@ -489,24 +491,27 @@ export default function Pasajero() {
     const delta = e.touches[0]!.clientY - d.startY;
     d.lastDelta = delta;
     if (Math.abs(delta) > 4) d.moved = true;
-    // Sigue el dedo hacia abajo; al subir aplica resistencia (no se despega del fondo).
-    setDragOffset(delta > 0 ? delta : delta * 0.35);
+    // Feedback al bajar (amortiguado y con tope); subir lo resuelve la altura.
+    setDragOffset(delta > 0 ? Math.min(delta * 0.6, 140) : 0);
   };
   const onCardTouchEnd = () => {
     const d = dragRef.current;
     dragRef.current = null;
     setDragOffset(null);
     if (!d || !d.moved) return; // tap puro → lo maneja onClick de la barrita
-    suppressClickRef.current = true; // evita que el click posterior alterne el card
-    if (d.lastDelta > 70) {
-      if (cardExpanded) setCardExpanded(false); else cerrarCard();
-    } else if (d.lastDelta < -70) {
-      setCardExpanded(true);
+    suppressClickRef.current = true; // evita que el click posterior cicle el card
+    if (d.lastDelta > 50) {
+      // Hacia abajo → un paso menos (full→half→peek), nunca cierra.
+      setSheetSnap((s) => SNAPS[Math.max(0, SNAPS.indexOf(s) - 1)]!);
+    } else if (d.lastDelta < -50) {
+      // Hacia arriba → un paso más (peek→half→full).
+      setSheetSnap((s) => SNAPS[Math.min(SNAPS.length - 1, SNAPS.indexOf(s) + 1)]!);
     }
   };
   const onHandleTap = () => {
     if (suppressClickRef.current) { suppressClickRef.current = false; return; }
-    setCardExpanded((v) => !v);
+    // Tap en la barrita: cicla peek → half → full → peek.
+    setSheetSnap((s) => s === "peek" ? "half" : s === "half" ? "full" : "peek");
   };
 
   // ── Centrar el mapa en la ubicación del pasajero ───────────────────────────
@@ -977,23 +982,28 @@ export default function Pasajero() {
           transition: dragOffset !== null ? "none" : "transform 0.25s ease",
         }}
       >
-        {/* Barrita de arrastre: swipe ↓ cierra/colapsa · swipe ↑ expande · tap alterna */}
+        {/* Barrita de arrastre: swipe ↓ minimiza (peek) · swipe ↑ expande · tap cicla. NO cierra. */}
         <div
           onTouchStart={onCardTouchStart}
           onTouchMove={onCardTouchMove}
           onTouchEnd={onCardTouchEnd}
           onClick={onHandleTap}
-          className="flex items-center justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing touch-none select-none"
+          className="flex flex-col items-center pt-2.5 pb-1.5 cursor-grab active:cursor-grabbing touch-none select-none"
           role="button"
-          aria-label="Arrastra para expandir o cerrar el detalle"
+          aria-label={sheetSnap === "peek" ? "Subir el detalle" : "Bajar o minimizar el detalle"}
         >
           <div className="h-1.5 w-11 rounded-full" style={{ background: "rgba(27,59,111,0.30)" }} />
+          <ChevronUp
+            className="w-4 h-4 -mb-1 transition-transform duration-200"
+            style={{ color: "rgba(27,59,111,0.35)", transform: sheetSnap === "full" ? "rotate(180deg)" : "none" }}
+          />
         </div>
-        {/* Contenido scrolleable (altura según expandido/colapsado) */}
+        {/* Contenido (altura según snap: peek=barra, half, full) */}
         <div
-          className="overflow-y-auto px-4 pb-6"
+          className="px-4 pb-6"
           style={{
-            maxHeight: cardExpanded ? "calc(88vh - 34px)" : "calc(58vh - 34px)",
+            maxHeight: sheetSnap === "peek" ? "78px" : sheetSnap === "half" ? "54vh" : "84vh",
+            overflowY: sheetSnap === "peek" ? "hidden" : "auto",
             transition: "max-height 0.25s ease",
             touchAction: "pan-y",
             overscrollBehavior: "contain",
@@ -1010,6 +1020,7 @@ export default function Pasajero() {
             .map((p, i) => ({ i, eta: etaPorParada[p.id]?.eta }))
             .filter((x): x is { i: number; eta: number } => x.eta != null);
           const nextI = conEta.length ? conEta.sort((a, b) => a.eta - b.eta)[0]!.i : -1;
+          const proxEtaMin = nextI >= 0 ? etaPorParada[paradas[nextI]!.id]?.eta : undefined;
           const progresoPct = nextI >= 0 && paradas.length > 1 ? (nextI / (paradas.length - 1)) * 100 : 0;
           const hayDemora = busesRutaSel.some((x) => x.bus.estado === "demora");
           const nov = busesRutaSel.find((x) => x.bus.novedad)?.bus.novedad;
@@ -1026,7 +1037,13 @@ export default function Pasajero() {
                 <h3 className="font-display font-bold text-lg text-white leading-tight truncate">{selectedRuta.nombre}</h3>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="w-2 h-2 rounded-full" style={{ background: selectedRuta.color }} />
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-white/70">Ruta</span>
+                  {proximoBus && proxEtaMin != null ? (
+                    <span className="text-[11px] font-bold flex items-center gap-1" style={{ color: "var(--color-gold)" }}>
+                      <Bus className="w-3 h-3" /> Próx · {proxEtaMin <= 0 ? "llegando" : `${proxEtaMin} min`}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-white/70">Ruta</span>
+                  )}
                 </div>
               </div>
               <button onClick={() => setSelectedRutaId(null)} aria-label="Cerrar" className="text-white/80 p-1"><X className="w-5 h-5" /></button>
@@ -1515,7 +1532,7 @@ export default function Pasajero() {
                 <div
                   key={r.id}
                   role="button"
-                  onClick={() => { setSelectedRutaId(r.id); setVista("mapa"); setCardExpanded(false); }}
+                  onClick={() => { setSelectedRutaId(r.id); setVista("mapa"); setSheetSnap("half"); }}
                   className="relative w-full flex items-center gap-4 rounded-2xl p-4 pl-5 min-h-[78px] overflow-hidden active:scale-[0.98] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
                   style={{ background: `linear-gradient(100deg, ${r.color}14 0%, #ffffff 60%)`, boxShadow: "0 6px 16px rgba(27,59,111,0.10)" }}
                 >
@@ -1603,7 +1620,7 @@ export default function Pasajero() {
                 <div
                   key={x.parada.id}
                   role="button"
-                  onClick={() => { if (x.rutas[0]) setSelectedRutaId(x.rutas[0].id); setVista("mapa"); setCardExpanded(false); }}
+                  onClick={() => { if (x.rutas[0]) setSelectedRutaId(x.rutas[0].id); setVista("mapa"); setSheetSnap("half"); }}
                   className="relative w-full flex items-center gap-4 rounded-2xl p-4 pl-5 min-h-[78px] overflow-hidden active:scale-[0.98] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
                   style={{ background: "var(--color-white)", boxShadow: "0 6px 16px rgba(27,59,111,0.10)" }}
                 >
