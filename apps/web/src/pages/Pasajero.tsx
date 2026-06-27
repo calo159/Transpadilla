@@ -611,6 +611,22 @@ export default function Pasajero() {
     setSelectedRutaId(null);
     setSheetSnap("half"); // resetea para el próximo abrir
   };
+
+  // Tecla Escape: cierra lo que esté abierto, de lo más superficial a lo más
+  // profundo (ayuda → bienvenida → menú → modo destino → panel de ruta).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (showAyuda) setShowAyuda(false);
+      else if (showWelcome) dismissWelcome();
+      else if (menuAbierto) setMenuAbierto(false);
+      else if (modoDestino) setModoDestino(false);
+      else if (selectedRutaId !== null || destino) cerrarCard();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAyuda, showWelcome, menuAbierto, modoDestino, selectedRutaId, destino]);
   const onCardTouchStart = (e: React.TouchEvent) => {
     suppressClickRef.current = false;
     dragRef.current = { startY: e.touches[0]!.clientY, moved: false, lastDelta: 0 };
@@ -1343,7 +1359,7 @@ export default function Pasajero() {
 
       {/* Mapa */}
       <div className="flex-1 relative">
-        <div ref={mapContainerRef} className="w-full h-full" data-testid="map-container" />
+        <div ref={mapContainerRef} className="w-full h-full" data-testid="map-container" role="application" aria-label="Mapa de Riohacha con los buses en tiempo real" />
 
         {/* FAB "ver ruta completa" — solo con una ruta seleccionada, encima del de ubicación */}
         {vista === "mapa" && selectedRutaId !== null && (
@@ -1501,7 +1517,7 @@ export default function Pasajero() {
         )}
 
         {/* ── Bottom nav (estilo Stitch): Inicio / Rutas / Favoritos / Perfil ── */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[1002] flex justify-around items-center px-2 pt-2 pb-3 bg-white" style={{ boxShadow: "0 -4px 16px rgba(15,30,60,0.10)" }}>
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[1002] flex justify-around items-center px-2 pt-2 pb-3 bg-white" style={{ boxShadow: "0 -4px 16px rgba(15,30,60,0.10)" }} aria-label="Navegación principal">
           {([
             { id: "mapa", label: "Inicio", icon: <MapIcon className="w-5 h-5" /> },
             { id: "rutas", label: "Rutas", icon: <RouteIcon className="w-5 h-5" /> },
@@ -1511,7 +1527,7 @@ export default function Pasajero() {
             const activo = vista === t.id;
             const badge = t.id === "favoritos" && favoritos.length > 0 ? favoritos.length : null;
             return (
-              <button key={t.id} onClick={() => setVista(t.id)} className="relative flex flex-col items-center gap-1 rounded-2xl px-4 py-2 active:scale-90 transition-all" style={activo ? { background: "var(--color-gold)", color: "var(--color-navy)", boxShadow: "0 4px 12px rgba(245,183,49,0.4)" } : { color: "var(--color-blue)" }}>
+              <button key={t.id} onClick={() => setVista(t.id)} aria-current={activo ? "page" : undefined} aria-label={badge !== null ? `${t.label} (${badge})` : t.label} className="relative flex flex-col items-center gap-1 rounded-2xl px-4 py-2 active:scale-90 transition-all" style={activo ? { background: "var(--color-gold)", color: "var(--color-navy)", boxShadow: "0 4px 12px rgba(245,183,49,0.4)" } : { color: "var(--color-blue)" }}>
                 <span className="relative">
                   {t.icon}
                   {badge !== null && (
