@@ -1030,8 +1030,12 @@ export default function Pasajero() {
             : null;
           return (
           <div className="-mx-4 -mt-1">
-            {/* Header navy con número de ruta (sticky: X y título siempre visibles al scrollear) */}
-            <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3" style={{ background: "var(--color-navy)" }}>
+            {/* Header navy (sticky). En peek: tócalo para expandir; el panel no se cierra. */}
+            <div
+              className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3"
+              style={{ background: "var(--color-navy)", cursor: sheetSnap === "peek" ? "pointer" : "default" }}
+              onClick={sheetSnap === "peek" ? () => setSheetSnap("half") : undefined}
+            >
               <div className="w-12 h-12 rounded-xl flex items-center justify-center font-extrabold text-xl shrink-0" style={{ background: "#fff", color: "var(--color-navy)" }}>{rutaNumero}</div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-display font-bold text-lg text-white leading-tight truncate">{selectedRuta.nombre}</h3>
@@ -1046,7 +1050,7 @@ export default function Pasajero() {
                   )}
                 </div>
               </div>
-              <button onClick={cerrarCard} aria-label="Cerrar" className="text-white/80 p-1"><X className="w-5 h-5" /></button>
+              <button onClick={(e) => { e.stopPropagation(); cerrarCard(); }} aria-label="Cerrar" className="text-white/80 p-2.5 -mr-1.5"><X className="w-5 h-5" /></button>
             </div>
             {/* Estado en vivo + barra de progreso con bus dorado */}
             <div className="px-4 py-3 bg-white border-b" style={{ borderColor: "#eef2f7" }}>
@@ -1264,9 +1268,9 @@ export default function Pasajero() {
 
         {/* Guía de bienvenida (primera visita) */}
         {showWelcome && (
-          <div className="absolute inset-0 z-[1001] flex items-end md:items-center justify-center p-4 pb-28 md:pb-4 pointer-events-none">
-            <div className="pointer-events-auto w-full max-w-sm rounded-2xl border shadow-2xl p-5"
-              style={{ background: "rgba(12,18,32,0.96)", borderColor: "rgba(123,184,213,0.3)", backdropFilter: "blur(16px)" }}>
+          <div className="absolute inset-0 z-[1001] flex items-end md:items-center justify-center p-4 pb-28 md:pb-4" style={{ background: "rgba(9,14,26,0.65)", backdropFilter: "blur(3px)" }}>
+            <div className="w-full max-w-sm rounded-2xl border shadow-2xl p-5"
+              style={{ background: "rgba(12,18,32,0.97)", borderColor: "rgba(123,184,213,0.3)" }}>
               <div className="flex items-center gap-3 mb-3">
                 <LogoTP size={40} />
                 <div>
@@ -1547,7 +1551,10 @@ export default function Pasajero() {
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="font-display block text-[17px] font-bold truncate" style={{ color: "var(--color-navy)" }}>{r.nombre}</span>
-                    <span className="mt-1 block">{EstadoPill(rutaTieneVivos(r.id))}</span>
+                    <span className="mt-1 flex items-center gap-2 flex-wrap">
+                      {EstadoPill(rutaTieneVivos(r.id))}
+                      {r.paradas.length > 0 && <span className="text-xs" style={{ color: "var(--color-gray-text)" }}>{r.paradas.length} paradas</span>}
+                    </span>
                   </span>
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleFavorito(r.id); }}
@@ -1573,6 +1580,7 @@ export default function Pasajero() {
               );
 
               if (vista === "favoritos") {
+                if (rutasLoading && rutas.length === 0) return skeletonRutas;
                 const favs = rutas.filter((r) => favoritos.includes(r.id));
                 return favs.length === 0
                   ? Estado(
@@ -1613,6 +1621,7 @@ export default function Pasajero() {
                 return arr;
               })();
 
+              if (rutasLoading && rutas.length === 0) return skeletonRutas;
               if (!userPos) {
                 return Estado(
                   <MapPin className="w-8 h-8" style={{ color: "var(--color-sky)" }} />,
