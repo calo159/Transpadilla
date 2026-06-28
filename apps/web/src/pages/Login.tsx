@@ -176,7 +176,8 @@ export default function Login() {
                 type="button"
                 onClick={() => setShowPass((v) => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white p-1"
-                tabIndex={-1}
+                aria-label={showPass ? "Ocultar contraseña" : "Mostrar contraseña"}
+                aria-pressed={showPass}
               >
                 {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>

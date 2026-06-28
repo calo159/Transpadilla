@@ -389,3 +389,40 @@
   .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after,
   .border.active-elevate-2:not(.no-active-interaction-elevate)::after { inset: -1px; }
 }
+
+/* ── Accesibilidad (sin @layer para que apliquen de forma fiable) ─────────────── */
+
+/* Respeta la preferencia del sistema de reducir el movimiento: detiene pulsos,
+   pings, slide-ins y transiciones para usuarios con sensibilidad vestibular. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Anillo de foco claro SOLO al navegar con teclado (:focus-visible). Con ratón o
+   toque no aparece. Cubre los botones custom y los role="button" que no traían
+   estilo de foco. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 2px solid var(--color-ring, #2558a5);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Quita el flash gris al tocar elementos interactivos en móvil. */
+a,
+button,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
