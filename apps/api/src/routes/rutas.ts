@@ -4,6 +4,7 @@ import { eq, asc } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
 import { validarBody, requerido, texto } from "../middleware/validate";
 import { agruparRutasConParadas } from "../lib/agrupar-rutas";
+import { crearCacheTtl } from "../lib/cache";
 
 // Rutas (líneas de transporte). La asignación de paradas vive en paradas.ts.
 const router = Router();
@@ -12,7 +13,8 @@ const idParam = (raw: unknown): number => parseInt(String(raw));
 
 // Lectura pública: cada ruta con sus paradas en orden (la usa el mapa).
 // Una sola query (LEFT JOIN) + agrupación en memoria → evita el N+1 anterior.
-router.get("/rutas", async (_req, res) => {
+// Caché de 3 s: las rutas cambian poco; colapsa los polls de miles de pasajeros.
+const rutasCache = crearCacheTtl(3000, async () => {
   const rows = await db
     .select({
       id: rutas.id,
@@ -29,8 +31,11 @@ router.get("/rutas", async (_req, res) => {
     .leftJoin(ruta_paradas, eq(ruta_paradas.ruta_id, rutas.id))
     .leftJoin(paradas, eq(ruta_paradas.parada_id, paradas.id))
     .orderBy(asc(rutas.id), asc(ruta_paradas.orden));
+  return agruparRutasConParadas(rows);
+});
 
-  res.json(agruparRutasConParadas(rows));
+router.get("/rutas", async (_req, res) => {
+  res.json(await rutasCache.obtener());
 });
 
 router.post(
