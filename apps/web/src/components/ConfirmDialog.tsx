@@ -33,8 +33,9 @@ export function ConfirmDialog({
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
           <AlertDialogAction
             onClick={async () => {
+              // AlertDialogAction ya cierra el diálogo (dispara onOpenChange →
+              // onClose); por eso aquí NO llamamos onClose, para no hacerlo doble.
               await opts?.accion();
-              onClose();
             }}
             className={opts?.destructivo ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
           >
