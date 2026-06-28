@@ -4,11 +4,11 @@
 // demostración de OSRM, que sirven para desarrollo y demos, pero NO tienen
 // garantía de servicio (SLA) ni límites altos para producción.
 //
-// Para un despliegue real (p. ej. la Alcaldía) se recomienda apuntar a un
-// proveedor con SLA o a un servidor propio, definiendo estas variables en el
-// build del frontend:
-//   VITE_MAP_TILES_URL  -> URL de tiles (Mapbox/MapTiler o tu propio servidor)
-//   VITE_MAP_ATTRIBUTION-> atribución a mostrar
+// Para producción se apunta a un proveedor con SLA (o a un servidor propio)
+// definiendo estas variables en el BUILD del frontend. Guía: docs/MAPA.md.
+//   VITE_MAP_TILES_URL  -> URL de tiles, p. ej. MapTiler:
+//       https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=TU_KEY
+//   VITE_MAP_ATTRIBUTION-> atribución a mostrar (p. ej. "© MapTiler © OpenStreetMap")
 //   VITE_OSRM_URL       -> base de tu OSRM (p. ej. https://osrm.mialcaldia.gov.co)
 
 const env = import.meta.env as Record<string, string | undefined>;
