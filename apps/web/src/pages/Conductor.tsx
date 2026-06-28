@@ -4,7 +4,7 @@ import { useGetBuses, useUpdateGps, useReportarNovedad, useFinalizarRecorrido, g
 import { useQueryClient } from "@tanstack/react-query";
 import { getUser, clearAuth, homeForRol } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
-import { Bus, LogOut, Play, Square, AlertTriangle, Radio, Clock, ChevronLeft, Users, User, MapPin, X, KeyRound } from "lucide-react";
+import { Bus, LogOut, Play, Square, AlertTriangle, Radio, Clock, ChevronLeft, Users, User, MapPin, X, KeyRound, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { LogoTP } from "@/components/LogoTP";
@@ -47,7 +47,7 @@ export default function Conductor() {
 
   const elapsed = useElapsedTime(activo);
 
-  const { data: buses = [] } = useGetBuses({ query: { queryKey: getGetBusesQueryKey() } });
+  const { data: buses = [], isLoading: busesLoading } = useGetBuses({ query: { queryKey: getGetBusesQueryKey() } });
   const updateGps = useUpdateGps({ mutation: {
     onError: () => setGpsFallos((n) => n + 1),
     onSuccess: () => setGpsFallos(0),
@@ -288,8 +288,16 @@ export default function Conductor() {
             </div>
           )}
 
-          {/* Sin bus asignado */}
-          {!busId && (
+          {/* Cargando la asignación (evita el falso "sin bus" mientras llega el dato) */}
+          {!busId && busesLoading && (
+            <div className="bg-white rounded-2xl px-6 py-8 text-center shadow-sm flex flex-col items-center">
+              <Loader2 className="w-8 h-8 mb-3 animate-spin" style={{ color: "var(--color-sky)" }} />
+              <p className="text-sm font-semibold" style={{ color: "var(--color-gray-text)" }}>Cargando tu asignación…</p>
+            </div>
+          )}
+
+          {/* Sin bus asignado (solo una vez confirmado que no hay) */}
+          {!busId && !busesLoading && (
             <div className="bg-white rounded-2xl px-6 py-8 text-center shadow-sm">
               <Bus className="w-10 h-10 mx-auto mb-3" style={{ color: "var(--color-sky)" }} />
               <p className="text-sm font-bold" style={{ color: "var(--color-navy)" }}>Sin bus asignado</p>
@@ -297,8 +305,8 @@ export default function Conductor() {
             </div>
           )}
 
-          {/* Botón GRAN turno (Iniciar / Finalizar) */}
-          {!activo ? (
+          {/* Botón GRAN turno (Iniciar / Finalizar) — oculto mientras carga la asignación */}
+          {!busId && busesLoading ? null : !activo ? (
             <button onClick={iniciar} disabled={!busId} data-testid="button-iniciar" className="w-full rounded-2xl py-10 flex flex-col items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50 text-white" style={{ background: "var(--color-navy)" }}>
               <Play className="w-16 h-16 fill-white" />
               <span className="text-2xl font-extrabold uppercase tracking-wide">Iniciar Turno</span>
@@ -332,7 +340,7 @@ export default function Conductor() {
                   ] as const).map((o) => {
                     const activa = ocupacion === o.val;
                     return (
-                      <button key={o.val} onClick={() => enviarOcupacion(o.val)} className="rounded-2xl py-5 flex flex-col items-center gap-2.5 shadow-sm active:scale-95 transition-all" style={activa ? { background: o.color, color: "#fff" } : { background: "#fff", color: "var(--color-navy)" }}>
+                      <button key={o.val} onClick={() => enviarOcupacion(o.val)} aria-pressed={activa} aria-label={`Marcar ocupación: ${o.label}`} className="rounded-2xl py-5 flex flex-col items-center gap-2.5 shadow-sm active:scale-95 transition-all" style={activa ? { background: o.color, color: "#fff" } : { background: "#fff", color: "var(--color-navy)" }}>
                         <span className="w-12 h-12 rounded-full flex items-center justify-center" style={activa ? { background: "rgba(255,255,255,0.25)" } : { background: "var(--color-gray-light)" }}>
                           <o.Icon className="w-6 h-6" />
                         </span>
@@ -394,7 +402,7 @@ export default function Conductor() {
             <MapPin className="w-3.5 h-3.5" /> {showMapa ? "Ocultar mapa" : "Ver mi ubicación en el mapa"}
           </button>
           <div style={{ display: showMapa ? "block" : "none" }}>
-            <div ref={mapContainerRef} className="w-full h-56 rounded-2xl overflow-hidden shadow-sm" data-testid="map-conductor" />
+            <div ref={mapContainerRef} className="w-full h-56 rounded-2xl overflow-hidden shadow-sm" data-testid="map-conductor" role="application" aria-label="Mapa con tu ubicación actual" />
           </div>
         </div>
       </div>
