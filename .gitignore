@@ -66,6 +66,5 @@ __pycache__/
 # Documentos generados (no son fuente)
 *.docx
 
-# Capacitor (proyectos nativos generados localmente)
-apps/web/android/
+# Capacitor iOS (solo si se añade)
 apps/web/ios/
