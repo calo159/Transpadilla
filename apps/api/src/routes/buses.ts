@@ -70,6 +70,44 @@ router.delete(
   },
 );
 
+// Editar un bus (reasignar ruta y/o renombrar placa) sin borrarlo ni perder su
+// conductor. ruta_id puede ser un entero > 0 (asignar) o null (dejar sin ruta).
+router.patch(
+  "/buses/:id",
+  authMiddleware,
+  requireRol("admin"),
+  async (req, res) => {
+    const body = req.body as { ruta_id?: number | null; placa?: string };
+    const cambios: { ruta_id?: number | null; placa?: string } = {};
+    if ("ruta_id" in body) {
+      if (body.ruta_id == null) {
+        cambios.ruta_id = null;
+      } else {
+        const rid = Number(body.ruta_id);
+        if (!Number.isInteger(rid) || rid <= 0) {
+          res.status(400).json({ error: "ruta_id inválido" });
+          return;
+        }
+        cambios.ruta_id = rid;
+      }
+    }
+    if (typeof body.placa === "string" && body.placa.trim()) {
+      cambios.placa = body.placa.trim().toUpperCase();
+    }
+    if (Object.keys(cambios).length === 0) {
+      res.status(400).json({ error: "Nada que actualizar" });
+      return;
+    }
+    const [actualizado] = await db
+      .update(buses)
+      .set(cambios)
+      .where(eq(buses.id, idParam(req.params["id"])))
+      .returning({ id: buses.id });
+    if (!actualizado) { res.status(404).json({ error: "Bus no encontrado" }); return; }
+    res.json({ mensaje: "Bus actualizado" });
+  },
+);
+
 // ─── Operación del recorrido (conductor sobre SU bus, o admin sobre cualquiera) ─
 // `busAutorizado` deja en `req.busId` el bus que el usuario puede operar.
 

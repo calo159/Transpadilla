@@ -141,11 +141,13 @@ export default function Pasajero() {
   const user = getUser();
 
   const {
-    data: rutas = [],
+    data: rutasRaw = [],
     isLoading: rutasLoading,
     isError: rutasError,
     refetch: refetchRutas,
   } = useGetRutas({ query: { queryKey: ["rutas"], refetchInterval: 15000 } });
+  // El pasajero NO ve las rutas pausadas (activa === false). El admin sí (otra query).
+  const rutas = useMemo(() => rutasRaw.filter((r) => r.activa !== false), [rutasRaw]);
   const { data: buses = [], refetch: refetchBuses } = useGetBuses({
     query: { queryKey: getGetBusesQueryKey(), refetchInterval: 10000 },
   });
