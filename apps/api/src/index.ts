@@ -11,6 +11,27 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
+// Resumen NO sensible de la postura de seguridad al arrancar (ayuda a detectar
+// despliegues mal configurados). Nunca imprime secretos, solo si están presentes.
+function logResumenSeguridad(): void {
+  const env = process.env;
+  if (env["NODE_ENV"] !== "production") return;
+  const cors = (env["CORS_ORIGIN"] ?? "").trim()
+    ? "lista blanca (CORS_ORIGIN)"
+    : "same-origin (sin CORS)";
+  const resumen = {
+    cors,
+    cloudflareOriginSecret: Boolean(env["CLOUDFLARE_ORIGIN_SECRET"]),
+    detrasDeCloudflare: env["BEHIND_CLOUDFLARE"] === "true",
+    jwtExpira: env["JWT_EXPIRES_IN"] ?? "3d",
+    cspPersonalizada: Boolean(env["CSP"]),
+  };
+  logger.info({ seguridad: resumen }, "Configuración de seguridad activa");
+  if (!resumen.cloudflareOriginSecret) {
+    logger.warn("Sin CLOUDFLARE_ORIGIN_SECRET: el origen es accesible directo. Recomendado configurarlo en producción (ver docs/CLOUDFLARE.md).");
+  }
+}
+
 async function main(): Promise<void> {
   // Crea las tablas (si faltan) y carga datos demo en una base vacía, de modo
   // que un despliegue nuevo quede operativo sin pasos manuales.
@@ -33,6 +54,7 @@ async function main(): Promise<void> {
 
   httpServer.listen(port, () => {
     logger.info({ port }, "Server listening");
+    logResumenSeguridad();
   });
 
   // Apagado ordenado: cuando la plataforma reinicia/actualiza la instancia
