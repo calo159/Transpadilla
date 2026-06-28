@@ -1395,6 +1395,20 @@ export default function Pasajero() {
           </button>
         )}
 
+        {/* FAB "¿A dónde vas?" (gold) — abajo-izquierda; arma el modo destino */}
+        {vista === "mapa" && (
+          <button
+            onClick={armarDestino}
+            className="md:hidden absolute left-4 bottom-[88px] z-[900] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform"
+            style={{ background: "var(--color-gold)", color: "var(--color-navy)", border: modoDestino ? "3px solid var(--color-navy)" : "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
+            aria-label="Elegir mi destino en el mapa"
+            aria-pressed={modoDestino}
+            title="¿A dónde vas?"
+          >
+            <Navigation className="w-5 h-5" />
+          </button>
+        )}
+
 
         {/* ── Controles desktop ── */}
         <button
@@ -1472,10 +1486,7 @@ export default function Pasajero() {
           {/* Menú ☰ desplegable con acciones */}
           {menuAbierto && (
             <div className="rounded-2xl bg-white shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200" onClick={() => setMenuAbierto(false)}>
-              <button onClick={armarDestino} className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-gray-100" style={{ color: "var(--color-navy)" }}>
-                <Navigation className="w-5 h-5 flex-shrink-0" style={{ color: "var(--color-blue)" }} /><span className="font-semibold text-sm">¿A dónde vas? — toca el mapa</span>
-              </button>
-              <a href={`https://wa.me/${WHATSAPP_NUMERO}?text=Hola%20TransPadilla%2C%20necesito%20ayuda`} target="_blank" rel="noopener noreferrer" className="w-full flex items-center gap-3 px-4 py-3.5 border-t border-gray-100 active:bg-gray-100" style={{ color: "var(--color-navy)" }}>
+              <a href={`https://wa.me/${WHATSAPP_NUMERO}?text=Hola%20TransPadilla%2C%20necesito%20ayuda`} target="_blank" rel="noopener noreferrer" className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-gray-100" style={{ color: "var(--color-navy)" }}>
                 <MessageCircle className="w-5 h-5 flex-shrink-0" style={{ color: "#25D366" }} /><span className="font-semibold text-sm">Atención al cliente (WhatsApp)</span>
               </a>
               <button onClick={() => setShowAyuda(true)} className="w-full flex items-center gap-3 px-4 py-3.5 text-left border-t border-gray-100 active:bg-gray-100" style={{ color: "var(--color-navy)" }}>
