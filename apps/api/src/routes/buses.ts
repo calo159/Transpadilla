@@ -116,13 +116,14 @@ router.post(
   async (req, res) => {
     const busId = req.busId!;
     const { novedad } = req.body as { novedad: string };
-    const [busRow] = await db.select().from(buses).where(eq(buses.id, busId));
-    await db
+    const [actualizado] = await db
       .update(buses)
       .set({ novedad, estado: "demora", actualizado: new Date() })
-      .where(eq(buses.id, busId));
+      .where(eq(buses.id, busId))
+      .returning({ placa: buses.placa });
+    if (!actualizado) { res.status(404).json({ error: "Bus no encontrado" }); return; }
 
-    emitirSeguro("bus:novedad", { busId, novedad, placa: busRow?.placa });
+    emitirSeguro("bus:novedad", { busId, novedad, placa: actualizado.placa });
     res.json({ mensaje: "Novedad reportada" });
   },
 );
@@ -134,13 +135,14 @@ router.post(
   busAutorizado,
   async (req, res) => {
     const busId = req.busId!;
-    const [busRow] = await db.select().from(buses).where(eq(buses.id, busId));
-    await db
+    const [actualizado] = await db
       .update(buses)
       .set({ novedad: null, estado: "activo", actualizado: new Date() })
-      .where(eq(buses.id, busId));
+      .where(eq(buses.id, busId))
+      .returning({ placa: buses.placa });
+    if (!actualizado) { res.status(404).json({ error: "Bus no encontrado" }); return; }
 
-    emitirSeguro("bus:novedad", { busId, novedad: null, placa: busRow?.placa });
+    emitirSeguro("bus:novedad", { busId, novedad: null, placa: actualizado.placa });
     res.json({ mensaje: "Reporte retirado" });
   },
 );
@@ -157,10 +159,12 @@ router.post(
       res.status(400).json({ error: "Nivel de ocupación inválido" });
       return;
     }
-    await db
+    const [actualizado] = await db
       .update(buses)
       .set({ ocupacion, actualizado: new Date() })
-      .where(eq(buses.id, busId));
+      .where(eq(buses.id, busId))
+      .returning({ id: buses.id });
+    if (!actualizado) { res.status(404).json({ error: "Bus no encontrado" }); return; }
 
     emitirSeguro("bus:ocupacion", { busId, ocupacion });
     res.json({ mensaje: "Ocupación actualizada" });
@@ -174,7 +178,7 @@ router.post(
   busAutorizado,
   async (req, res) => {
     const busId = req.busId!;
-    await db
+    const [actualizado] = await db
       .update(buses)
       .set({
         estado: "inactivo",
@@ -185,7 +189,9 @@ router.post(
         ocupacion: null,
         actualizado: new Date(),
       })
-      .where(eq(buses.id, busId));
+      .where(eq(buses.id, busId))
+      .returning({ id: buses.id });
+    if (!actualizado) { res.status(404).json({ error: "Bus no encontrado" }); return; }
     res.json({ mensaje: "Recorrido finalizado" });
   },
 );
