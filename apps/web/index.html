@@ -2,7 +2,7 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TransPadilla — Moviendo la Ciudad</title>
     <meta name="description" content="Sistema de rastreo de transporte público en tiempo real — Riohacha, La Guajira. Moviendo la Ciudad." />
     <meta name="theme-color" content="#0D2461" />
@@ -32,7 +32,7 @@
         <img src="/logo-transpadilla.png" alt="TransPadilla" width="84" height="84" style="border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,.4)" />
         <div style="font-size:22px;font-weight:900;letter-spacing:.12em;color:#fff">Trans<span style="color:#F5C200">Padilla</span></div>
         <div style="width:34px;height:34px;border:3px solid rgba(255,255,255,.25);border-top-color:#4BA9D8;border-radius:50%;animation:tp-spin .8s linear infinite"></div>
-        <style>@keyframes tp-spin{to{transform:rotate(360deg)}}</style>
+        <style>@keyframes tp-spin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){#tp-splash div[style*="tp-spin"]{animation:none!important}}</style>
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>
