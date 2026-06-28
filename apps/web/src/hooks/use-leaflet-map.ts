@@ -20,7 +20,7 @@ export function useLeafletMap(
 
   useEffect(() => {
     if (containerRef.current && !mapRef.current) {
-      const map = L.map(containerRef.current, { zoomControl: false, minZoom: 10, maxZoom: 19 })
+      const map = L.map(containerRef.current, { zoomControl: false, minZoom: 8, maxZoom: 19 })
         .setView(options?.center ?? RIOHACHA_CENTRO, options?.zoom ?? 14);
       L.tileLayer(TILES_URL, {
         attribution: TILES_ATTRIBUTION,
