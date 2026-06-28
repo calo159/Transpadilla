@@ -7,8 +7,10 @@ import { Label } from "@/components/ui/label";
 import { setAuth, getUser } from "@/lib/auth";
 import { LogoTP } from "@/components/LogoTP";
 import { WHATSAPP_URL, INSTAGRAM_URL } from "@/lib/constants";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 export default function Login() {
+  useDocumentTitle("Iniciar sesión · TransPadilla");
   const [, setLocation] = useLocation();
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");

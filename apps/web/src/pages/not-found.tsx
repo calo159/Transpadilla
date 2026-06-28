@@ -1,8 +1,10 @@
 import { useLocation } from "wouter";
 import { Bus } from "lucide-react";
 import { LogoTP } from "@/components/LogoTP";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 export default function NotFound() {
+  useDocumentTitle("Página no encontrada · TransPadilla");
   const [, setLocation] = useLocation();
   return (
     <div

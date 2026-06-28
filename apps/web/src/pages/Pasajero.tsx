@@ -20,6 +20,7 @@ import { useLeafletMap } from "@/hooks/use-leaflet-map";
 import { WHATSAPP_NUMERO, INSTAGRAM_URL, TARIFA_COP } from "@/lib/constants";
 import type { BusLocation, Novedad } from "@/lib/types";
 import { tiempoRelativo } from "@/lib/format";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { distanciaKm, velEfectiva } from "@/lib/geo";
 import { recomendarRuta, busMasCercano } from "@/lib/sugerencia";
 import { escHtml } from "@/lib/html";
@@ -31,6 +32,7 @@ interface BeforeInstallPrompt extends Event {
 }
 
 export default function Pasajero() {
+  useDocumentTitle("TransPadilla — Buses de Riohacha en vivo");
   const [, setLocation] = useLocation();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useLeafletMap(mapContainerRef, { zoom: 13 });
