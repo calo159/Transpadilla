@@ -44,6 +44,15 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
         runtimeCaching: [
           {
+            urlPattern: /^https:\/\/api\.maptiler\.com\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "maptiler-tiles",
+              expiration: { maxEntries: 800, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
             urlPattern: /^https:\/\/[a-z]\.tile\.openstreetmap\.org\/.*/i,
             handler: "CacheFirst",
             options: {
