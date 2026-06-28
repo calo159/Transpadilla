@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useCreateRuta, useDeleteRuta, getGetRutasQueryKey, type Ruta,
 } from "@workspace/api-client";
-import { Plus, Route, Pencil, Trash2, MapPin, X } from "lucide-react";
+import { Plus, Route, Pencil, Trash2, MapPin, X, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +30,34 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
 
   const [nombre, setNombre] = useState("");
   const [color, setColor] = useState("#2558A5");
+  // Qué ruta tiene la paleta de color abierta en la lista (null = ninguna).
+  const [editColorId, setEditColorId] = useState<number | null>(null);
+
+  // Pausar / reactivar una ruta. Pausada = no aparece para los pasajeros.
+  const togglePausa = async (ruta: Ruta) => {
+    try {
+      const res = await apiFetch(`/api/rutas/${ruta.id}/activa`, { method: "PATCH", body: JSON.stringify({ activa: !ruta.activa }) });
+      if (!res.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      toast({ title: ruta.activa ? `Ruta "${ruta.nombre}" pausada` : `Ruta "${ruta.nombre}" reactivada` });
+    } catch {
+      toast({ title: "Error al cambiar el estado de la ruta", variant: "destructive" });
+    }
+  };
+
+  // Cambiar el color de una ruta ya creada.
+  const cambiarColor = async (id: number, nuevo: string) => {
+    setEditColorId(null);
+    try {
+      const res = await apiFetch(`/api/rutas/${id}`, { method: "PATCH", body: JSON.stringify({ color: nuevo }) });
+      if (!res.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
+      toast({ title: "Color actualizado" });
+    } catch {
+      toast({ title: "Error al cambiar el color", variant: "destructive" });
+    }
+  };
 
   const crear = async () => {
     if (!nombre.trim()) { toast({ title: "El nombre de la ruta es obligatorio", variant: "destructive" }); return; }
@@ -149,13 +177,25 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
         ) : (
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {rutas.map((ruta) => (
-              <div key={ruta.id} className="p-3 bg-secondary/30 border border-border rounded-xl">
+              <div key={ruta.id} className="p-3 bg-secondary/30 border border-border rounded-xl" style={{ opacity: ruta.activa === false ? 0.6 : 1 }}>
                 <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: ruta.color }} />
+                  <button
+                    onClick={() => setEditColorId(editColorId === ruta.id ? null : ruta.id)}
+                    className="w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-transparent hover:ring-primary/40 transition-all"
+                    style={{ background: ruta.color }}
+                    title="Cambiar color"
+                    aria-label="Cambiar color de la ruta"
+                  />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate">{ruta.nombre}</p>
+                    <p className="text-sm font-semibold text-foreground truncate flex items-center gap-1.5">
+                      {ruta.nombre}
+                      {ruta.activa === false && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-500 uppercase">Pausada</span>}
+                    </p>
                     <p className="text-xs text-muted-foreground">{ruta.paradas.length} paradas</p>
                   </div>
+                  <Button variant="ghost" size="sm" onClick={() => togglePausa(ruta)} className={`h-9 w-9 p-0 ${ruta.activa === false ? "text-amber-500" : "text-muted-foreground hover:text-green-500"}`} title={ruta.activa === false ? "Reactivar ruta" : "Pausar ruta (ocultarla a los pasajeros)"}>
+                    <Power className="w-4 h-4" />
+                  </Button>
                   <Button variant="ghost" size="sm" onClick={() => renombrar(ruta.id, ruta.nombre)} className="h-9 w-9 p-0 text-muted-foreground hover:text-primary" title="Renombrar ruta">
                     <Pencil className="w-4 h-4" />
                   </Button>
@@ -163,6 +203,20 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
+                {/* Paleta para cambiar el color (se abre al tocar el círculo) */}
+                {editColorId === ruta.id && (
+                  <div className="flex flex-wrap gap-2 mt-2 pl-7">
+                    {COLORES.map((c) => (
+                      <button
+                        key={c.value}
+                        onClick={() => cambiarColor(ruta.id, c.value)}
+                        title={c.label}
+                        className={`w-7 h-7 rounded-full border-2 transition-all active:scale-90 ${ruta.color === c.value ? "border-white scale-110 shadow-lg" : "border-transparent"}`}
+                        style={{ background: c.value }}
+                      />
+                    ))}
+                  </div>
+                )}
                 {/* Paradas de la ruta — quitar cada una sin borrarla */}
                 {ruta.paradas.length > 0 && (
                   <div className="mt-2 pl-7 space-y-1">
