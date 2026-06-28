@@ -41,6 +41,7 @@ export default function Pasajero() {
   const userMarkerRef = useRef<L.Marker | null>(null);
   const destinoMarkerRef = useRef<L.Marker | null>(null);
   const miParadaMarkerRef = useRef<L.Marker | null>(null);
+  const novedadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queryClient = useQueryClient();
 
   const [selectedRutaId, setSelectedRutaId] = useState<number | null>(null);
@@ -390,13 +391,17 @@ export default function Pasajero() {
       // Solo muestra la alerta cuando hay novedad (no cuando el conductor la retira).
       if (data.novedad) {
         setNovedad(data);
-        setTimeout(() => setNovedad(null), 15000);
+        if (novedadTimerRef.current) clearTimeout(novedadTimerRef.current);
+        novedadTimerRef.current = setTimeout(() => setNovedad(null), 15000);
       }
     });
     socket.on("bus:ocupacion", () => {
       queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
     });
-    return () => { socket.disconnect(); };
+    return () => {
+      socket.disconnect();
+      if (novedadTimerRef.current) clearTimeout(novedadTimerRef.current);
+    };
   }, [updateBusMarker, queryClient]);
 
   const handleSelectRuta = (rutaId: number) => {
@@ -451,7 +456,7 @@ export default function Pasajero() {
     map.on("click", onClick);
     return () => { map.off("click", onClick); container.style.cursor = ""; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modoDestino, rutas, userPos]);
+  }, [modoDestino, rutas, userPos, selectedRutaId]);
 
   // Tocar el mapa (zona vacía) deselecciona la ruta y cierra el panel — gesto
   // natural en apps de mapas. Los toques en buses/paradas/recorrido no llegan
@@ -537,7 +542,9 @@ export default function Pasajero() {
     cargarEta();
     const t = setInterval(cargarEta, 15000);
     return () => { cancelado = true; clearInterval(t); };
-  }, [selectedRutaId, buses]);
+    // Solo depende de la ruta: el polling de 15s ya refresca; incluir `buses`
+    // recreaba el intervalo en cada refetch (~10s) y disparaba fetches de más.
+  }, [selectedRutaId]);
 
   // El próximo bus que llega (menor ETA entre las paradas de la ruta).
   const proximoBus = (() => {

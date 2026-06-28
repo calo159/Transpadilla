@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import type { Server as HttpServer } from "http";
+import { logger } from "./logger";
 
 let io: Server | null = null;
 
@@ -71,7 +72,9 @@ export function getIO(): Server {
 export function emitirSeguro(evento: string, payload: unknown): void {
   try {
     getIO().emit(evento, payload);
-  } catch {
-    // Socket.IO todavía no está listo: la emisión es best-effort, se ignora.
+  } catch (err) {
+    // Best-effort: si Socket.IO aún no está listo (arranque/tests) no rompemos,
+    // pero lo dejamos en logs de debug para no esconder fallos de sincronización.
+    logger.debug({ err, evento }, "emit omitido (Socket.IO no inicializado)");
   }
 }
