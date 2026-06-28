@@ -3,6 +3,7 @@ import { db, rutas, paradas, ruta_paradas } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
 import { validarBody, requerido, texto } from "../middleware/validate";
+import { agruparRutasConParadas } from "../lib/agrupar-rutas";
 
 // Rutas (líneas de transporte). La asignación de paradas vive en paradas.ts.
 const router = Router();
@@ -10,28 +11,26 @@ const router = Router();
 const idParam = (raw: unknown): number => parseInt(String(raw));
 
 // Lectura pública: cada ruta con sus paradas en orden (la usa el mapa).
+// Una sola query (LEFT JOIN) + agrupación en memoria → evita el N+1 anterior.
 router.get("/rutas", async (_req, res) => {
-  const allRutas = await db.select().from(rutas).orderBy(rutas.id);
+  const rows = await db
+    .select({
+      id: rutas.id,
+      nombre: rutas.nombre,
+      color: rutas.color,
+      activa: rutas.activa,
+      parada_id: paradas.id,
+      parada_nombre: paradas.nombre,
+      latitud: paradas.latitud,
+      longitud: paradas.longitud,
+      orden: ruta_paradas.orden,
+    })
+    .from(rutas)
+    .leftJoin(ruta_paradas, eq(ruta_paradas.ruta_id, rutas.id))
+    .leftJoin(paradas, eq(ruta_paradas.parada_id, paradas.id))
+    .orderBy(asc(rutas.id), asc(ruta_paradas.orden));
 
-  const result = await Promise.all(
-    allRutas.map(async (ruta) => {
-      const stops = await db
-        .select({
-          id: paradas.id,
-          nombre: paradas.nombre,
-          latitud: paradas.latitud,
-          longitud: paradas.longitud,
-          orden: ruta_paradas.orden,
-        })
-        .from(ruta_paradas)
-        .innerJoin(paradas, eq(ruta_paradas.parada_id, paradas.id))
-        .where(eq(ruta_paradas.ruta_id, ruta.id))
-        .orderBy(asc(ruta_paradas.orden));
-      return { ...ruta, paradas: stops };
-    }),
-  );
-
-  res.json(result);
+  res.json(agruparRutasConParadas(rows));
 });
 
 router.post(

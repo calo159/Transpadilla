@@ -59,6 +59,14 @@ CREATE TABLE IF NOT EXISTS buses (
 -- tablas ya existían sin ellas.
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS identificacion varchar(30);
 ALTER TABLE buses ADD COLUMN IF NOT EXISTS ocupacion varchar(10);
+
+-- Índices en las columnas usadas en JOIN/filtros (rendimiento a escala). Las
+-- claves foráneas no se indexan solas en PostgreSQL; estos aceleran GET /buses,
+-- /rutas, /eta y la resolución del bus del conductor (busAutorizado).
+CREATE INDEX IF NOT EXISTS idx_ruta_paradas_ruta   ON ruta_paradas(ruta_id, orden);
+CREATE INDEX IF NOT EXISTS idx_ruta_paradas_parada ON ruta_paradas(parada_id);
+CREATE INDEX IF NOT EXISTS idx_buses_ruta_estado   ON buses(ruta_id, estado);
+CREATE INDEX IF NOT EXISTS idx_buses_conductor     ON buses(conductor_id);
 `;
 
 export async function ensureSchema(): Promise<void> {

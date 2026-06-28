@@ -98,8 +98,23 @@ router.post(
   requireRol("admin"),
   async (req, res) => {
     const rutaId = idParam(req.params["id"]);
-    const { parada_id, orden } = req.body as { parada_id: number; orden: number };
-    await db.insert(ruta_paradas).values({ ruta_id: rutaId, parada_id, orden });
+    const { parada_id, orden } = req.body as { parada_id: number; orden?: number };
+    const pid = Number(parada_id);
+    if (!Number.isInteger(pid) || pid <= 0) {
+      res.status(400).json({ error: "parada_id inválido" });
+      return;
+    }
+    const ordenNum = Number.isFinite(Number(orden)) ? Number(orden) : 0;
+    // Evita duplicar la misma parada en la misma ruta.
+    const [existe] = await db
+      .select({ id: ruta_paradas.id })
+      .from(ruta_paradas)
+      .where(and(eq(ruta_paradas.ruta_id, rutaId), eq(ruta_paradas.parada_id, pid)));
+    if (existe) {
+      res.status(409).json({ error: "Esa parada ya está en la ruta" });
+      return;
+    }
+    await db.insert(ruta_paradas).values({ ruta_id: rutaId, parada_id: pid, orden: ordenNum });
     res.status(201).json({ mensaje: "Parada asignada" });
   },
 );
