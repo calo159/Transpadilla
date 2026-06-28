@@ -22,10 +22,12 @@ import { LogoTP } from "@/components/LogoTP";
 import { ConfirmDialog, type ConfirmOpts } from "@/components/ConfirmDialog";
 import { PromptDialog, type PromptOpts } from "@/components/PromptDialog";
 import { CambiarPasswordDialog } from "@/components/CambiarPasswordDialog";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 type Tab = "dashboard" | "rutas" | "buses" | "paradas" | "conductores";
 
 export default function Admin() {
+  useDocumentTitle("Panel admin · TransPadilla");
   const [, setLocation] = useLocation();
   const user = getUser();
   const { toast } = useToast();

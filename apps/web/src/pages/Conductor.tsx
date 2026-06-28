@@ -16,8 +16,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useElapsedTime } from "@/hooks/use-elapsed-time";
 import { useLeafletMap } from "@/hooks/use-leaflet-map";
 import { NOVEDAD_OPCIONES } from "@/lib/constants";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 export default function Conductor() {
+  useDocumentTitle("Conductor · TransPadilla");
   const [, setLocation] = useLocation();
   const user = getUser();
   const { toast } = useToast();
