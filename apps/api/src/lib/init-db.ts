@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS buses (
   lat real,
   lng real,
   velocidad real,
-  novedad text,
+  novedad varchar(200),
   ocupacion varchar(10),
   actualizado timestamp
 );

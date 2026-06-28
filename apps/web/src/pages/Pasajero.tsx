@@ -22,10 +22,7 @@ import type { BusLocation, Novedad } from "@/lib/types";
 import { tiempoRelativo } from "@/lib/format";
 import { distanciaKm, velEfectiva } from "@/lib/geo";
 import { recomendarRuta, busMasCercano } from "@/lib/sugerencia";
-
-/** Escapa HTML para inyectar texto (de la BD/usuario) en los popups de Leaflet
- *  por innerHTML sin riesgo de XSS almacenado (p. ej. la novedad del conductor). */
-const escHtml = (s: string) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+import { escHtml } from "@/lib/html";
 
 /** Evento `beforeinstallprompt` (no está en los tipos estándar del DOM). */
 interface BeforeInstallPrompt extends Event {

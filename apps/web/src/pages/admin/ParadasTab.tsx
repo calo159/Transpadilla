@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useLeafletMap } from "@/hooks/use-leaflet-map";
 import { apiFetch } from "@/lib/api";
+import { escHtml } from "@/lib/html";
 import type { ConfirmOpts } from "@/components/ConfirmDialog";
 import type { PromptOpts } from "@/components/PromptDialog";
 import { inputCls, selectTriggerCls } from "./shared";
@@ -81,7 +82,7 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
         html: `<div style="width:10px;height:10px;border-radius:50%;background:#7BB8D5;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>`,
         iconSize: [10, 10], iconAnchor: [5, 5],
       });
-      L.marker([p.latitud, p.longitud], { icon, interactive: false }).bindTooltip(p.nombre).addTo(grupo);
+      L.marker([p.latitud, p.longitud], { icon, interactive: false }).bindTooltip(escHtml(p.nombre)).addTo(grupo);
     });
     grupo.addTo(map);
     paradasLayerRef.current = grupo;
