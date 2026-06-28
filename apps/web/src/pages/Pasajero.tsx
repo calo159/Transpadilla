@@ -1443,8 +1443,8 @@ export default function Pasajero() {
             </div>
             <div className="flex items-center justify-between mt-1 px-1">
               <span className="text-[11px] font-medium text-white/80">Moviendo la Ciudad</span>
-              <span className="flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full" style={conectado ? { background: "rgba(245,183,49,0.2)", color: "var(--color-gold)" } : { background: "rgba(255,255,255,0.15)", color: "#fff" }}>
-                <span className={`w-1.5 h-1.5 rounded-full ${conectado ? "animate-pulse" : ""}`} style={{ background: conectado ? "var(--color-gold)" : "#fcd34d" }} />
+              <span role="status" aria-live="polite" className="flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full" style={conectado ? { background: "rgba(245,183,49,0.2)", color: "var(--color-gold)" } : { background: "rgba(255,255,255,0.15)", color: "#fff" }}>
+                <span aria-hidden="true" className={`w-1.5 h-1.5 rounded-full ${conectado ? "animate-pulse" : ""}`} style={{ background: conectado ? "var(--color-gold)" : "#fcd34d" }} />
                 {conectado ? "EN VIVO" : "SIN CONEXIÓN"}
               </span>
             </div>
@@ -1755,8 +1755,8 @@ export default function Pasajero() {
         </div>
 
         {/* En escritorio: indicador de conexión abajo-izquierda (en móvil está el badge EN VIVO en la TopBar) */}
-        <div className="hidden md:flex absolute md:bottom-4 left-3 z-[600] items-center gap-1.5 rounded-full px-3 py-1.5 shadow-md" style={{ background: "var(--color-white)" }}>
-          <span className={`w-2 h-2 rounded-full ${conectado ? "animate-pulse" : ""}`} style={{ background: conectado ? "var(--color-success)" : "var(--color-gold)" }} />
+        <div role="status" aria-live="polite" className="hidden md:flex absolute md:bottom-4 left-3 z-[600] items-center gap-1.5 rounded-full px-3 py-1.5 shadow-md" style={{ background: "var(--color-white)" }}>
+          <span aria-hidden="true" className={`w-2 h-2 rounded-full ${conectado ? "animate-pulse" : ""}`} style={{ background: conectado ? "var(--color-success)" : "var(--color-gold)" }} />
           <span className="text-xs font-bold" style={{ color: "var(--color-navy)" }}>{conectado ? "En vivo" : "Reconectando…"}</span>
         </div>
 
