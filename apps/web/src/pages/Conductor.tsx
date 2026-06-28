@@ -4,6 +4,10 @@ import { useGetBuses, useUpdateGps, useReportarNovedad, useFinalizarRecorrido, g
 import { useQueryClient } from "@tanstack/react-query";
 import { getUser, clearAuth, homeForRol } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
+import { Capacitor, registerPlugin } from "@capacitor/core";
+import type { BackgroundGeolocationPlugin } from "@capacitor-community/background-geolocation";
+
+const BackgroundGeolocation = registerPlugin<BackgroundGeolocationPlugin>("BackgroundGeolocation");
 import { Bus, LogOut, Play, Square, AlertTriangle, Radio, Clock, ChevronLeft, Users, User, MapPin, X, KeyRound, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,7 +32,7 @@ export default function Conductor() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useLeafletMap(mapContainerRef, { zoom: 14 });
   const busMarkerRef = useRef<L.Marker | null>(null);
-  const gpsWatchRef = useRef<number | null>(null);
+  const gpsWatchRef = useRef<number | string | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   const [activo, setActivo] = useState(false);
@@ -98,16 +102,39 @@ export default function Conductor() {
     queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
   }, [busId, updateGps, queryClient]);
 
-  // Inicia (o reinicia) el seguimiento GPS. Se reutiliza al volver a la app por
-  // si el navegador suspendió el watch en segundo plano.
+  // Inicia (o reinicia) el seguimiento GPS.
+  // En nativo (Capacitor) usa BackgroundGeolocation → Foreground Service de Android,
+  // que sigue enviando aunque la pantalla esté apagada.
+  // En web sigue usando navigator.geolocation.watchPosition.
   const iniciarWatch = useCallback(() => {
-    if (!navigator.geolocation) return;
-    if (gpsWatchRef.current !== null) navigator.geolocation.clearWatch(gpsWatchRef.current);
-    gpsWatchRef.current = navigator.geolocation.watchPosition(
-      (pos) => sendGps(pos.coords.latitude, pos.coords.longitude, (pos.coords.speed ?? 0) * 3.6),
-      () => setGpsError(true),
-      { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
-    );
+    if (Capacitor.isNativePlatform()) {
+      // Cancela watcher anterior si existe
+      if (gpsWatchRef.current !== null) {
+        BackgroundGeolocation.removeWatcher({ id: gpsWatchRef.current as string }).catch(() => {});
+        gpsWatchRef.current = null;
+      }
+      BackgroundGeolocation.addWatcher(
+        {
+          backgroundTitle: "TransPadilla — GPS activo",
+          backgroundMessage: "Enviando tu posición al sistema de rastreo.",
+          requestPermissions: true,
+          stale: false,
+          distanceFilter: 5,
+        },
+        (pos, err) => {
+          if (err || !pos) { setGpsError(true); return; }
+          sendGps(pos.latitude, pos.longitude, (pos.speed ?? 0) * 3.6);
+        },
+      ).then((id) => { gpsWatchRef.current = id; }).catch(() => setGpsError(true));
+    } else {
+      if (!navigator.geolocation) return;
+      if (gpsWatchRef.current !== null) navigator.geolocation.clearWatch(gpsWatchRef.current as number);
+      gpsWatchRef.current = navigator.geolocation.watchPosition(
+        (pos) => sendGps(pos.coords.latitude, pos.coords.longitude, (pos.coords.speed ?? 0) * 3.6),
+        () => setGpsError(true),
+        { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
+      );
+    }
   }, [sendGps]);
 
   // Mantiene la PANTALLA ENCENDIDA durante el recorrido (Wake Lock API), para que
@@ -163,7 +190,14 @@ export default function Conductor() {
         return;
       }
     }
-    if (gpsWatchRef.current !== null) { navigator.geolocation.clearWatch(gpsWatchRef.current); gpsWatchRef.current = null; }
+    if (gpsWatchRef.current !== null) {
+      if (Capacitor.isNativePlatform()) {
+        BackgroundGeolocation.removeWatcher({ id: gpsWatchRef.current as string }).catch(() => {});
+      } else {
+        navigator.geolocation.clearWatch(gpsWatchRef.current as number);
+      }
+      gpsWatchRef.current = null;
+    }
     liberarWakeLock();
     setActivo(false); setGpsLat(null); setGpsLng(null); setGpsCount(0); setGpsError(false); setGpsFallos(0);
     busMarkerRef.current?.remove(); busMarkerRef.current = null;
