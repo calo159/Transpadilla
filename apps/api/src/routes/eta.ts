@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, paradas, ruta_paradas, buses } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
-import { haversineMetros, velEfectiva } from "../lib/geo";
+import { calcularEtaPorParada } from "../lib/eta-calc";
 
 // Estimación de tiempo de llegada (ETA) del próximo bus a cada parada de una
 // ruta, calculada en el API Node (Haversine sobre las paradas de la ruta).
@@ -40,53 +40,16 @@ router.get("/rutas/:id/eta", async (req, res) => {
     return;
   }
 
-  // Distancia acumulada (metros) hasta cada parada.
-  const acum: number[] = [0];
-  for (let i = 1; i < secuencia.length; i++) {
-    const a = secuencia[i - 1]!;
-    const b = secuencia[i]!;
-    acum.push(acum[i - 1]! + haversineMetros(a.latitud, a.longitud, b.latitud, b.longitud));
-  }
-
   // 2. Buses activos de la ruta con posición conocida.
   const activos = await db
     .select({ placa: buses.placa, lat: buses.lat, lng: buses.lng, velocidad: buses.velocidad })
     .from(buses)
     .where(and(eq(buses.ruta_id, rutaId), eq(buses.estado, "activo")));
 
-  const busesInfo = activos
-    .filter((b) => b.lat != null && b.lng != null)
-    .map((b) => {
-      // Parada más cercana al bus (su posición aproximada en la secuencia).
-      let idx = 0;
-      let mejorDist = Infinity;
-      for (let i = 0; i < secuencia.length; i++) {
-        const p = secuencia[i]!;
-        const d = haversineMetros(b.lat!, b.lng!, p.latitud, p.longitud);
-        if (d < mejorDist) { mejorDist = d; idx = i; }
-      }
-      return { placa: b.placa, idx, vel: velEfectiva(b.velocidad) };
-    });
+  // 3-4. Cálculo del ETA (lógica pura y testeable; ver lib/eta-calc.ts).
+  const { buses_activos, paradas: resultado } = calcularEtaPorParada(secuencia, activos);
 
-  // 3-4. ETA por parada: el bus que llega más pronto sin haberla pasado.
-  const resultado = secuencia.map((parada, j) => {
-    let mejor: { eta: number; placa: string } | null = null;
-    for (const info of busesInfo) {
-      if (info.idx <= j) {
-        const distKm = (acum[j]! - acum[info.idx]!) / 1000;
-        const eta = (distKm / info.vel) * 60; // minutos
-        if (mejor === null || eta < mejor.eta) mejor = { eta, placa: info.placa };
-      }
-    }
-    return {
-      parada_id: parada.id,
-      nombre: parada.nombre,
-      eta_min: mejor ? Math.round(mejor.eta) : null,
-      placa: mejor ? mejor.placa : null,
-    };
-  });
-
-  res.json({ ruta_id: rutaId, buses_activos: busesInfo.length, paradas: resultado });
+  res.json({ ruta_id: rutaId, buses_activos, paradas: resultado });
 });
 
 export default router;
