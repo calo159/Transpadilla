@@ -5,6 +5,7 @@ import { authMiddleware, requireRol } from "../middleware/auth";
 import { busAutorizado } from "../middleware/bus-autorizado";
 import { emitirSeguro } from "../lib/socket";
 import { validarBody, requerido, texto, numeroEnRango } from "../middleware/validate";
+import { crearCacheTtl } from "../lib/cache";
 
 const router = Router();
 
@@ -15,7 +16,9 @@ const idParam = (raw: unknown): number => parseInt(String(raw));
 
 // ─── Lectura pública (la usa el mapa del pasajero, sin login) ─────────────────
 
-router.get("/buses", async (_req, res) => {
+// Caché de 2 s: colapsa los refetch en ráfaga (polling + invalidaciones por
+// socket). La posición en vivo del bus llega por socket, no por este poll.
+const busesCache = crearCacheTtl(2000, async () => {
   const rows = await db
     .select({
       id: buses.id,
@@ -37,10 +40,11 @@ router.get("/buses", async (_req, res) => {
     .leftJoin(rutas, eq(buses.ruta_id, rutas.id))
     .leftJoin(usuarios, eq(buses.conductor_id, usuarios.id))
     .orderBy(buses.id);
+  return rows.map((b) => ({ ...b, actualizado: b.actualizado?.toISOString() ?? null }));
+});
 
-  res.json(
-    rows.map((b) => ({ ...b, actualizado: b.actualizado?.toISOString() ?? null })),
-  );
+router.get("/buses", async (_req, res) => {
+  res.json(await busesCache.obtener());
 });
 
 // ─── Gestión de la flota (solo admin) ─────────────────────────────────────────
