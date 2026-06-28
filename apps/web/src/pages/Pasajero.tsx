@@ -83,15 +83,14 @@ export default function Pasajero() {
       return next;
     });
   };
-  // Rutas vistas recientemente (se recuerdan en localStorage). La última abierta
-  // va primera; se deduplican y se conservan máximo 4 para acceso rápido.
+  // Última ruta vista (se recuerda en localStorage) para acceso rápido a ella.
   const [recientes, setRecientes] = useState<number[]>(() => {
-    try { return JSON.parse(localStorage.getItem("tp_recientes") ?? "[]") as number[]; }
+    try { return (JSON.parse(localStorage.getItem("tp_recientes") ?? "[]") as number[]).slice(0, 1); }
     catch { return []; }
   });
   const pushReciente = (id: number) => {
     setRecientes((prev) => {
-      const next = [id, ...prev.filter((x) => x !== id)].slice(0, 4);
+      const next = [id, ...prev.filter((x) => x !== id)].slice(0, 1);
       try { localStorage.setItem("tp_recientes", JSON.stringify(next)); } catch { /* ignore */ }
       return next;
     });
@@ -890,7 +889,7 @@ export default function Pasajero() {
           return (
             <div className="px-4 pt-1 pb-2">
               <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
-                <History className="w-3 h-3" /> Recientes
+                <History className="w-3 h-3" /> Última ruta
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {recientesRutas.map((r) => (
@@ -1919,7 +1918,7 @@ export default function Pasajero() {
                   <>
                     {recientesRutas.length > 0 && (
                       <>
-                        {SubHeader(<History className="w-4 h-4" />, "Recientes")}
+                        {SubHeader(<History className="w-4 h-4" />, "Última ruta")}
                         {recientesRutas.map(RouteCard)}
                         <div className="h-1" />
                       </>
