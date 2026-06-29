@@ -118,9 +118,9 @@ export default function Pasajero() {
   // Banner "Instalar app" (PWA). El navegador dispara beforeinstallprompt cuando
   // la app es instalable; lo guardamos para ofrecer la instalación a un toque.
   const [installEvt, setInstallEvt] = useState<BeforeInstallPrompt | null>(null);
-  const [installOculto, setInstallOculto] = useState(
-    () => typeof localStorage !== "undefined" && !!localStorage.getItem("tp_install_dismissed"),
-  );
+  // Se oculta solo durante esta sesión (no se persiste): así reaparece en cada
+  // visita hasta que la app quede instalada (yaInstalada / appinstalled lo cortan).
+  const [installOculto, setInstallOculto] = useState(false);
   // El banner entra ~1.2s después de cargar (animado, sin competir con la carga inicial).
   const [bannerVisible, setBannerVisible] = useState(false);
   useEffect(() => {
@@ -151,8 +151,8 @@ export default function Pasajero() {
     setInstallEvt(null); // el evento es de un solo uso
   };
   const descartarInstall = () => {
+    // Solo para esta sesión: en la próxima visita el banner vuelve a aparecer.
     setInstallOculto(true);
-    try { localStorage.setItem("tp_install_dismissed", "1"); } catch { /* ignore */ }
   };
   // Arrastre del card de detalle (swipe). dragOffset = px en vivo durante el gesto.
   const [dragOffset, setDragOffset] = useState<number | null>(null);
