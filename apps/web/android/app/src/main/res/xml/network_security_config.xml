@@ -1,21 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <!-- Solo HTTPS: bloquea cualquier tráfico en texto plano (cleartext).
+         Se confía en las CAs del sistema. No se hace certificate pinning porque
+         Render gestiona/rota sus certificados (Google Trust Services) y un pin
+         desactualizado dejaría inservibles los APK ya instalados. -->
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
     </base-config>
-
-    <!-- Solo HTTPS hacia el backend de Render; pins sobre la CA raíz de Let's Encrypt
-         (ISRG Root X1) para resistir MITM incluso con CAs comprometidas.
-         Si Render cambia de CA, actualizar el pin secundario. -->
-    <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">transpadilla-web.onrender.com</domain>
-        <pin-set expiration="2027-01-01">
-            <!-- ISRG Root X1 (Let's Encrypt raíz principal) -->
-            <pin digest="SHA-256">C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=</pin>
-            <!-- ISRG Root X2 (respaldo Let's Encrypt) -->
-            <pin digest="SHA-256">diGVwiVYbubAI3RW4hB9xU8e/CH2GnkuvmFZRIjr1Ww=</pin>
-        </pin-set>
-    </domain-config>
 </network-security-config>
