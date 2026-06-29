@@ -68,3 +68,7 @@ services:
       # usa 20 por defecto; súbelo solo si el plan de Supabase admite más.
       # - key: DB_POOL_MAX
       #   value: "20"
+      # Opcional: captura de errores en Sentry (alertas centralizadas). Sin esto
+      # la app funciona igual; solo no envía errores. sync:false = no va en el repo.
+      # - key: SENTRY_DSN
+      #   sync: false

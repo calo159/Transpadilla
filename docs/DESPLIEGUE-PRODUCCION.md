@@ -50,8 +50,16 @@ Todo en **un solo servidor** (DigitalOcean/Hetzner/AWS Lightsail, ~US$6–12/mes
   ```bash
   0 3 * * * docker exec <db> pg_dump -U postgres transpadilla | gzip > /backups/tp_$(date +\%F).sql.gz
   ```
-- **Monitoreo de uptime**: configura UptimeRobot (gratis) apuntando a
-  `https://tu-dominio/api/readyz` (verifica también la base de datos).
+- **Monitoreo de uptime**: configura UptimeRobot o Healthchecks (gratis) apuntando a
+  `https://tu-dominio/api/healthz` (vivo) y `https://tu-dominio/api/readyz` (verifica
+  también la base de datos). Activa alertas por correo/WhatsApp ante caídas.
+- **Captura de errores (Sentry)**: define `SENTRY_DSN` (de sentry.io, plan gratuito) y los
+  errores no controlados se envían con alerta. Sin la variable, la app funciona igual
+  (no envía nada). Útil para enterarte de fallos sin revisar logs.
+- **En Supabase**: usa el plan **Pro** para respaldos point-in-time (el free no garantiza
+  backups). El historial de posiciones se autopoda (`HISTORIAL_RETENCION_DIAS`, default 30).
+- **Rotación de secretos**: rota periódicamente `DATABASE_URL`, `JWT_SECRET` y la API key
+  de mapas; restringe la key de mapas por dominio.
 - **Mapas y rutas con SLA**: define en el build del frontend
   `VITE_MAP_TILES_URL`, `VITE_MAP_ATTRIBUTION` y `VITE_OSRM_URL` para usar un
   proveedor con garantía o un OSRM propio. Por defecto usa los
@@ -70,6 +78,9 @@ Todo en **un solo servidor** (DigitalOcean/Hetzner/AWS Lightsail, ~US$6–12/mes
 | `SEED_DEMO` | Node | `false` = arranque limpio (solo admin) |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Node | Admin inicial en arranque limpio |
 | `CORS_ORIGIN` | Node | Orígenes permitidos (opcional) |
+| `SENTRY_DSN` | Node | Captura de errores en Sentry (opcional) |
+| `DB_POOL_MAX` | Node | Conexiones del pool (default 20, opcional) |
+| `HISTORIAL_RETENCION_DIAS` | Node | Días de historial a conservar (default 30) |
 | `VITE_MAP_TILES_URL` / `VITE_OSRM_URL` | Frontend (build) | Proveedor de mapas/rutas |
 
 > ⚠️ Los Dockerfiles y `docker-compose.yml` son una base lista para usar; prueba
