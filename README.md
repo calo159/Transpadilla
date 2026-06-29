@@ -46,8 +46,15 @@ El destinatario real es la **empresa TransPadilla**, como herramienta para mejor
    próximo bus a cada parada (distancia Haversine ÷ velocidad real).
 6. **Comodidad del pasajero** — rutas favoritas, "seguir mi bus" (el mapa lo
    sigue), botón de ubicación y ocupación visible en cada bus.
-7. **Seguridad y calidad** — autorización por rol en el backend, cambio de
-   contraseña self-service, pruebas automatizadas (Vitest) e integración continua.
+7. **Reportes e historial** — el backend toma una "foto" periódica de las posiciones
+   y el panel admin muestra gráficas (km recorridos por ruta, ocupación) por periodo.
+8. **App Android del conductor (APK)** — empaquetada con Capacitor; transmite el GPS
+   **incluso con la pantalla apagada** (Foreground Service de Android).
+9. **Páginas legales** — Privacidad y Términos (`/privacidad`, `/terminos`), alineadas
+   con la Ley 1581 de 2012 (Habeas Data, Colombia).
+10. **Seguridad y calidad** — autorización por rol en el backend, rate-limit, HTTPS
+    forzado, listo para Cloudflare, captura de errores opcional (Sentry), cambio de
+    contraseña self-service, pruebas automatizadas (Vitest) e integración continua.
 
 ---
 
@@ -70,10 +77,11 @@ Un **único servicio Node** sirve la API, los WebSockets, el cálculo del ETA y 
 frontend ya construido (mismo dominio, sin CORS). Más simple de operar y desplegar.
 
 - **Frontend:** React + Vite + TypeScript, Leaflet (mapas), TanStack Query,
-  Tailwind, PWA instalable.
-- **API Server:** Node.js + Express + Socket.IO (tiempo real) + Drizzle ORM. Sirve
-  el frontend en producción y calcula el ETA del próximo bus (Haversine).
-- **Base de datos:** PostgreSQL.
+  Tailwind, recharts (reportes), PWA instalable y **Capacitor** (APK Android).
+- **API Server:** Node.js + Express + Socket.IO (tiempo real, **emisión por salas de
+  ruta**) + Drizzle ORM. Sirve el frontend en producción y calcula el ETA (Haversine).
+- **Base de datos:** PostgreSQL en **Supabase** (local y producción), con **RLS** activado
+  (ver [`packages/db/rls.sql`](packages/db/rls.sql) y [docs/SUPABASE.md](docs/SUPABASE.md)).
 - **Calidad:** TypeScript estricto, pruebas con Vitest + Supertest y CI en GitHub Actions.
 
 ---
@@ -81,8 +89,11 @@ frontend ya construido (mismo dominio, sin CORS). Más simple de operar y desple
 ## ⚙️ Instalación y ejecución
 
 ### Requisitos
-- **Node.js 20+** y **pnpm** — `npm install -g pnpm`
-- **PostgreSQL 14+**
+- **Node.js 24** y **pnpm 9** — `npm install -g pnpm` (el repo exige pnpm)
+- **PostgreSQL 14+** local, **o** una base **Supabase** (lo que usa producción)
+
+> 📖 ¿Eres nuevo en el proyecto? Empieza por **[docs/ONBOARDING.md](docs/ONBOARDING.md)**
+> (guía para desarrolladores) y, para el detalle de arquitectura y decisiones, **[CLAUDE.md](CLAUDE.md)**.
 
 ### 1. Base de datos
 ```bash
@@ -135,24 +146,31 @@ Luego abre **http://localhost:5173**.
 
 ## ☁️ Despliegue en Render (producción)
 
-El repo incluye un **Blueprint** ([`render.yaml`](render.yaml)) que despliega todo
-con un solo clic:
+El repo incluye un **Blueprint** ([`render.yaml`](render.yaml)) que despliega el servicio:
 
 | Recurso | Qué es |
 |---------|--------|
 | `transpadilla-web` | Node: API + Socket.IO **y** sirve el frontend React ya construido (un solo dominio con HTTPS). Render detecta pnpm por el `pnpm-lock.yaml` y el campo `packageManager`. |
-| `transpadilla-db` | PostgreSQL gestionado. |
+
+> La **base de datos es Supabase** (gestionada aparte, no por Render). Render solo
+> hospeda el servicio web.
 
 ### Pasos
 
 1. **Sube el repo a GitHub** (el `.env` no se sube; los secretos se configuran en
    Render). Verifica que `.env` siga en `.gitignore`.
 2. En [Render](https://render.com): **New → Blueprint** → conecta tu repositorio →
-   **Apply**. Render lee `render.yaml`, crea ambos recursos y los enlaza: la
-   `DATABASE_URL` y el `JWT_SECRET` se configuran **solos**.
-3. Define `ADMIN_EMAIL` / `ADMIN_PASSWORD` cuando Render los pida (van como
-   `sync:false`, no en el repo); con `SEED_DEMO=false` la base arranca limpia y
-   crea solo ese administrador.
+   **Apply**. Render lee `render.yaml` y crea el servicio web. El `JWT_SECRET` se
+   genera solo.
+3. Pega la **`DATABASE_URL`** con la cadena del **Session pooler de Supabase** (host
+   `...pooler.supabase.com`; la conexión directa es IPv6 y falla en Render). Va como
+   `sync:false` (Render la pide al desplegar; no está en el repo).
+4. Define `ADMIN_EMAIL` / `ADMIN_PASSWORD` cuando Render los pida; con `SEED_DEMO=false`
+   la base arranca limpia y crea solo ese administrador.
+
+> Para subir a producción con tráfico real (2.000+ usuarios), cambia `plan: free` a
+> `plan: standard` en `render.yaml` (ver comentarios ahí). Guía completa:
+> [docs/DESPLIEGUE-PRODUCCION.md](docs/DESPLIEGUE-PRODUCCION.md) y [docs/SUPABASE.md](docs/SUPABASE.md).
 
 > **Nota sobre el plan gratuito:** los servicios free de Render se "duermen" tras
 > unos minutos de inactividad (la primera petición tarda ~30 s en despertar) y la
@@ -170,17 +188,24 @@ con un solo clic:
 
 ```
 apps/
-  web/              Frontend React (mapa, login, conductor, admin)
+  web/              Frontend React (mapa, login, conductor, admin, reportes, legal)
+    src/pages/      Una página por vista (Pasajero, Conductor, Admin, Privacidad…)
+    src/hooks/      Hooks (mapa Leaflet, título de documento, etc.)
+    android/        Proyecto Android nativo (Capacitor) para el APK del conductor
   api/              API Node.js (Express + Socket.IO + Drizzle + ETA), con tests
+    src/routes/     Endpoints por recurso (buses, rutas, eta, reportes, auth…)
+    src/lib/        Núcleo: socket, historial, init-db, eta-calc, geo, sentry
+    test/           Vitest + Supertest (unitarias + integración con BD)
 packages/
-  db/               Esquema de base de datos (Drizzle ORM)
-  api-client/       Hooks React generados (TanStack Query)
-  api-types/        Tipos Zod generados
-  api-spec/         Especificación OpenAPI + orval
-docs/
-  DESPLIEGUE-PRODUCCION.md    Guía de despliegue 24/7 (VPS / Render)
-  CAPACITOR-ANDROID.md        App nativa Android para el conductor
-.github/workflows/ci.yml      Integración continua (typecheck, build, test, audit)
+  db/               Esquema Drizzle (src/schema/), pool PostgreSQL y rls.sql (RLS)
+  api-spec/         OpenAPI + orval.config.ts — FUENTE DE VERDAD del contrato del API
+  api-client/       Hooks React generados con orval (useGetBuses…) — NO editar a mano
+  api-types/        Tipos Zod generados — NO editar a mano
+docs/               Guías: ONBOARDING, DESPLIEGUE-PRODUCCION, SUPABASE, SEGURIDAD,
+                    CLOUDFLARE, MAPA, CAPACITOR-ANDROID, UI-SKILL (+ maquetas stitch/)
+.github/workflows/  CI: typecheck, build, test (con Postgres), audit
+render.yaml         Blueprint de Render (servicio web)
+CLAUDE.md           Referencia profunda de arquitectura y decisiones
 ```
 
 > Los scripts `.ps1` de la raíz (`iniciar.ps1`, `iniciar-https.ps1`,
