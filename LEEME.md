@@ -5,6 +5,8 @@ Sistema de rastreo de transporte público en tiempo real para Riohacha, La Guaji
 
 > 🌐 App desplegada: **https://transpadilla-web.onrender.com**
 > (Esta guía es solo para correr el proyecto en tu PC; para mostrarlo basta la URL.)
+>
+> 👩‍💻 ¿Eres desarrollador? Ve a **[README.md](README.md)** y **[docs/ONBOARDING.md](docs/ONBOARDING.md)**.
 
 ---
 
@@ -33,9 +35,9 @@ Para detener: cierra las dos ventanas de PowerShell.
 
 ## 🧩 ¿Qué hay instalado?
 
-- **Node.js 24** + **pnpm** — entorno de ejecución
-- **PostgreSQL 17** — base de datos (servicio automático de Windows)
-  - Usuario: `postgres` · Contraseña: `postgres` · Base: `transpadilla`
+- **Node.js 24** + **pnpm 9** — entorno de ejecución
+- **Base de datos PostgreSQL** — el proyecto usa **Supabase** (local y producción);
+  también puede correr contra un PostgreSQL local. La conexión va en `DATABASE_URL` (`.env`).
 - Dependencias del proyecto (`node_modules`) — ya instaladas
 - Tablas de la base de datos — ya creadas
 - Datos demo (3 rutas, 7 paradas, 3 buses) — ya cargados
@@ -70,9 +72,14 @@ packages/
   api-types/      → Tipos Zod generados
   api-spec/       → Especificación OpenAPI + orval
 docs/
+  ONBOARDING.md               → Empieza aquí (guía para desarrolladores)
   DESPLIEGUE-PRODUCCION.md    → Guía para despliegue 24/7 (VPS / Render)
+  SUPABASE.md                 → Base de datos + RLS
   CAPACITOR-ANDROID.md        → App nativa Android (APK conductor)
+  (+ SEGURIDAD, CLOUDFLARE, MAPA, UI-SKILL)
 ```
+
+> Cada `apps/*` y `packages/*` tiene su propio `README.md` explicando su rol.
 
 ---
 
