@@ -351,7 +351,9 @@ export default function Pasajero() {
       } else {
         const marker = L.marker([lat, lng], { icon }).bindPopup(popupContent).addTo(mapRef.current!);
         if (rutaId) marker.on("click", () => {
-          setSelectedRutaId((prev) => (prev === rutaId ? null : rutaId));
+          // Mantener la ruta seleccionada (nunca deseleccionar al tocar el bus,
+          // o el marcador desaparecería). Solo abre su popup.
+          setSelectedRutaId(rutaId);
           setSheetSnap("half");
         });
         markersRef.current[busId] = marker;
