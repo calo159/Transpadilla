@@ -53,8 +53,8 @@ El destinatario real es la **empresa TransPadilla**, como herramienta para mejor
 9. **Páginas legales** — Privacidad y Términos (`/privacidad`, `/terminos`), alineadas
    con la Ley 1581 de 2012 (Habeas Data, Colombia).
 10. **Seguridad y calidad** — autorización por rol en el backend, rate-limit, HTTPS
-    forzado, listo para Cloudflare, captura de errores opcional (Sentry), cambio de
-    contraseña self-service, pruebas automatizadas (Vitest) e integración continua.
+    forzado, listo para Cloudflare, cambio de contraseña self-service, pruebas
+    automatizadas (Vitest) e integración continua.
 
 ---
 
@@ -194,7 +194,7 @@ apps/
     android/        Proyecto Android nativo (Capacitor) para el APK del conductor
   api/              API Node.js (Express + Socket.IO + Drizzle + ETA), con tests
     src/routes/     Endpoints por recurso (buses, rutas, eta, reportes, auth…)
-    src/lib/        Núcleo: socket, historial, init-db, eta-calc, geo, sentry
+    src/lib/        Núcleo: socket, historial, init-db, eta-calc, geo, cache, logger
     test/           Vitest + Supertest (unitarias + integración con BD)
 packages/
   db/               Esquema Drizzle (src/schema/), pool PostgreSQL y rls.sql (RLS)

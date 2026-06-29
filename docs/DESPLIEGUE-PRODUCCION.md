@@ -53,9 +53,11 @@ Todo en **un solo servidor** (DigitalOcean/Hetzner/AWS Lightsail, ~US$6–12/mes
 - **Monitoreo de uptime**: configura UptimeRobot o Healthchecks (gratis) apuntando a
   `https://tu-dominio/api/healthz` (vivo) y `https://tu-dominio/api/readyz` (verifica
   también la base de datos). Activa alertas por correo/WhatsApp ante caídas.
-- **Captura de errores (Sentry)**: define `SENTRY_DSN` (de sentry.io, plan gratuito) y los
-  errores no controlados se envían con alerta. Sin la variable, la app funciona igual
-  (no envía nada). Útil para enterarte de fallos sin revisar logs.
+- **Alertas de errores**: el API registra cada error con pino (`req.log.error`). Configura
+  **alertas sobre los logs** (Render Log Streams / un destino externo) para enterarte de
+  fallos sin revisar manualmente. (Una integración con Sentry es posible, pero requiere
+  ajustar el empaquetado esbuild: su SDK arrastra OpenTelemetry y no bundlea en un solo
+  `.mjs`; por eso no viene incluida.)
 - **En Supabase**: usa el plan **Pro** para respaldos point-in-time (el free no garantiza
   backups). El historial de posiciones se autopoda (`HISTORIAL_RETENCION_DIAS`, default 30).
 - **Rotación de secretos**: rota periódicamente `DATABASE_URL`, `JWT_SECRET` y la API key
@@ -78,7 +80,6 @@ Todo en **un solo servidor** (DigitalOcean/Hetzner/AWS Lightsail, ~US$6–12/mes
 | `SEED_DEMO` | Node | `false` = arranque limpio (solo admin) |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Node | Admin inicial en arranque limpio |
 | `CORS_ORIGIN` | Node | Orígenes permitidos (opcional) |
-| `SENTRY_DSN` | Node | Captura de errores en Sentry (opcional) |
 | `DB_POOL_MAX` | Node | Conexiones del pool (default 20, opcional) |
 | `HISTORIAL_RETENCION_DIAS` | Node | Días de historial a conservar (default 30) |
 | `VITE_MAP_TILES_URL` / `VITE_OSRM_URL` | Frontend (build) | Proveedor de mapas/rutas |

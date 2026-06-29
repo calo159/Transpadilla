@@ -6,7 +6,6 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { rateLimit } from "./middleware/rate-limit";
-import { capturarError } from "./lib/sentry";
 
 const app: Express = express();
 const isProd = process.env["NODE_ENV"] === "production";
@@ -185,7 +184,6 @@ if (process.env["NODE_ENV"] === "production") {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   req.log?.error({ err }, "Unhandled error");
-  capturarError(err); // a Sentry si está configurado (no-op si no)
   if (res.headersSent) return;
   res.status(500).json({ error: "Error interno del servidor" });
 });

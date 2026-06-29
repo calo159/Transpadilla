@@ -11,7 +11,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@sentry/node": "^10.62.0",
     "@workspace/api-types": "workspace:*",
     "@workspace/db": "workspace:*",
     "bcryptjs": "^2.4.3",
