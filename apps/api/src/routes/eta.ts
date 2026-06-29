@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, paradas, ruta_paradas, buses } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { calcularEtaPorParada } from "../lib/eta-calc";
+import { crearCacheTtl, type CacheTtl } from "../lib/cache";
 
 // Estimación de tiempo de llegada (ETA) del próximo bus a cada parada de una
 // ruta, calculada en el API Node (Haversine sobre las paradas de la ruta).
@@ -18,9 +19,9 @@ const idParam = (raw: unknown): number => parseInt(String(raw));
  *  3. Para cada parada futura, ETA = distancia restante ÷ velocidad efectiva.
  *  4. Por parada, devolver el bus que llega más pronto.
  */
-router.get("/rutas/:id/eta", async (req, res) => {
-  const rutaId = idParam(req.params["id"]);
+type EtaResultado = { ruta_id: number; buses_activos: number; paradas: ReturnType<typeof calcularEtaPorParada>["paradas"] };
 
+async function calcularEta(rutaId: number): Promise<EtaResultado> {
   // 1. Secuencia de paradas de la ruta, en orden.
   const secuencia = await db
     .select({
@@ -36,8 +37,7 @@ router.get("/rutas/:id/eta", async (req, res) => {
     .orderBy(ruta_paradas.orden);
 
   if (secuencia.length === 0) {
-    res.json({ ruta_id: rutaId, buses_activos: 0, paradas: [] });
-    return;
+    return { ruta_id: rutaId, buses_activos: 0, paradas: [] };
   }
 
   // 2. Buses activos de la ruta con posición conocida.
@@ -48,8 +48,24 @@ router.get("/rutas/:id/eta", async (req, res) => {
 
   // 3-4. Cálculo del ETA (lógica pura y testeable; ver lib/eta-calc.ts).
   const { buses_activos, paradas: resultado } = calcularEtaPorParada(secuencia, activos);
+  return { ruta_id: rutaId, buses_activos, paradas: resultado };
+}
 
-  res.json({ ruta_id: rutaId, buses_activos, paradas: resultado });
+// Caché por ruta (TTL 4 s): muchos pasajeros de la misma ruta comparten el mismo
+// cálculo, así no se repiten 2 queries + Haversine por cada request.
+const etaCaches = new Map<number, CacheTtl<EtaResultado>>();
+function etaCache(rutaId: number): CacheTtl<EtaResultado> {
+  let c = etaCaches.get(rutaId);
+  if (!c) {
+    c = crearCacheTtl(4000, () => calcularEta(rutaId));
+    etaCaches.set(rutaId, c);
+  }
+  return c;
+}
+
+router.get("/rutas/:id/eta", async (req, res) => {
+  const rutaId = idParam(req.params["id"]);
+  res.json(await etaCache(rutaId).obtener());
 });
 
 export default router;

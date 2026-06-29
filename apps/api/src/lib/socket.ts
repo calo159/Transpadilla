@@ -69,10 +69,15 @@ export function getIO(): Server {
  * Emite un evento a todos los clientes sin reventar si Socket.IO aún no está
  * inicializado (p. ej. en tests o durante el arranque). Centraliza el patrón
  * try/catch que de otro modo se repetiría en cada handler que notifica cambios.
+ *
+ * Con `sala` definida, emite SOLO a esa room (p. ej. `ruta_5`) en vez de a todos
+ * los clientes — clave para escalar: la posición de un bus llega únicamente a los
+ * pasajeros que miran esa ruta, no a los miles conectados.
  */
-export function emitirSeguro(evento: string, payload: unknown): void {
+export function emitirSeguro(evento: string, payload: unknown, sala?: string): void {
   try {
-    getIO().emit(evento, payload);
+    const io = getIO();
+    (sala ? io.to(sala) : io).emit(evento, payload);
   } catch (err) {
     // Best-effort: si Socket.IO aún no está listo (arranque/tests) no rompemos,
     // pero lo dejamos en logs de debug para no esconder fallos de sincronización.

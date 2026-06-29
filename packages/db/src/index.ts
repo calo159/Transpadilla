@@ -21,6 +21,10 @@ const needsSsl =
 
 export const pool = new Pool({
   connectionString,
+  // Máximo de conexiones del pool (default de pg = 10). Se sube para soportar
+  // picos de tráfico (polling + GPS) sin saturar; ajustable por entorno y acotado
+  // al límite del pooler de Supabase. Ver DB_POOL_MAX.
+  max: Number(process.env["DB_POOL_MAX"] ?? 20),
   ...(needsSsl ? { ssl: { rejectUnauthorized: false } } : {}),
 });
 export const db = drizzle(pool, { schema });

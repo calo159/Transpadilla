@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, buses, rutas, usuarios } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
 import { busAutorizado } from "../middleware/bus-autorizado";
 import { emitirSeguro } from "../lib/socket";
@@ -127,24 +127,27 @@ router.post(
   async (req, res) => {
     const busId = req.busId!;
     const { lat, lng, velocidad } = req.body as { lat: number; lng: number; velocidad?: number };
-    // Conserva el reporte activo: si el bus tiene una novedad, se mantiene en
-    // "demora" hasta que el conductor la retire; no se borra al moverse.
-    const [actual] = await db
-      .select({ novedad: buses.novedad })
-      .from(buses)
-      .where(eq(buses.id, busId));
-    await db
+    // Una sola query: el estado se decide en SQL (si hay novedad activa se mantiene
+    // en "demora" hasta que el conductor la retire) y devolvemos ruta_id para emitir
+    // SOLO a la sala de esa ruta.
+    const [row] = await db
       .update(buses)
       .set({
         lat,
         lng,
         velocidad: velocidad ?? null,
-        estado: actual?.novedad ? "demora" : "activo",
+        estado: sql`CASE WHEN ${buses.novedad} IS NOT NULL THEN 'demora' ELSE 'activo' END`,
         actualizado: new Date(),
       })
-      .where(eq(buses.id, busId));
+      .where(eq(buses.id, busId))
+      .returning({ rutaId: buses.ruta_id });
 
-    emitirSeguro("bus:ubicacion", { busId, lat, lng, velocidad });
+    const rutaId = row?.rutaId ?? null;
+    // Solo se difunde si el bus tiene ruta (los pasajeros solo ven buses por ruta).
+    // rutaId va en el payload: el cliente filtra por él y la sala acota el fan-out.
+    if (rutaId != null) {
+      emitirSeguro("bus:ubicacion", { busId, lat, lng, velocidad, rutaId }, `ruta_${rutaId}`);
+    }
     res.json({ mensaje: "GPS actualizado" });
   },
 );
