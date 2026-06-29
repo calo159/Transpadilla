@@ -18,6 +18,6 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
 
         // Deshabilita la depuración remota de WebView en release
-        WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
+        WebView.setWebContentsDebuggingEnabled(false);
     }
 }
