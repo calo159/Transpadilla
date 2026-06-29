@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { setAuth, getUser } from "@/lib/auth";
+import { apiFetch } from "@/lib/api";
 import { LogoTP } from "@/components/LogoTP";
 import { WHATSAPP_URL, INSTAGRAM_URL } from "@/lib/constants";
 import { useDocumentTitle } from "@/hooks/use-document-title";
@@ -31,9 +32,8 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await apiFetch("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ correo: c, password: p }),
       });
       if (!res.ok) { setError("Correo o contraseña incorrectos"); return; }
