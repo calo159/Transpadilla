@@ -8,7 +8,8 @@ import {
   Bus, MapPin, LogOut, Radio, AlertTriangle, X,
   Search, Clock, LogIn, Shield, ChevronRight, ChevronUp,
   Menu, MessageCircle, Instagram, LocateFixed, Loader2, Star, HelpCircle, Navigation, RefreshCw,
-  User, Map as MapIcon, Route as RouteIcon, Check, History, Download, Smartphone, Maximize2,
+  User, Map as MapIcon, Route as RouteIcon, Check, History, Download, Maximize2,
+  Share, SquarePlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,18 +121,29 @@ export default function Pasajero() {
   const [installOculto, setInstallOculto] = useState(
     () => typeof localStorage !== "undefined" && !!localStorage.getItem("tp_install_dismissed"),
   );
+  // El banner entra ~1.2s después de cargar (animado, sin competir con la carga inicial).
+  const [bannerVisible, setBannerVisible] = useState(false);
   useEffect(() => {
     const onPrompt = (e: Event) => { e.preventDefault(); setInstallEvt(e as BeforeInstallPrompt); };
     const onInstalled = () => { setInstallEvt(null); setInstallOculto(true); };
     window.addEventListener("beforeinstallprompt", onPrompt);
     window.addEventListener("appinstalled", onInstalled);
+    const t = setTimeout(() => setBannerVisible(true), 1200);
     return () => {
       window.removeEventListener("beforeinstallprompt", onPrompt);
       window.removeEventListener("appinstalled", onInstalled);
+      clearTimeout(t);
     };
   }, []);
-  const yaInstalada = typeof window !== "undefined" && window.matchMedia?.("(display-mode: standalone)").matches;
-  const mostrarInstall = !!installEvt && !installOculto && !yaInstalada;
+  // iPhone/iPad: Safari NO soporta beforeinstallprompt → se muestran instrucciones.
+  const esIOS = typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
+  // Ya instalada: standalone en Android/desktop o navigator.standalone en iOS.
+  const yaInstalada =
+    (typeof window !== "undefined" && window.matchMedia?.("(display-mode: standalone)").matches) ||
+    (typeof navigator !== "undefined" && "standalone" in navigator && (navigator as Navigator & { standalone?: boolean }).standalone === true);
+  // Dentro del APK (build con VITE_API_URL) no tiene sentido ofrecer instalar la PWA.
+  const enAPK = !!import.meta.env.VITE_API_URL;
+  const mostrarInstall = bannerVisible && !installOculto && !yaInstalada && !enAPK && (!!installEvt || esIOS);
   const instalarApp = async () => {
     if (!installEvt) return;
     await installEvt.prompt();
@@ -1575,22 +1587,52 @@ export default function Pasajero() {
           )}
         </div>
 
-        {/* Banner "Instalar app" (PWA) — sobre el bottom nav, descartable */}
+        {/* Banner "Instalar app" (PWA) — tarjeta de marca sobre el bottom nav, descartable */}
         {mostrarInstall && (
-          <div className="md:hidden fixed left-3 right-3 bottom-[84px] z-[1001] flex items-center gap-3 rounded-2xl px-3.5 py-3 shadow-xl animate-in fade-in slide-in-from-bottom-3 duration-300" style={{ background: "var(--color-navy)" }}>
-            <span className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,255,255,0.12)" }}>
-              <Smartphone className="w-5 h-5 text-white" />
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-white leading-tight">Instala TransPadilla</p>
-              <p className="text-[11px] text-white/70 leading-tight mt-0.5">Ábrela como app, sin abrir el navegador.</p>
-            </div>
-            <button onClick={instalarApp} className="flex items-center gap-1.5 px-3 h-9 rounded-xl text-sm font-bold flex-shrink-0 active:scale-95 transition-transform" style={{ background: "var(--color-gold)", color: "var(--color-navy)" }}>
-              <Download className="w-4 h-4" /> Instalar
-            </button>
-            <button onClick={descartarInstall} aria-label="Ahora no" className="p-1.5 -mr-1 flex-shrink-0 text-white/60 hover:text-white">
+          <div
+            className="md:hidden fixed left-3 right-3 bottom-[84px] z-[1001] rounded-2xl p-3.5 animate-in fade-in slide-in-from-bottom-4 duration-300 tp-gradient"
+            style={{ border: "1px solid rgba(245,183,49,0.45)", boxShadow: "var(--shadow-xl)" }}
+          >
+            <button
+              onClick={descartarInstall}
+              aria-label="Ahora no"
+              className="absolute top-2.5 right-2.5 p-1 rounded-lg text-white/55 hover:text-white active:scale-90 transition"
+            >
               <X className="w-4 h-4" />
             </button>
+            <div className="flex items-center gap-3 pr-6">
+              <span className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 bg-white shadow-md">
+                <LogoTP size={34} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="font-display text-[15px] font-extrabold text-white leading-tight">Instala TransPadilla</p>
+                <p className="text-[11.5px] text-white/75 leading-snug mt-0.5">
+                  Ábrela como app, más rápido y sin ocupar espacio.
+                </p>
+              </div>
+            </div>
+
+            {esIOS && !installEvt ? (
+              /* iOS: no hay diálogo nativo → instrucción visual */
+              <div
+                className="mt-3 flex items-center gap-2 rounded-xl px-3 py-2 text-[12px] font-semibold text-white"
+                style={{ background: "rgba(255,255,255,0.12)" }}
+              >
+                <span className="opacity-90">Toca</span>
+                <Share className="w-4 h-4 flex-shrink-0" style={{ color: "var(--color-gold)" }} />
+                <span className="opacity-90">y luego</span>
+                <SquarePlus className="w-4 h-4 flex-shrink-0" style={{ color: "var(--color-gold)" }} />
+                <span className="opacity-90 truncate">"Agregar a inicio"</span>
+              </div>
+            ) : (
+              <button
+                onClick={instalarApp}
+                className="mt-3 w-full flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-bold active:scale-[0.98] transition-transform"
+                style={{ background: "var(--color-gold)", color: "var(--color-navy)" }}
+              >
+                <Download className="w-4 h-4" /> Instalar la app
+              </button>
+            )}
           </div>
         )}
 
