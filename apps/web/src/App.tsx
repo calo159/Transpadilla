@@ -13,6 +13,8 @@ import Pasajero from "@/pages/Pasajero";
 const Login = lazy(() => import("@/pages/Login"));
 const Conductor = lazy(() => import("@/pages/Conductor"));
 const Admin = lazy(() => import("@/pages/Admin"));
+const Privacidad = lazy(() => import("@/pages/Privacidad"));
+const Terminos = lazy(() => import("@/pages/Terminos"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 setAuthTokenGetter(() => localStorage.getItem("transpadilla_token"));
@@ -50,6 +52,8 @@ function Router() {
         <Route path="/login" component={Login} />
         <Route path="/conductor" component={Conductor} />
         <Route path="/admin" component={Admin} />
+        <Route path="/privacidad" component={Privacidad} />
+        <Route path="/terminos" component={Terminos} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
