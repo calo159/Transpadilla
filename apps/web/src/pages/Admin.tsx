@@ -83,7 +83,7 @@ export default function Admin() {
   if (!user || user.rol !== "admin") return null;
 
   return (
-    <div className="tp-light flex h-screen overflow-hidden" style={{ background: "var(--color-gray-light)" }}>
+    <div className="tp-light tp-admin-bg flex h-screen overflow-hidden">
 
       {/* ─── DESKTOP SIDEBAR (navy, estilo Stitch) ───────────────────────── */}
       <div className="hidden md:flex flex-col w-60 min-w-60 text-white" style={{ background: "var(--color-navy)" }}>
