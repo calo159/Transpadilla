@@ -67,6 +67,21 @@ CREATE INDEX IF NOT EXISTS idx_ruta_paradas_ruta   ON ruta_paradas(ruta_id, orde
 CREATE INDEX IF NOT EXISTS idx_ruta_paradas_parada ON ruta_paradas(parada_id);
 CREATE INDEX IF NOT EXISTS idx_buses_ruta_estado   ON buses(ruta_id, estado);
 CREATE INDEX IF NOT EXISTS idx_buses_conductor     ON buses(conductor_id);
+
+-- Historial de posiciones (base de los reportes). Lo alimenta un job de snapshot
+-- cada ~60 s, no cada ping de GPS, para acotar el volumen de escritura.
+CREATE TABLE IF NOT EXISTS posiciones_historial (
+  id serial PRIMARY KEY,
+  bus_id integer NOT NULL REFERENCES buses(id) ON DELETE CASCADE,
+  ruta_id integer REFERENCES rutas(id) ON DELETE SET NULL,
+  lat real NOT NULL,
+  lng real NOT NULL,
+  velocidad real,
+  ocupacion varchar(10),
+  capturado timestamp NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_hist_bus_capturado  ON posiciones_historial(bus_id, capturado);
+CREATE INDEX IF NOT EXISTS idx_hist_ruta_capturado ON posiciones_historial(ruta_id, capturado);
 `;
 
 export async function ensureSchema(): Promise<void> {
