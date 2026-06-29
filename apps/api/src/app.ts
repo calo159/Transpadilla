@@ -92,13 +92,17 @@ const corsOrigins = (process.env["CORS_ORIGIN"] ?? "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+// El APK de Capacitor carga el bundle localmente, así que su WebView corre con
+// origen https://localhost (o capacitor://localhost): toda llamada a la API es
+// cross-origin y necesita CORS. La web servida desde el mismo dominio NO pasa por
+// CORS (same-origin), así que añadir estos orígenes no la afecta.
+const capacitorOrigins = ["https://localhost", "http://localhost", "capacitor://localhost"];
+const allowedOrigins = [...corsOrigins, ...capacitorOrigins];
 app.use(
   cors(
-    isProd && corsOrigins.length > 0
-      ? { origin: corsOrigins, credentials: true }
-      : isProd
-        ? { origin: false } // same-origin: no se necesitan cabeceras CORS
-        : {}, // desarrollo: permitir todo
+    isProd
+      ? { origin: allowedOrigins, credentials: true }
+      : {}, // desarrollo: permitir todo
   ),
 );
 
