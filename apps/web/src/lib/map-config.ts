@@ -19,6 +19,13 @@ export const TILES_URL =
 export const TILES_ATTRIBUTION =
   env.VITE_MAP_ATTRIBUTION ?? '© <a href="https://openstreetmap.org">OpenStreetMap</a>';
 
+// Zoom máximo del mapa (lo que el usuario puede acercar) y zoom máximo NATIVO de los
+// tiles (el último nivel que el proveedor realmente sirve). Si maxZoom > maxNativeZoom,
+// Leaflet ESCALA el último tile disponible en vez de mostrar blanco. OSM llega a z19;
+// MapTiler a z20 → en ese caso subir VITE_MAP_MAX_NATIVE_ZOOM=20.
+export const MAP_MAX_ZOOM = Number(env.VITE_MAP_MAX_ZOOM ?? 20);
+export const MAP_MAX_NATIVE_ZOOM = Number(env.VITE_MAP_MAX_NATIVE_ZOOM ?? 19);
+
 // Base del servicio OSRM (sin slash final). El de demo no es para producción.
 export const OSRM_URL = (
   env.VITE_OSRM_URL ?? "https://router.project-osrm.org"
