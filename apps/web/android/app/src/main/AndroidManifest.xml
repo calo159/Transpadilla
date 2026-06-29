@@ -8,14 +8,19 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:networkSecurityConfig="@xml/network_security_config"
-        android:usesCleartextTraffic="false">
+        android:usesCleartextTraffic="false"
+        android:extractNativeLibs="false"
+        android:debuggable="false">
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
-            android:exported="true">
+            android:exported="true"
+            android:taskAffinity=""
+            android:allowTaskReparenting="false"
+            android:excludeFromRecents="false">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

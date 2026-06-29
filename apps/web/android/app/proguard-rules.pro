@@ -21,3 +21,22 @@
 # Suprimir avisos de librerías de terceros
 -dontwarn org.apache.cordova.**
 -dontwarn com.getcapacitor.**
+
+# Eliminar todas las llamadas a Log.* en release (no dejar trazas en logcat)
+-assumenosideeffects class android.util.Log {
+    public static boolean isLoggable(java.lang.String, int);
+    public static int v(...);
+    public static int i(...);
+    public static int w(...);
+    public static int d(...);
+    public static int e(...);
+}
+
+# Ofuscación agresiva: renombrar clases y métodos internos
+-repackageclasses 'co.transpadilla.internal'
+-allowaccessmodification
+-overloadaggressively
+
+# Eliminar atributos de depuración del bytecode
+-renamesourcefileattribute SourceFile
+-keepattributes SourceFile,LineNumberTable
