@@ -68,3 +68,8 @@ __pycache__/
 
 # Capacitor iOS (solo si se añade)
 apps/web/ios/
+
+# Android keystore y propiedades de firma (contienen contraseñas — NO subir)
+*.keystore
+*.jks
+keystore.properties
