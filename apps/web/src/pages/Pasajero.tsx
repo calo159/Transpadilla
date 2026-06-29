@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useGetRutas, useGetBuses, getGetBusesQueryKey } from "@workspace/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 import { clearAuth, getUser } from "@/lib/auth";
+import { apiFetch } from "@/lib/api";
 import {
   Bus, MapPin, LogOut, Radio, AlertTriangle, X,
   Search, Clock, LogIn, Shield, ChevronRight, ChevronUp,
@@ -533,7 +534,7 @@ export default function Pasajero() {
     let cancelado = false;
     const cargarEta = async () => {
       try {
-        const res = await fetch(`/api/rutas/${selectedRutaId}/eta`);
+        const res = await apiFetch(`/api/rutas/${selectedRutaId}/eta`);
         if (!res.ok || cancelado) return;
         const data = (await res.json()) as {
           paradas: { parada_id: number; eta_min: number | null; placa: string | null }[];
