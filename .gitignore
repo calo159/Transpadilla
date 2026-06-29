@@ -56,7 +56,7 @@ Thumbs.db
 .env.local
 .env.*.local
 
-# Python (solo el generador de la propuesta en docs/)
+# Python
 __pycache__/
 *.py[cod]
 

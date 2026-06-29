@@ -7,8 +7,7 @@ Hay dos caminos; elige según presupuesto y capacidad técnica.
 
 ## Opción A — Render (la más simple)
 Ya está soportada con [`render.yaml`](../render.yaml). Para uso real:
-1. Subir a planes **de pago** (los gratuitos se duermen). Ver costos en
-   [`PROPUESTA-ALCALDIA.md`](PROPUESTA-ALCALDIA.md).
+1. Subir a planes **de pago** (los gratuitos se duermen).
 2. En el servicio `transpadilla-web`, para arrancar sin datos demo:
    `SEED_DEMO=false`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
 3. Activar **backups** de la base (plan de pago de PostgreSQL) y un monitor de uptime.
@@ -55,7 +54,7 @@ Todo en **un solo servidor** (DigitalOcean/Hetzner/AWS Lightsail, ~US$6–12/mes
   `https://tu-dominio/api/readyz` (verifica también la base de datos).
 - **Mapas y rutas con SLA**: define en el build del frontend
   `VITE_MAP_TILES_URL`, `VITE_MAP_ATTRIBUTION` y `VITE_OSRM_URL` para usar un
-  proveedor con garantía o un OSRM propio (ver propuesta). Por defecto usa los
+  proveedor con garantía o un OSRM propio. Por defecto usa los
   servidores públicos de demostración (no recomendados para producción).
 - **Actualizaciones**: `git pull && docker compose up -d --build`. La PWA del
   frontend se auto-actualiza en los dispositivos.

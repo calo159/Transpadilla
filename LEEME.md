@@ -70,8 +70,6 @@ packages/
   api-types/      → Tipos Zod generados
   api-spec/       → Especificación OpenAPI + orval
 docs/
-  PROPUESTA-ALCALDIA.md       → Presupuesto y propuesta para la Alcaldía
-  generar-propuesta-word.py   → Genera la propuesta en Word (.docx)
   DESPLIEGUE-PRODUCCION.md    → Guía para despliegue 24/7 (VPS / Render)
   CAPACITOR-ANDROID.md        → App nativa Android (APK conductor)
 ```
