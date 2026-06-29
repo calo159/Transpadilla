@@ -38,6 +38,9 @@ export default function Pasajero() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useLeafletMap(mapContainerRef, { zoom: 13 });
   const markersRef = useRef<Record<number, L.Marker>>({});
+  // Firma visual del último ícono/popup pintado por bus: si no cambia, en un ping
+  // que solo mueve el bus evitamos reconstruir el DOM (setIcon/setPopupContent).
+  const markerSigRef = useRef<Record<number, string>>({});
   const routeLayersRef = useRef<Record<number, L.Polyline>>({});
   const stopMarkersRef = useRef<Array<{ rutaId: number; marker: L.Marker }>>([]);
   const socketRef = useRef<Socket | null>(null);
@@ -285,6 +288,24 @@ export default function Pasajero() {
       const etaVals = Object.values(etaRef.current).filter((v) => v.placa === placa);
       const busEta = etaVals.length ? Math.min(...etaVals.map((v) => v.eta)) : null;
 
+      const seguido = siguiendoBusRef.current === busId;
+
+      // Si estamos siguiendo este bus, centrar el mapa en su nueva posición.
+      if (seguido && mapRef.current) {
+        mapRef.current.panTo([lat, lng]);
+      }
+
+      const existente = markersRef.current[busId];
+
+      // Firma de todo lo que afecta el ícono/popup. Si no cambió y el marcador ya
+      // existe, basta mover (setLatLng) sin reconstruir el DOM (evita parpadeo y CPU).
+      const sig = `${placaSafe}|${color}|${bus?.ocupacion ?? ""}|${bus?.novedad ?? ""}|${seguido ? 1 : 0}|${busEta ?? ""}|${Math.round(vel)}|${routeName}`;
+      if (existente && markerSigRef.current[busId] === sig) {
+        existente.setLatLng([lat, lng]);
+        return;
+      }
+      markerSigRef.current[busId] = sig;
+
       // ── Ícono: cuerpo con color de ruta + placa; punto de ocupación en la esquina ──
       const ocupDot = ocup ? ocup.color : "#9CA3AF"; // gris si no hay dato
       // Íconos SVG inline (sin emoji, regla del UI skill).
@@ -294,7 +315,6 @@ export default function Pasajero() {
         ? `<span style="position:absolute;top:-6px;right:-6px;width:15px;height:15px;border-radius:50%;background:#F5B731;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.4)">${svgAlerta}</span>`
         : "";
       // Halo pulsante cuando el pasajero sigue este bus (sensación "en vivo").
-      const seguido = siguiendoBusRef.current === busId;
       const haloRing = seguido ? "box-shadow:0 4px 14px rgba(0,0,0,.4),0 0 0 4px rgba(245,183,49,.9),0 0 0 9px rgba(245,183,49,.35);" : "box-shadow:0 4px 14px rgba(0,0,0,.4);";
       const icon = L.divIcon({
         className: seguido ? "tp-bus-seguido" : "",
@@ -339,15 +359,10 @@ export default function Pasajero() {
           <div style="color:#94a3b8;font-size:11px;margin-top:7px;border-top:1px solid #eef2f7;padding-top:5px">Tarifa: ${TARIFA_COP} COP</div>
         </div>`;
 
-      // Si estamos siguiendo este bus, centrar el mapa en su nueva posición.
-      if (siguiendoBusRef.current === busId && mapRef.current) {
-        mapRef.current.panTo([lat, lng]);
-      }
-
-      if (markersRef.current[busId]) {
-        markersRef.current[busId]!.setLatLng([lat, lng]);
-        markersRef.current[busId]!.setIcon(icon);
-        markersRef.current[busId]!.setPopupContent(popupContent);
+      if (existente) {
+        existente.setLatLng([lat, lng]);
+        existente.setIcon(icon);
+        existente.setPopupContent(popupContent);
       } else {
         const marker = L.marker([lat, lng], { icon }).bindPopup(popupContent).addTo(mapRef.current!);
         if (rutaId) marker.on("click", () => {
@@ -380,6 +395,7 @@ export default function Pasajero() {
       if (!vivos.has(id)) {
         markersRef.current[id]?.remove();
         delete markersRef.current[id];
+        delete markerSigRef.current[id];
         if (siguiendoBusRef.current === id) setSiguiendoBusId(null);
       }
     });
@@ -396,8 +412,9 @@ export default function Pasajero() {
     socket.on("disconnect", () => setConectado(false));
     socket.io.on("reconnect", () => setConectado(true));
     socket.on("bus:ubicacion", (data: BusLocation) => {
-      // Mantener el conteo de buses vivos al día aunque no haya ruta seleccionada.
-      queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
+      // NO se invalida la lista en cada ping (sería una recarga de /api/buses por
+      // cada actualización de GPS). El poll cada 10s y los eventos de novedad/
+      // ocupación mantienen los metadatos al día; aquí solo movemos el marcador.
       // Solo se pinta el bus si pertenece a la ruta seleccionada.
       if (selectedRutaIdRef.current === null || data.rutaId !== selectedRutaIdRef.current) return;
       const bus = busesRef.current.find((b) => b.id === data.busId);

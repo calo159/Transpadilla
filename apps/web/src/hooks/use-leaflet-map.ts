@@ -1,7 +1,7 @@
 import { useEffect, useRef, type RefObject } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { TILES_URL, TILES_ATTRIBUTION } from "@/lib/map-config";
+import { TILES_URL, TILES_ATTRIBUTION, MAP_MAX_ZOOM, MAP_MAX_NATIVE_ZOOM } from "@/lib/map-config";
 
 /** Centro por defecto del mapa: Riohacha, La Guajira. */
 export const RIOHACHA_CENTRO: [number, number] = [11.5444, -72.9072];
@@ -20,7 +20,7 @@ export function useLeafletMap(
 
   useEffect(() => {
     if (containerRef.current && !mapRef.current) {
-      const map = L.map(containerRef.current, { zoomControl: false, minZoom: 10, maxZoom: 21 })
+      const map = L.map(containerRef.current, { zoomControl: false, minZoom: 10, maxZoom: MAP_MAX_ZOOM })
         .setView(options?.center ?? RIOHACHA_CENTRO, options?.zoom ?? 14);
       L.tileLayer(TILES_URL, {
         attribution: TILES_ATTRIBUTION,
@@ -28,6 +28,10 @@ export function useLeafletMap(
         updateWhenIdle: true,
         updateWhenZooming: false,
         keepBuffer: 2,
+        // Permite acercar más allá del último nivel de tiles: Leaflet escala el tile
+        // disponible en vez de mostrar el mapa en blanco.
+        maxZoom: MAP_MAX_ZOOM,
+        maxNativeZoom: MAP_MAX_NATIVE_ZOOM,
       }).addTo(map);
       L.control.zoom({ position: "bottomright" }).addTo(map);
       mapRef.current = map;
