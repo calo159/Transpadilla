@@ -24,6 +24,14 @@ services:
   - type: web
     name: transpadilla-web
     runtime: node
+    # ── PLAN ────────────────────────────────────────────────────────────────
+    # free   → pruebas/demo. Se DUERME tras inactividad y NO sostiene 2.000
+    #          usuarios simultáneos (512 MB). Sirve para el piloto inicial.
+    # Para PRODUCCIÓN con tráfico real (hasta 70 buses / 2.000+ usuarios),
+    # cambia esta línea a:  plan: standard   (~US$25/mes, ~2 GB RAM, sin dormir).
+    # Alternativa intermedia: plan: starter  (~US$7/mes). Recomendado: standard.
+    # (Cambiar el plan aquí y volver a aplicar el Blueprint, o ajustarlo en el
+    #  panel de Render → Settings → Instance Type.)
     plan: free
     region: oregon
     # --prod=false fuerza instalar tambien las devDependencies (vite, esbuild…),
@@ -56,3 +64,7 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
+      # Opcional (producción): tamaño del pool de conexiones a la BD. El código
+      # usa 20 por defecto; súbelo solo si el plan de Supabase admite más.
+      # - key: DB_POOL_MAX
+      #   value: "20"
