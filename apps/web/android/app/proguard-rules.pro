@@ -1,21 +1,23 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Capacitor — conservar clases del bridge WebView
+-keep class com.getcapacitor.** { *; }
+-keep class co.transpadilla.app.** { *; }
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Background Geolocation plugin
+-keep class com.equimaps.capacitorbackgroundgeolocation.** { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Cordova plugins bridge
+-keep class org.apache.cordova.** { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Evitar que R8 elimine anotaciones de Kotlin/AndroidX
+-keepattributes *Annotation*
+-keepattributes Signature
+-keepattributes Exceptions
+
+# WebView JavaScript interface
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# Suprimir avisos de librerías de terceros
+-dontwarn org.apache.cordova.**
+-dontwarn com.getcapacitor.**

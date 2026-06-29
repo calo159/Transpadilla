@@ -17,12 +17,15 @@ const config: CapacitorConfig = {
   appId: "co.transpadilla.app",
   appName: "TransPadilla",
   webDir: "dist/public",
-  // Fase 2 (GPS en segundo plano): usa bundle local. Para volver al shell remoto
-  // descomenta el bloque server y comenta el import de BackgroundGeolocation.
-  // server: {
-  //   url: "https://transpadilla-web.onrender.com",
-  //   cleartext: false,
-  // },
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 1800,
+      backgroundColor: "#1B3B6F",
+      showSpinner: false,
+      splashFullScreen: true,
+      splashImmersive: true,
+    },
+  },
 };
 
 export default config;
