@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.WindowManager;
 import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
+import co.transpadilla.app.BuildConfig;
 
 public class MainActivity extends BridgeActivity {
 
