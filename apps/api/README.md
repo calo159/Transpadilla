@@ -17,7 +17,7 @@ src/
                     stats.ts, health.ts, seed.ts
   middleware/     auth (JWT + requireRol), bus-autorizado, rate-limit, validate
   lib/            socket (salas), historial (snapshot), init-db (esquema idempotente),
-                  eta-calc, geo (Haversine), cache (TTL), sentry, logger
+                  eta-calc, geo (Haversine), cache (TTL), logger
 test/             Vitest + Supertest (integración corre si hay DATABASE_URL)
 ```
 
