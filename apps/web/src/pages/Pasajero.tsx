@@ -378,7 +378,10 @@ export default function Pasajero() {
 
   // Socket.IO — se conecta UNA sola vez (lee busesRef para datos actuales).
   useEffect(() => {
-    const socket = io({ path: "/socket.io", transports: ["websocket", "polling"] });
+    const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
+    const socket = apiUrl
+      ? io(apiUrl, { path: "/socket.io", transports: ["websocket", "polling"] })
+      : io({ path: "/socket.io", transports: ["websocket", "polling"] });
     socketRef.current = socket;
     socket.on("connect", () => setConectado(true));
     socket.on("disconnect", () => setConectado(false));
