@@ -48,6 +48,9 @@ export default function Pasajero() {
   const queryClient = useQueryClient();
 
   const [selectedRutaId, setSelectedRutaId] = useState<number | null>(null);
+  // Espejo de la ruta seleccionada para leerlo dentro del handler del socket
+  // (que se monta una sola vez y de otro modo capturaría un valor obsoleto).
+  const selectedRutaIdRef = useRef<number | null>(null);
   const [etaPorParada, setEtaPorParada] = useState<Record<number, { eta: number; placa: string }>>({});
   // "Seguir mi bus": el mapa hace pan automático al bus elegido cuando se mueve.
   const [siguiendoBusId, setSiguiendoBusId] = useState<number | null>(null);
@@ -357,16 +360,19 @@ export default function Pasajero() {
     []
   );
 
-  // Sincroniza los marcadores con los buses: dibuja los activos con coordenadas y
-  // ELIMINA los que ya no están en circulación (evita "buses fantasma" en el mapa).
+  // Sincroniza los marcadores con los buses: dibuja SOLO los de la ruta
+  // seleccionada (sin ruta seleccionada no se muestra ninguno) y ELIMINA los que
+  // ya no corresponden (evita "buses fantasma" en el mapa).
   useEffect(() => {
     const vivos = new Set<number>();
-    buses.forEach((b) => {
-      if (b.lat != null && b.lng != null && b.estado !== "inactivo") {
-        vivos.add(b.id);
-        updateBusMarker(b.id, b.lat, b.lng, b.color_ruta ?? "#2558A5", b.placa, b.ruta_id ?? undefined);
-      }
-    });
+    if (selectedRutaId !== null) {
+      buses.forEach((b) => {
+        if (b.ruta_id === selectedRutaId && b.lat != null && b.lng != null && b.estado !== "inactivo") {
+          vivos.add(b.id);
+          updateBusMarker(b.id, b.lat, b.lng, b.color_ruta ?? "#2558A5", b.placa, b.ruta_id ?? undefined);
+        }
+      });
+    }
     Object.keys(markersRef.current).forEach((idStr) => {
       const id = Number(idStr);
       if (!vivos.has(id)) {
@@ -375,7 +381,7 @@ export default function Pasajero() {
         if (siguiendoBusRef.current === id) setSiguiendoBusId(null);
       }
     });
-  }, [buses, updateBusMarker]);
+  }, [buses, updateBusMarker, selectedRutaId]);
 
   // Socket.IO — se conecta UNA sola vez (lee busesRef para datos actuales).
   useEffect(() => {
@@ -388,9 +394,12 @@ export default function Pasajero() {
     socket.on("disconnect", () => setConectado(false));
     socket.io.on("reconnect", () => setConectado(true));
     socket.on("bus:ubicacion", (data: BusLocation) => {
+      // Mantener el conteo de buses vivos al día aunque no haya ruta seleccionada.
+      queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
+      // Solo se pinta el bus si pertenece a la ruta seleccionada.
+      if (selectedRutaIdRef.current === null || data.rutaId !== selectedRutaIdRef.current) return;
       const bus = busesRef.current.find((b) => b.id === data.busId);
       updateBusMarker(data.busId, data.lat, data.lng, bus?.color_ruta ?? "#2558A5", bus?.placa ?? "BUS", data.rutaId);
-      queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
     });
     socket.on("bus:novedad", (data: Novedad) => {
       // Refresca los buses para que el ⚠ aparezca/desaparezca en el marcador.
@@ -562,6 +571,8 @@ export default function Pasajero() {
 
   // Mantener el ref sincronizado para el pan dentro de updateBusMarker.
   useEffect(() => { siguiendoBusRef.current = siguiendoBusId; }, [siguiendoBusId]);
+  // Espejo de la ruta seleccionada para el handler del socket.
+  useEffect(() => { selectedRutaIdRef.current = selectedRutaId; }, [selectedRutaId]);
   // Espejo del ETA para el popup del bus (updateBusMarker no depende del estado).
   useEffect(() => { etaRef.current = etaPorParada; }, [etaPorParada]);
 
