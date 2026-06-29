@@ -68,3 +68,14 @@ services:
       # usa 20 por defecto; súbelo solo si el plan de Supabase admite más.
       # - key: DB_POOL_MAX
       #   value: "20"
+      # ── Cloudflare (anti-DDoS) — requiere un DOMINIO PROPIO. Guía completa:
+      #    docs/CLOUDFLARE.md. Descomenta cuando el sitio ya pase por Cloudflare.
+      # BEHIND_CLOUDFLARE=true → la app toma la IP real de CF-Connecting-IP para el
+      # rate-limit (en vez de la IP de Cloudflare).
+      # - key: BEHIND_CLOUDFLARE
+      #   value: "true"
+      # CLOUDFLARE_ORIGIN_SECRET → /api solo acepta requests que traigan este secreto
+      # en la cabecera x-cf-origin-secret (inyectada por un Transform Rule de
+      # Cloudflare). Impide esquivar Cloudflare golpeando el origen directo. sync:false.
+      # - key: CLOUDFLARE_ORIGIN_SECRET
+      #   sync: false
