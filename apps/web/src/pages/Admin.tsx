@@ -9,13 +9,14 @@ import { getUser, clearAuth, homeForRol } from "@/lib/auth";
 import {
   Bus, LogOut, Map, MapPin, BarChart3,
   RefreshCw, Users, Route,
-  Radio, UserCheck, KeyRound,
+  Radio, UserCheck, KeyRound, LineChart,
 } from "lucide-react";
 import DashboardTab from "./admin/DashboardTab";
 import RutasTab from "./admin/RutasTab";
 import BusesTab from "./admin/BusesTab";
 import ParadasTab from "./admin/ParadasTab";
 import ConductoresTab from "./admin/ConductoresTab";
+import ReportesTab from "./admin/ReportesTab";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { LogoTP } from "@/components/LogoTP";
@@ -24,7 +25,7 @@ import { PromptDialog, type PromptOpts } from "@/components/PromptDialog";
 import { CambiarPasswordDialog } from "@/components/CambiarPasswordDialog";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 
-type Tab = "dashboard" | "rutas" | "buses" | "paradas" | "conductores";
+type Tab = "dashboard" | "rutas" | "buses" | "paradas" | "conductores" | "reportes";
 
 export default function Admin() {
   useDocumentTitle("Panel admin · TransPadilla");
@@ -67,6 +68,7 @@ export default function Admin() {
     { id: "buses"       as Tab, label: "Buses",       icon: <Bus className="w-4 h-4" /> },
     { id: "paradas"     as Tab, label: "Paradas",     icon: <MapPin className="w-4 h-4" /> },
     { id: "conductores" as Tab, label: "Conductores", icon: <UserCheck className="w-4 h-4" /> },
+    { id: "reportes"    as Tab, label: "Reportes",    icon: <LineChart className="w-4 h-4" /> },
   ];
 
 
@@ -76,6 +78,7 @@ export default function Admin() {
     buses:       "Gestión de Buses",
     paradas:     "Gestión de Paradas",
     conductores: "Conductores",
+    reportes:    "Reportes",
   };
 
   // Evita que el panel admin se muestre (aunque sea un instante) a quien no es admin;
@@ -234,6 +237,9 @@ export default function Admin() {
           {tab === "conductores" && (
             <ConductoresTab buses={buses} setConfirmar={setConfirmar} />
           )}
+
+          {/* REPORTES */}
+          {tab === "reportes" && <ReportesTab />}
 
         </div>
       </div>

@@ -7,6 +7,7 @@ import rutasRouter from "./rutas";
 import paradasRouter from "./paradas";
 import etaRouter from "./eta";
 import statsRouter from "./stats";
+import reportesRouter from "./reportes";
 import seedRouter from "./seed";
 
 const router: IRouter = Router();
@@ -19,6 +20,7 @@ router.use(rutasRouter);
 router.use(paradasRouter);
 router.use(etaRouter);
 router.use(statsRouter);
+router.use(reportesRouter);
 router.use(seedRouter);
 
 export default router;

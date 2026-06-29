@@ -3,6 +3,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { initSocketIO } from "./lib/socket";
 import { initDatabase } from "./lib/init-db";
+import { iniciarHistorial } from "./lib/historial";
 
 const rawPort = process.env["PORT"] ?? "8080";
 const port = Number(rawPort);
@@ -52,6 +53,9 @@ async function main(): Promise<void> {
 
   initSocketIO(httpServer);
 
+  // Job de historial (snapshot de posiciones para los reportes). Devuelve el stop.
+  const detenerHistorial = iniciarHistorial();
+
   httpServer.listen(port, () => {
     logger.info({ port }, "Server listening");
     logResumenSeguridad();
@@ -61,6 +65,7 @@ async function main(): Promise<void> {
   // (24/7), cerramos el servidor sin cortar peticiones en curso de golpe.
   const apagar = (señal: string) => {
     logger.info({ señal }, "Shutting down gracefully");
+    detenerHistorial();
     httpServer.close(() => process.exit(0));
     // Tope de seguridad por si una conexión queda colgada.
     setTimeout(() => process.exit(0), 10_000).unref();

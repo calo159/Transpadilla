@@ -91,6 +91,25 @@ suite("API (integración)", () => {
     expect(reLogin.status).toBe(200);
   });
 
+  it("reportes: público no puede; admin recibe el resumen", async () => {
+    // Sin token → 401
+    const anon = await request(app).get("/api/reportes/resumen");
+    expect(anon.status).toBe(401);
+
+    // Admin (sembrado con SEED_DEMO=true) → 200 con la forma esperada
+    const login = await request(app)
+      .post("/api/auth/login")
+      .send({ correo: "admin@transpadilla.co", password: "admin123" });
+    if (login.status !== 200) return; // sin admin demo, nada que comprobar
+    const token = login.body.token as string;
+    const res = await request(app)
+      .get("/api/reportes/resumen?dias=7")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("km_total");
+    expect(Array.isArray(res.body.rutas)).toBe(true);
+  });
+
   it("GET /api/rutas/:id/eta devuelve la forma esperada", async () => {
     const rutas = await request(app).get("/api/rutas");
     expect(rutas.status).toBe(200);
