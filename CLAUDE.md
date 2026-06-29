@@ -19,7 +19,7 @@ packages/
   api-types/    Tipos Zod generados con orval
   api-spec/     OpenAPI spec + orval.config.ts (fuente de verdad del API)
 scripts/        post-merge.sh (hook git) + @workspace/scripts (placeholder)
-docs/           Guías de despliegue, propuesta alcaldía, Capacitor Android
+docs/           Guías de despliegue, seguridad, Capacitor Android, mapa
 .github/        Workflow de CI (typecheck, build, test, audit)
 ```
 

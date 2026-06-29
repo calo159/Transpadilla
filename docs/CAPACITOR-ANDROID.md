@@ -84,5 +84,3 @@ Para que el GPS transmita con la **pantalla apagada / app en segundo plano** hay
   cargado y con permisos correctos.
 - **Rastreador GPS dedicado**: máxima confiabilidad, transmite solo; tiene costo por
   bus. Recomendado para flota 24/7.
-
-Ver comparación y costos en [`PROPUESTA-ALCALDIA.md`](PROPUESTA-ALCALDIA.md).
