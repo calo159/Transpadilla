@@ -849,8 +849,8 @@ export default function Pasajero() {
   // ─── SIDEBAR DESKTOP ────────────────────────────────────────────────────────
   const DesktopSidebar = () => (
     <div
-      className="hidden md:flex flex-col bg-white overflow-hidden transition-all duration-300 ease-in-out"
-      style={{ width: sidebarOpen ? 310 : 0, minWidth: sidebarOpen ? 310 : 0, borderRight: "1px solid #e5e7eb" }}
+      className="hidden md:flex flex-col overflow-hidden transition-all duration-300 ease-in-out"
+      style={{ width: sidebarOpen ? 310 : 0, minWidth: sidebarOpen ? 310 : 0, borderRight: "1px solid #e5e7eb", background: "#E8EDF4" }}
     >
       {/* Stats en vivo */}
       <div className="flex items-center gap-3 px-4 py-2.5 text-xs shrink-0" style={{ borderBottom: "1px solid #f1f5f9" }}>
@@ -884,7 +884,7 @@ export default function Pasajero() {
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar ruta..."
             className="pl-8 h-9 text-xs rounded-lg border-gray-200"
-            style={{ background: "#f8fafc", color: "var(--color-navy)" }}
+            style={{ background: "#fff", color: "var(--color-navy)" }}
           />
           {busqueda && (
             <button onClick={() => setBusqueda("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground">
@@ -1127,7 +1127,7 @@ export default function Pasajero() {
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-semibold transition-colors"
-            style={{ background: "#f8fafc", color: "var(--color-navy)", border: "1px solid #e5e7eb" }}
+            style={{ background: "#fff", color: "var(--color-navy)", border: "1px solid #e5e7eb" }}
           >
             <Instagram className="w-3.5 h-3.5" />Instagram
           </a>
@@ -1135,7 +1135,7 @@ export default function Pasajero() {
       </div>
 
       {/* Footer usuario */}
-      <div className="px-4 py-3 shrink-0" style={{ borderTop: "1px solid #f1f5f9", background: "#f8fafc" }}>
+      <div className="px-4 py-3 shrink-0" style={{ borderTop: "1px solid #f1f5f9", background: "#E8EDF4" }}>
         {user ? (
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
