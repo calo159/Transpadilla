@@ -1185,6 +1185,11 @@ export default function Pasajero() {
             <ChevronRight className="w-3.5 h-3.5" style={{ color: "var(--color-gray-text)" }} />
           </button>
         )}
+        <div className="flex items-center justify-center gap-2 mt-2.5 text-[10px]" style={{ color: "var(--color-gray-text)" }}>
+          <a href="/privacidad" className="hover:underline">Privacidad</a>
+          <span>·</span>
+          <a href="/terminos" className="hover:underline">Términos</a>
+        </div>
       </div>
     </div>
   );

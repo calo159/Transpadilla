@@ -217,9 +217,11 @@ export default function Login() {
           <p className="text-[11px] text-white/30 tracking-wider">
             TransPadilla © {new Date().getFullYear()} · Riohacha, La Guajira
           </p>
-          <p className="text-[10px] text-white/20">
-            Muévete siempre con seguridad
-          </p>
+          <div className="flex items-center justify-center gap-3 text-[10px] text-white/40">
+            <a href="/privacidad" className="hover:text-white/70 transition-colors">Privacidad</a>
+            <span>·</span>
+            <a href="/terminos" className="hover:text-white/70 transition-colors">Términos</a>
+          </div>
         </div>
       </div>
     </div>
