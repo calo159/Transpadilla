@@ -254,8 +254,8 @@ export default function Conductor() {
   if (!user || user.rol !== "conductor") return null;
 
   return (
-    <div className="tp-light min-h-screen" style={{ background: "var(--color-gray-light)" }}>
-      <div className="max-w-md mx-auto flex flex-col min-h-screen">
+    <div className="tp-light tp-conductor-bg min-h-screen">
+      <div className="tp-conductor-panel max-w-md mx-auto flex flex-col min-h-screen">
         {/* Header navy (estilo Stitch) */}
         <header className="flex items-center justify-between px-3 shrink-0" style={{ background: "var(--color-navy)", height: 56 }}>
           <button onClick={() => setLocation("/")} className="text-white p-2.5 -ml-1 active:scale-90 transition-transform" aria-label="Volver al mapa" title="Volver al mapa">

@@ -210,6 +210,29 @@
 /* Fuente de títulos (marca): Plus Jakarta Sans con caída a Inter. */
 .font-display { font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif; letter-spacing: -0.015em; }
 
+/* ── Fondos de las vistas de gestión (admin/conductor) ──────────────────────────
+   En móvil quedan claros (pantalla pequeña, sin deslumbrar); en PC se atenúan para
+   que las grandes superficies no se vean tan brillantes en monitores grandes. */
+.tp-admin-bg     { background: #F4F6F9; }
+.tp-conductor-bg { background: #EEF1F6; }
+@media (min-width: 768px) {
+  /* Admin: el área de contenido pasa a un gris-azulado más suave. */
+  .tp-admin-bg { background: #E4E9F1; }
+  /* Conductor: telón navy de marca; la columna central flota como una "app",
+     eliminando la pared casi blanca de los costados. */
+  .tp-conductor-bg {
+    background: radial-gradient(ellipse at 50% -20%, #21477f 0%, #16335f 52%, #0e2245 100%);
+    padding: 2rem 0;
+  }
+  .tp-conductor-panel {
+    min-height: 0 !important;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: var(--shadow-2xl);
+    background: #EEF1F6;
+  }
+}
+
 @layer base {
   * { @apply border-border; }
   body {
