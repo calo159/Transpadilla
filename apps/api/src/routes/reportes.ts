@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { pool } from "@workspace/db";
 import { authMiddleware, requireRol } from "../middleware/auth";
+import { calcularFrecuencia, type MuestraFrec } from "../lib/frecuencia";
 
 // Reportes históricos para el panel admin (km recorridos, ocupación, actividad).
 // Se calculan sobre posiciones_historial (alimentada por el job de snapshot).
@@ -65,6 +66,37 @@ router.get("/reportes/resumen", authMiddleware, requireRol("admin"), async (req,
     km_total: Math.round(porRuta.reduce((s, r) => s + r.km, 0) * 10) / 10,
     buses_activos: porRuta.reduce((s, r) => Math.max(s, r.buses), 0),
     rutas: porRuta,
+  });
+});
+
+// Frecuencia estimada (headway = intervalo entre buses) como PROXY del tiempo de
+// espera. No hay dato real de espera; se aproxima desde el historial. Ver frecuencia.ts.
+router.get("/reportes/frecuencia", authMiddleware, requireRol("admin"), async (req, res) => {
+  const dias = diasParam(req.query["dias"]);
+  const { rows } = await pool.query(
+    `SELECT ruta_id, bus_id, capturado
+       FROM posiciones_historial
+       WHERE capturado >= now() - ($1 || ' days')::interval AND ruta_id IS NOT NULL
+       ORDER BY capturado`,
+    [String(dias)],
+  );
+  const muestras: MuestraFrec[] = rows.map((r) => ({
+    rutaId: r.ruta_id as number,
+    busId: r.bus_id as number,
+    t: new Date(r.capturado as string).getTime(),
+  }));
+  const { global_headway_min, rutas } = calcularFrecuencia(muestras);
+
+  // Une los nombres de ruta (para mostrarlos en el panel).
+  const nombres = await pool.query(`SELECT id, nombre FROM rutas`);
+  const nombreDe = new Map<number, string>(nombres.rows.map((r) => [r.id as number, r.nombre as string]));
+
+  res.json({
+    dias,
+    // Espera estimada ≈ headway / 2 (aproximación; se etiqueta como estimado en la UI).
+    espera_estimada_min: global_headway_min !== null ? Math.round((global_headway_min / 2) * 10) / 10 : null,
+    global_headway_min,
+    rutas: rutas.map((r) => ({ ...r, nombre: nombreDe.get(r.ruta_id) ?? `Ruta ${r.ruta_id}` })),
   });
 });
 
