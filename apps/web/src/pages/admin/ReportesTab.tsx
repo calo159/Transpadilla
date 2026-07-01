@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, CartesianGrid,
 } from "recharts";
-import { Route as RouteIcon, Gauge, Users, Loader2, BarChart3 } from "lucide-react";
+import { Route as RouteIcon, Gauge, Users, Loader2, BarChart3, FileDown, FileText } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
 interface ResumenRuta {
@@ -34,6 +34,81 @@ async function getJson<T>(path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
+const hoyISO = () => new Date().toISOString().slice(0, 10);
+
+/** Escapa un campo para CSV (comillas si trae coma/comilla/salto de línea). */
+function csvCampo(v: string | number): string {
+  const s = String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+/** Descarga los datos en pantalla como CSV. */
+function descargarCSV(resumen: Resumen, ocup: Ocupacion) {
+  const lineas: string[] = [];
+  lineas.push(`TransPadilla - Reporte (${resumen.dias} dias) - ${hoyISO()}`);
+  lineas.push("");
+  lineas.push("Kilometros recorridos por ruta");
+  lineas.push(["Ruta", "Km", "Muestras", "Buses"].join(","));
+  for (const r of resumen.rutas) {
+    lineas.push([csvCampo(r.nombre), r.km, r.muestras, r.buses].join(","));
+  }
+  lineas.push(["TOTAL", resumen.km_total, "", resumen.buses_activos].join(","));
+  lineas.push("");
+  lineas.push("Reportes de ocupacion");
+  lineas.push(["Nivel", "Muestras"].join(","));
+  lineas.push(["Vacio", ocup.vacio].join(","));
+  lineas.push(["Medio", ocup.medio].join(","));
+  lineas.push(["Lleno", ocup.lleno].join(","));
+
+  const blob = new Blob(["﻿" + lineas.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `reporte-transpadilla-${hoyISO()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Genera un PDF simple con jspdf (import dinámico para no cargar el bundle público). */
+async function descargarPDF(resumen: Resumen, ocup: Ocupacion) {
+  const { jsPDF } = await import("jspdf");
+  const autoTable = (await import("jspdf-autotable")).default;
+  const doc = new jsPDF();
+
+  doc.setFontSize(18);
+  doc.setTextColor(27, 59, 111); // navy
+  doc.text("TransPadilla", 14, 18);
+  doc.setFontSize(10);
+  doc.setTextColor(107, 114, 128);
+  doc.text("Moviendo la Ciudad — Reporte de operación", 14, 24);
+  doc.text(`Periodo: últimos ${resumen.dias} días   ·   Generado: ${hoyISO()}`, 14, 30);
+
+  autoTable(doc, {
+    startY: 38,
+    head: [["Ruta", "Km", "Muestras", "Buses"]],
+    body: resumen.rutas.map((r) => [r.nombre, String(r.km), String(r.muestras), String(r.buses)]),
+    foot: [["TOTAL", String(resumen.km_total), "", String(resumen.buses_activos)]],
+    headStyles: { fillColor: [27, 59, 111] },
+    footStyles: { fillColor: [37, 88, 165], textColor: 255 },
+    styles: { fontSize: 9 },
+  });
+
+  const y = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 46;
+  autoTable(doc, {
+    startY: y + 8,
+    head: [["Ocupación", "Muestras"]],
+    body: [
+      ["Vacío", String(ocup.vacio)],
+      ["Medio", String(ocup.medio)],
+      ["Lleno", String(ocup.lleno)],
+    ],
+    headStyles: { fillColor: [27, 59, 111] },
+    styles: { fontSize: 9 },
+  });
+
+  doc.save(`reporte-transpadilla-${hoyISO()}.pdf`);
+}
+
 /** Tab "Reportes": km recorridos por ruta y ocupación, sobre el historial. */
 export default function ReportesTab() {
   const [dias, setDias] = useState<number>(7);
@@ -61,8 +136,8 @@ export default function ReportesTab() {
 
   return (
     <div className="space-y-5">
-      {/* Selector de rango */}
-      <div className="flex items-center gap-2">
+      {/* Selector de rango + exportar */}
+      <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs font-semibold text-muted-foreground">Periodo:</span>
         {RANGOS.map((r) => (
           <button
@@ -76,6 +151,26 @@ export default function ReportesTab() {
             {r.label}
           </button>
         ))}
+        {!sinDatos && !cargando && resumen.data && ocup.data && (
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={() => descargarCSV(resumen.data!, ocup.data!)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+              style={{ background: "var(--color-secondary, #eef2f7)", color: "var(--color-navy, #1B3B6F)" }}
+              aria-label="Exportar reporte a CSV"
+            >
+              <FileDown className="w-3.5 h-3.5" /> CSV
+            </button>
+            <button
+              onClick={() => { void descargarPDF(resumen.data!, ocup.data!); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-colors"
+              style={{ background: "var(--color-blue, #2558A5)" }}
+              aria-label="Exportar reporte a PDF"
+            >
+              <FileText className="w-3.5 h-3.5" /> PDF
+            </button>
+          </div>
+        )}
       </div>
 
       {cargando ? (
