@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useGetBuses, useUpdateGps, useReportarNovedad, useFinalizarRecorrido, getGetBusesQueryKey } from "@workspace/api-client";
 import { useQueryClient } from "@tanstack/react-query";
-import { getUser, clearAuth, homeForRol } from "@/lib/auth";
+import { getUser, cerrarSesion, homeForRol } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import type { BackgroundGeolocationPlugin } from "@capacitor-community/background-geolocation";
@@ -264,7 +264,7 @@ export default function Conductor() {
           <span className="font-display font-extrabold text-xl tracking-wide text-white">TRANSPADILLA</span>
           <div className="flex items-center gap-1">
             <button onClick={() => setCambiarPass(true)} className="text-white p-2.5 active:scale-90 transition-transform" aria-label="Cambiar contraseña" title="Cambiar contraseña"><KeyRound className="w-5 h-5" /></button>
-            <button onClick={() => { clearAuth(); setLocation("/"); }} className="text-white p-2.5 -mr-1 active:scale-90 transition-transform" data-testid="button-salir" aria-label="Cerrar sesión" title="Cerrar sesión"><LogOut className="w-5 h-5" /></button>
+            <button onClick={() => { void cerrarSesion().finally(() => setLocation("/")); }} className="text-white p-2.5 -mr-1 active:scale-90 transition-transform" data-testid="button-salir" aria-label="Cerrar sesión" title="Cerrar sesión"><LogOut className="w-5 h-5" /></button>
           </div>
         </header>
 

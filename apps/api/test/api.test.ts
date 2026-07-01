@@ -127,6 +127,31 @@ suite("API (integración)", () => {
     expect(typeof res.body.total).toBe("number");
   });
 
+  it("cerrar sesión revoca el token (queda inválido)", async () => {
+    const correo = `logout_${Date.now()}@ejemplo.com`;
+    await request(app).post("/api/auth/register").send({ nombre: "LO", correo, password: "secreto123" });
+    const login = await request(app).post("/api/auth/login").send({ correo, password: "secreto123" });
+    const token = login.body.token as string;
+
+    // Con el token vigente, cambiar contraseña funciona (401 solo por clave incorrecta, no por token)
+    const antes = await request(app)
+      .post("/api/auth/cambiar-password")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ actual: "secreto123", nueva: "secreto456" });
+    expect(antes.status).toBe(200);
+
+    // Cierra sesión → revoca el token
+    const salir = await request(app).post("/api/auth/cerrar-sesion").set("Authorization", `Bearer ${token}`);
+    expect(salir.status).toBe(200);
+
+    // El MISMO token ahora es rechazado (401) aunque el JWT siga sin expirar
+    const despues = await request(app)
+      .post("/api/auth/cambiar-password")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ actual: "secreto456", nueva: "secreto789" });
+    expect(despues.status).toBe(401);
+  });
+
   it("GET /api/rutas/:id/eta devuelve la forma esperada", async () => {
     const rutas = await request(app).get("/api/rutas");
     expect(rutas.status).toBe(200);

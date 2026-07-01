@@ -113,6 +113,15 @@ export const suscripciones_push = pgTable("suscripciones_push", {
   creado_en: timestamp("creado_en").notNull().defaultNow(),
 });
 
+// Lista negra de tokens JWT revocados (cierre de sesión real). Se guarda el hash
+// del token, no el token. Se purga cuando `expira_en` pasa (ya no hace falta).
+export const tokens_revocados = pgTable("tokens_revocados", {
+  id: serial("id").primaryKey(),
+  token_hash: varchar("token_hash", { length: 64 }).notNull().unique(),
+  expira_en: timestamp("expira_en").notNull(),
+  creado_en: timestamp("creado_en").notNull().defaultNow(),
+});
+
 export type Usuario = typeof usuarios.$inferSelect;
 export type Ruta = typeof rutas.$inferSelect;
 export type Parada = typeof paradas.$inferSelect;

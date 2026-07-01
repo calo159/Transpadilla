@@ -5,7 +5,7 @@ import {
   getGetRutasQueryKey, getGetBusesQueryKey, getGetTodasParadasQueryKey,
 } from "@workspace/api-client";
 import { useQueryClient } from "@tanstack/react-query";
-import { getUser, clearAuth, homeForRol } from "@/lib/auth";
+import { getUser, cerrarSesion, homeForRol } from "@/lib/auth";
 import {
   Bus, LogOut, Map, MapPin, BarChart3,
   RefreshCw, Users, Route,
@@ -138,7 +138,7 @@ export default function Admin() {
             <span className="truncate">{user?.nombre ?? "Admin"}</span>
           </div>
           <button onClick={() => setCambiarPass(true)} className="w-full flex items-center gap-2 px-1 py-1.5 text-xs text-white/70 hover:text-white"><KeyRound className="w-3.5 h-3.5" />Cambiar contraseña</button>
-          <button onClick={() => { clearAuth(); setLocation("/"); }} data-testid="button-salir" className="w-full flex items-center gap-2 px-1 py-1.5 text-xs text-white/70 hover:text-white"><LogOut className="w-3.5 h-3.5" />Cerrar sesión</button>
+          <button onClick={() => { void cerrarSesion().finally(() => setLocation("/")); }} data-testid="button-salir" className="w-full flex items-center gap-2 px-1 py-1.5 text-xs text-white/70 hover:text-white"><LogOut className="w-3.5 h-3.5" />Cerrar sesión</button>
         </div>
       </div>
 
@@ -151,7 +151,7 @@ export default function Admin() {
           <div className="flex items-center gap-1">
             <button onClick={() => setLocation("/")} className="p-2 text-white" title="Ir al mapa" aria-label="Ir al mapa"><Map style={{ width: 18, height: 18 }} /></button>
             <button onClick={() => setCambiarPass(true)} className="p-2 text-white" title="Cambiar contraseña" aria-label="Cambiar contraseña"><KeyRound style={{ width: 18, height: 18 }} /></button>
-            <button onClick={() => { clearAuth(); setLocation("/"); }} className="p-2 text-white" data-testid="button-salir" title="Cerrar sesión" aria-label="Cerrar sesión"><LogOut style={{ width: 18, height: 18 }} /></button>
+            <button onClick={() => { void cerrarSesion().finally(() => setLocation("/")); }} className="p-2 text-white" data-testid="button-salir" title="Cerrar sesión" aria-label="Cerrar sesión"><LogOut style={{ width: 18, height: 18 }} /></button>
           </div>
         </div>
 

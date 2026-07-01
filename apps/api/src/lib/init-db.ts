@@ -104,6 +104,14 @@ CREATE TABLE IF NOT EXISTS suscripciones_push (
   rutas jsonb NOT NULL DEFAULT '[]'::jsonb,
   creado_en timestamp NOT NULL DEFAULT now()
 );
+
+-- Tokens JWT revocados (cierre de sesión). Se guarda el hash, no el token.
+CREATE TABLE IF NOT EXISTS tokens_revocados (
+  id serial PRIMARY KEY,
+  token_hash varchar(64) NOT NULL UNIQUE,
+  expira_en timestamp NOT NULL,
+  creado_en timestamp NOT NULL DEFAULT now()
+);
 `;
 
 export async function ensureSchema(): Promise<void> {
