@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LogoTP } from "@/components/LogoTP";
 import { NotificacionesToggle } from "@/components/NotificacionesToggle";
+import { GoogleTranslate } from "@/components/GoogleTranslate";
 import { io, type Socket } from "socket.io-client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -1186,8 +1187,9 @@ export default function Pasajero() {
             <ChevronRight className="w-3.5 h-3.5" style={{ color: "var(--color-gray-text)" }} />
           </button>
         )}
-        <div className="mt-2.5 flex justify-center">
+        <div className="mt-2.5 flex justify-center gap-2">
           <NotificacionesToggle rutas={favoritos} variant="pill" />
+          <GoogleTranslate variant="pill" />
         </div>
         <div className="flex items-center justify-center gap-2 mt-2.5 text-[10px]" style={{ color: "var(--color-gray-text)" }}>
           <a href="/privacidad" className="hover:underline">Privacidad</a>
@@ -1436,7 +1438,7 @@ export default function Pasajero() {
           <span
             role="status"
             aria-live="polite"
-            className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-full"
+            className="notranslate flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-full"
             style={conectado
               ? { background: "rgba(245,183,49,0.2)", color: "var(--color-gold)" }
               : { background: "rgba(255,255,255,0.15)", color: "#fff" }}
@@ -1539,7 +1541,7 @@ export default function Pasajero() {
             </div>
             <div className="flex items-center justify-between mt-1 px-1">
               <span className="text-[11px] font-medium text-white/80">Moviendo la Ciudad</span>
-              <span role="status" aria-live="polite" className="flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full" style={conectado ? { background: "rgba(245,183,49,0.2)", color: "var(--color-gold)" } : { background: "rgba(255,255,255,0.15)", color: "#fff" }}>
+              <span role="status" aria-live="polite" className="notranslate flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full" style={conectado ? { background: "rgba(245,183,49,0.2)", color: "var(--color-gold)" } : { background: "rgba(255,255,255,0.15)", color: "#fff" }}>
                 <span aria-hidden="true" className={`w-1.5 h-1.5 rounded-full ${conectado ? "animate-pulse" : ""}`} style={{ background: conectado ? "var(--color-gold)" : "#fcd34d" }} />
                 {conectado ? "EN VIVO" : "SIN CONEXIÓN"}
               </span>
@@ -1572,6 +1574,9 @@ export default function Pasajero() {
               <button onClick={() => setShowAyuda(true)} className="w-full flex items-center gap-3 px-4 py-3.5 text-left border-t border-gray-100 active:bg-gray-100" style={{ color: "var(--color-navy)" }}>
                 <HelpCircle className="w-5 h-5 flex-shrink-0" style={{ color: "var(--color-sky)" }} /><span className="font-semibold text-sm">¿Cómo funciona?</span>
               </button>
+              <div onClick={(e) => e.stopPropagation()}>
+                <GoogleTranslate variant="menu" />
+              </div>
               <div onClick={(e) => e.stopPropagation()}>
                 <NotificacionesToggle rutas={favoritos} variant="menu" />
               </div>
