@@ -94,6 +94,16 @@ CREATE TABLE IF NOT EXISTS auditoria (
   creado_en timestamp NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_auditoria_creado ON auditoria(creado_en);
+
+-- Suscripciones Web Push del pasajero (por dispositivo, sin cuenta).
+CREATE TABLE IF NOT EXISTS suscripciones_push (
+  id serial PRIMARY KEY,
+  endpoint text NOT NULL UNIQUE,
+  p256dh text NOT NULL,
+  auth text NOT NULL,
+  rutas jsonb NOT NULL DEFAULT '[]'::jsonb,
+  creado_en timestamp NOT NULL DEFAULT now()
+);
 `;
 
 export async function ensureSchema(): Promise<void> {

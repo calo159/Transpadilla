@@ -7,6 +7,7 @@ import { emitirSeguro } from "../lib/socket";
 import { validarBody, requerido, texto, numeroEnRango } from "../middleware/validate";
 import { crearCacheTtl } from "../lib/cache";
 import { registrarAuditoria } from "../lib/auditoria";
+import { enviarPushARuta, notificarProximidad } from "../lib/push";
 
 const router = Router();
 
@@ -154,6 +155,8 @@ router.post(
       emitirSeguro("bus:ubicacion", { busId, lat, lng, velocidad, rutaId }, `ruta_${rutaId}`);
     }
     res.json({ mensaje: "GPS actualizado" });
+    // Aviso push "tu bus está cerca" (best-effort, throttled; no frena la respuesta).
+    void notificarProximidad(busId, rutaId, lat, lng, velocidad ?? null);
   },
 );
 
@@ -170,10 +173,18 @@ router.post(
       .update(buses)
       .set({ novedad, estado: "demora", actualizado: new Date() })
       .where(eq(buses.id, busId))
-      .returning({ placa: buses.placa });
+      .returning({ placa: buses.placa, rutaId: buses.ruta_id });
     if (!actualizado) { res.status(404).json({ error: "Bus no encontrado" }); return; }
 
     emitirSeguro("bus:novedad", { busId, novedad, placa: actualizado.placa });
+    // Notificación push a quienes siguen esta ruta (best-effort).
+    if (actualizado.rutaId != null) {
+      void enviarPushARuta(actualizado.rutaId, {
+        titulo: "⚠️ Novedad en tu ruta",
+        cuerpo: novedad,
+        url: "/",
+      });
+    }
     res.json({ mensaje: "Novedad reportada" });
   },
 );
