@@ -102,6 +102,17 @@ export const auditoria = pgTable(
   (t) => [index("idx_auditoria_creado").on(t.creado_en)],
 );
 
+// Suscripciones Web Push del pasajero (sin cuenta): una por dispositivo/navegador.
+// `rutas` = ids de rutas "seguidas" para las que quiere notificaciones.
+export const suscripciones_push = pgTable("suscripciones_push", {
+  id: serial("id").primaryKey(),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  rutas: jsonb("rutas").notNull().$type<number[]>().default([]),
+  creado_en: timestamp("creado_en").notNull().defaultNow(),
+});
+
 export type Usuario = typeof usuarios.$inferSelect;
 export type Ruta = typeof rutas.$inferSelect;
 export type Parada = typeof paradas.$inferSelect;

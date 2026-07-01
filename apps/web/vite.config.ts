@@ -42,6 +42,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+        // Añade los handlers de Web Push (push / notificationclick) al SW generado,
+        // sin cambiar a injectManifest. El archivo vive en public/push-sw.js.
+        importScripts: ["push-sw.js"],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\.maptiler\.com\/.*/i,

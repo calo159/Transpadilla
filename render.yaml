@@ -79,3 +79,10 @@ services:
       # Cloudflare). Impide esquivar Cloudflare golpeando el origen directo. sync:false.
       # - key: CLOUDFLARE_ORIGIN_SECRET
       #   sync: false
+      # ── Notificaciones Web Push (opcionales) ──
+      # Genera las claves con: npx web-push generate-vapid-keys. Sin ellas, el push
+      # queda deshabilitado (la app funciona igual).
+      # - key: VAPID_PUBLIC_KEY
+      #   sync: false
+      # - key: VAPID_PRIVATE_KEY
+      #   sync: false
