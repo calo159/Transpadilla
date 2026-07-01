@@ -21,6 +21,16 @@ export function pushSoportado(): boolean {
   );
 }
 
+/** ¿El servidor tiene el push habilitado (claves VAPID configuradas)? */
+export async function pushDisponibleEnServidor(): Promise<boolean> {
+  try {
+    const info = (await (await apiFetch("/api/push/clave-publica")).json()) as { habilitado?: boolean };
+    return !!info.habilitado;
+  } catch {
+    return false;
+  }
+}
+
 export async function estadoSuscripcion(): Promise<boolean> {
   if (!pushSoportado()) return false;
   const reg = await navigator.serviceWorker.getRegistration();

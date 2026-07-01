@@ -90,7 +90,7 @@ export async function notificarProximidad(
     if (minutos <= UMBRAL_MIN) {
       ultimaProx.set(busId, ahora);
       await enviarPushARuta(rutaId, {
-        titulo: "🚌 Tu bus está cerca",
+        titulo: "Tu bus está cerca",
         cuerpo: `Un bus de tu ruta está a ~${Math.max(1, Math.round(minutos))} min de una parada.`,
         url: "/",
       });
