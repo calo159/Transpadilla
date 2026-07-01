@@ -47,6 +47,9 @@ app.use(
 //  - connect-src https: wss: ws:: fetch a OSRM (router.project-osrm.org o el propio)
 //    y el WebSocket de Socket.IO.
 //  - worker-src 'self' blob:: el service worker de la PWA (vite-plugin-pwa/workbox).
+//  - script-src/frame-src incluyen translate.google(apis).com: widget de
+//    traducción automática (GoogleTranslate.tsx) — inyecta su propio script y
+//    abre su menú de idiomas en un iframe propio.
 // Se puede sobreescribir por entorno con la variable CSP.
 const csp =
   process.env["CSP"] ??
@@ -56,13 +59,14 @@ const csp =
     "object-src 'none'",
     "frame-ancestors 'self'",
     "form-action 'self'",
-    "script-src 'self'",
+    "script-src 'self' https://translate.google.com https://translate.googleapis.com",
     // Google Fonts: el CSS viene de fonts.googleapis.com y los archivos .woff2
     // de fonts.gstatic.com (la fuente Inter que usa el index.html).
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https://fonts.gstatic.com",
     "connect-src 'self' https: wss: ws:",
+    "frame-src https://translate.google.com https://translate.googleapis.com",
     "worker-src 'self' blob:",
     "manifest-src 'self'",
     ...(isProd ? ["upgrade-insecure-requests"] : []),
