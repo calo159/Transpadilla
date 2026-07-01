@@ -130,7 +130,7 @@ export default function BusesTab({ buses, busesLoading, rutas, setConfirmar }: P
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase ${b.estado === "activo" ? "bg-green-500/20 text-green-400" : b.estado === "demora" ? "bg-amber-500/20 text-amber-400" : "bg-muted/20 text-muted-foreground"}`}>{b.estado}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">{b.velocidad && b.velocidad > 0 ? `${Math.round(b.velocidad)} km/h` : (b.nombre_conductor ? `Conductor: ${b.nombre_conductor}` : "Sin conductor")}</p>
-                  {b.novedad && <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "var(--tp-yellow)" }}><AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />{b.novedad}</p>}
+                  {b.novedad && <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "var(--tp-gold-ink)" }}><AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />{b.novedad}</p>}
                   {/* Reasignar ruta sin borrar el bus */}
                   <div className="mt-1.5">
                     <Select value={b.ruta_id != null ? b.ruta_id.toString() : "none"} onValueChange={(v) => reasignarRuta(b.id, v)}>

@@ -79,6 +79,7 @@
   --tp-yellow-rgb: 245, 183, 49;
   --tp-amber: #F5B731;          /* alias para compatibilidad */
   --tp-amber-rgb: 245, 183, 49;
+  --tp-gold-ink: #7a5200;       /* Dorado "tinta": para TEXTO sobre fondo claro (pasa AA) */
   --tp-navy: #1B3B6F;           /* Azul marino de marca */
   --tp-sky: #7BB8D5;            /* Azul cielo de marca */
   --tp-sky-rgb: 123, 184, 213;
