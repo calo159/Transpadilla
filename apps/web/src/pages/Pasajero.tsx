@@ -1846,7 +1846,9 @@ export default function Pasajero() {
             : <LocateFixed className="w-5 h-5 text-primary" />}
         </button>
 
-        {/* Chips de estado — apilados verticalmente para no solaparse entre sí */}
+        {/* Chips de estado del MAPA — se ocultan si hay un menú/panel abierto (Rutas,
+            Favoritos, Paraderos o ☰) para no solaparse con su encabezado. */}
+        {vista === "mapa" && !menuAbierto && (
         <div className="absolute top-[140px] md:top-3 left-1/2 -translate-x-1/2 z-[1001] flex flex-col items-center gap-2 pointer-events-none">
           {rutasLoading && rutas.length === 0 && (
             <div className="pointer-events-none flex items-center gap-2 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-lg">
@@ -1854,7 +1856,7 @@ export default function Pasajero() {
               <span className="text-xs text-muted-foreground font-medium">Cargando el mapa…</span>
             </div>
           )}
-          {activeBuses.length === 0 && !rutasLoading && rutas.length > 0 && (
+          {activeBuses.length === 0 && !rutasLoading && rutas.length > 0 && selectedRutaId === null && (
             <div className="pointer-events-none flex items-center gap-2 rounded-full shadow-md px-4 py-2" style={{ background: "var(--color-white)", border: "1px solid #e8edf4" }}>
               <Bus className="w-4 h-4 flex-shrink-0" style={{ color: "var(--color-gold)" }} />
               <span className="text-xs font-semibold" style={{ color: "var(--color-navy)" }}>Sin buses activos · <span style={{ color: "var(--color-gray-text)" }}>5:00 am – 10:00 pm</span></span>
@@ -1879,6 +1881,7 @@ export default function Pasajero() {
             </div>
           )}
         </div>
+        )}
 
         {/* Indicador de conexión desktop ocultado: el badge EN VIVO está en el TopBar */}
 
