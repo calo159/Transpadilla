@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useGetRutas, useGetBuses, getGetBusesQueryKey } from "@workspace/api-client";
 import { useQueryClient } from "@tanstack/react-query";
-import { clearAuth, getUser } from "@/lib/auth";
+import { cerrarSesion, getUser } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import {
   Bus, MapPin, LogOut, Radio, AlertTriangle, X,
@@ -1163,7 +1163,7 @@ export default function Pasajero() {
               )}
               <Button
                 variant="ghost" size="sm"
-                onClick={() => { clearAuth(); window.location.reload(); }}
+                onClick={() => { void cerrarSesion().finally(() => window.location.reload()); }}
                 className="h-7 px-2"
                 style={{ color: "var(--color-gray-text)" }}
                 title="Cerrar sesión"
@@ -1587,7 +1587,7 @@ export default function Pasajero() {
                     </div>
                   </div>
                   <button
-                    onClick={() => { clearAuth(); window.location.reload(); }}
+                    onClick={() => { void cerrarSesion().finally(() => window.location.reload()); }}
                     className="w-full flex items-center gap-3 px-4 py-3.5 border-t border-gray-100 active:bg-red-50 text-left"
                   >
                     <LogOut className="w-5 h-5 flex-shrink-0" style={{ color: "#ef4444" }} />

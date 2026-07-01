@@ -25,6 +25,23 @@ export function clearAuth(): void {
   localStorage.removeItem("transpadilla_user");
 }
 
+/**
+ * Cierre de sesión REAL: avisa al backend para revocar el token (lista negra) y
+ * luego limpia el estado local. Best-effort: si la red falla, igual limpia local.
+ */
+export async function cerrarSesion(): Promise<void> {
+  const token = getToken();
+  if (token) {
+    try {
+      const { apiFetch } = await import("./api");
+      await apiFetch("/api/auth/cerrar-sesion", { method: "POST" });
+    } catch {
+      /* red caída: se limpia local de todas formas */
+    }
+  }
+  clearAuth();
+}
+
 export function getToken(): string | null {
   return localStorage.getItem("transpadilla_token");
 }

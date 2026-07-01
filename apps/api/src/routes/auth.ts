@@ -4,7 +4,8 @@ import jwt from "jsonwebtoken";
 import { db } from "@workspace/db";
 import { usuarios } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { JWT_SECRET, authMiddleware } from "../middleware/auth";
+import { pool } from "@workspace/db";
+import { JWT_SECRET, authMiddleware, hashToken } from "../middleware/auth";
 import { validarBody, requerido, correoValido, texto } from "../middleware/validate";
 import { rateLimit } from "../middleware/rate-limit";
 
@@ -130,5 +131,20 @@ router.post(
     res.json({ mensaje: "Contraseña actualizada" });
   },
 );
+
+// Cierre de sesión REAL: revoca el token actual (lo agrega a la lista negra hasta
+// su expiración). Requiere token válido; tras esto ese token deja de servir.
+router.post("/auth/cerrar-sesion", authMiddleware, async (req, res) => {
+  const token = req.headers.authorization!.slice(7);
+  // exp del JWT (segundos epoch) → fecha de expiración para poder purgarlo luego.
+  const decoded = jwt.decode(token) as { exp?: number } | null;
+  const expira = decoded?.exp ? new Date(decoded.exp * 1000) : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+  await pool.query(
+    `INSERT INTO tokens_revocados (token_hash, expira_en) VALUES ($1, $2)
+     ON CONFLICT (token_hash) DO NOTHING`,
+    [hashToken(token), expira],
+  );
+  res.json({ mensaje: "Sesión cerrada" });
+});
 
 export default router;

@@ -35,6 +35,8 @@ async function podar(): Promise<void> {
     `DELETE FROM posiciones_historial WHERE capturado < now() - ($1 || ' days')::interval`,
     [String(RETENCION_DIAS)],
   );
+  // Aprovecha el ciclo para purgar tokens revocados que ya expiraron (no sirven).
+  await pool.query(`DELETE FROM tokens_revocados WHERE expira_en < now()`).catch(() => {});
 }
 
 /** Arranca el job de snapshot. Devuelve una función para detenerlo (apagado ordenado). */
