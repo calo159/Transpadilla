@@ -6,6 +6,7 @@ import { busAutorizado } from "../middleware/bus-autorizado";
 import { emitirSeguro } from "../lib/socket";
 import { validarBody, requerido, texto, numeroEnRango } from "../middleware/validate";
 import { crearCacheTtl } from "../lib/cache";
+import { registrarAuditoria } from "../lib/auditoria";
 
 const router = Router();
 
@@ -60,6 +61,7 @@ router.post(
       .insert(buses)
       .values({ placa: placa.toUpperCase(), ruta_id: ruta_id ?? null })
       .returning();
+    registrarAuditoria(req.usuario?.id, "crear_bus", "bus", bus?.id, { placa: placa.toUpperCase(), ruta_id: ruta_id ?? null });
     res.status(201).json({ ...bus, actualizado: null });
   },
 );
@@ -69,7 +71,9 @@ router.delete(
   authMiddleware,
   requireRol("admin"),
   async (req, res) => {
-    await db.delete(buses).where(eq(buses.id, idParam(req.params["id"])));
+    const bid = idParam(req.params["id"]);
+    await db.delete(buses).where(eq(buses.id, bid));
+    registrarAuditoria(req.usuario?.id, "eliminar_bus", "bus", bid);
     res.json({ mensaje: "Bus eliminado" });
   },
 );
@@ -108,6 +112,7 @@ router.patch(
       .where(eq(buses.id, idParam(req.params["id"])))
       .returning({ id: buses.id });
     if (!actualizado) { res.status(404).json({ error: "Bus no encontrado" }); return; }
+    registrarAuditoria(req.usuario?.id, "editar_bus", "bus", actualizado.id, cambios);
     res.json({ mensaje: "Bus actualizado" });
   },
 );

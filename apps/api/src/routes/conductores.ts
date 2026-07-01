@@ -4,6 +4,7 @@ import { db, buses, usuarios } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
 import { validarBody, requerido, texto, correoValido } from "../middleware/validate";
+import { registrarAuditoria } from "../lib/auditoria";
 
 // Toda la gestión de conductores es exclusiva del administrador autenticado.
 // IMPORTANTE: la guarda se aplica POR RUTA (no con un router.use global), porque
@@ -66,6 +67,7 @@ router.post(
         identificacion: identificacion.trim(),
       })
       .returning({ id: usuarios.id, nombre: usuarios.nombre, correo: usuarios.correo, rol: usuarios.rol });
+    registrarAuditoria(req.usuario?.id, "crear_conductor", "conductor", nuevo?.id, { nombre: nombre.trim(), correo: correoNorm });
     res.status(201).json(nuevo);
   },
 );
@@ -75,16 +77,19 @@ router.delete("/conductores/:id", ...soloAdmin, async (req, res) => {
   // Libera el bus que tuviera asignado antes de borrar al conductor.
   await db.update(buses).set({ conductor_id: null }).where(eq(buses.conductor_id, id));
   await db.delete(usuarios).where(eq(usuarios.id, id));
+  registrarAuditoria(req.usuario?.id, "eliminar_conductor", "conductor", id);
   res.json({ mensaje: "Conductor eliminado" });
 });
 
 // Asignar / desasignar el conductor de un bus.
 router.patch("/buses/:id/conductor", ...soloAdmin, async (req, res) => {
   const { conductor_id } = req.body as { conductor_id: number | null };
+  const busId = idParam(req.params["id"]);
   await db
     .update(buses)
     .set({ conductor_id: conductor_id ?? null })
-    .where(eq(buses.id, idParam(req.params["id"])));
+    .where(eq(buses.id, busId));
+  registrarAuditoria(req.usuario?.id, "asignar_conductor", "bus", busId, { conductor_id: conductor_id ?? null });
   res.json({ mensaje: "Conductor actualizado" });
 });
 

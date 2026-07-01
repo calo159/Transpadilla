@@ -8,6 +8,7 @@ import {
   text,
   timestamp,
   index,
+  jsonb,
 } from "drizzle-orm/pg-core";
 
 export const usuarios = pgTable("usuarios", {
@@ -85,9 +86,26 @@ export const posiciones_historial = pgTable(
   ],
 );
 
+// Registro de auditoría: quién (usuario_id) hizo qué (accion) sobre qué entidad.
+// Solo mutaciones administrativas (crear/editar/eliminar rutas, paradas, buses, conductores).
+export const auditoria = pgTable(
+  "auditoria",
+  {
+    id: serial("id").primaryKey(),
+    usuario_id: integer("usuario_id").references(() => usuarios.id, { onDelete: "set null" }),
+    accion: varchar("accion", { length: 50 }).notNull(),
+    entidad_tipo: varchar("entidad_tipo", { length: 30 }),
+    entidad_id: integer("entidad_id"),
+    detalle: jsonb("detalle"),
+    creado_en: timestamp("creado_en").notNull().defaultNow(),
+  },
+  (t) => [index("idx_auditoria_creado").on(t.creado_en)],
+);
+
 export type Usuario = typeof usuarios.$inferSelect;
 export type Ruta = typeof rutas.$inferSelect;
 export type Parada = typeof paradas.$inferSelect;
 export type RutaParada = typeof ruta_paradas.$inferSelect;
 export type Bus = typeof buses.$inferSelect;
 export type PosicionHistorial = typeof posiciones_historial.$inferSelect;
+export type Auditoria = typeof auditoria.$inferSelect;

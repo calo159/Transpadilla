@@ -82,6 +82,18 @@ CREATE TABLE IF NOT EXISTS posiciones_historial (
 );
 CREATE INDEX IF NOT EXISTS idx_hist_bus_capturado  ON posiciones_historial(bus_id, capturado);
 CREATE INDEX IF NOT EXISTS idx_hist_ruta_capturado ON posiciones_historial(ruta_id, capturado);
+
+-- Auditoría de acciones administrativas (quién hizo qué).
+CREATE TABLE IF NOT EXISTS auditoria (
+  id serial PRIMARY KEY,
+  usuario_id integer REFERENCES usuarios(id) ON DELETE SET NULL,
+  accion varchar(50) NOT NULL,
+  entidad_tipo varchar(30),
+  entidad_id integer,
+  detalle jsonb,
+  creado_en timestamp NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_auditoria_creado ON auditoria(creado_en);
 `;
 
 export async function ensureSchema(): Promise<void> {
