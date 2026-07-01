@@ -8,6 +8,7 @@ import paradasRouter from "./paradas";
 import etaRouter from "./eta";
 import statsRouter from "./stats";
 import reportesRouter from "./reportes";
+import auditoriaRouter from "./auditoria";
 import seedRouter from "./seed";
 
 const router: IRouter = Router();
@@ -21,6 +22,7 @@ router.use(paradasRouter);
 router.use(etaRouter);
 router.use(statsRouter);
 router.use(reportesRouter);
+router.use(auditoriaRouter);
 router.use(seedRouter);
 
 export default router;

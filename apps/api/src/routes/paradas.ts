@@ -3,6 +3,7 @@ import { db, paradas, ruta_paradas } from "@workspace/db";
 import { eq, asc, and } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
 import { validarBody, requerido, texto, numeroEnRango } from "../middleware/validate";
+import { registrarAuditoria } from "../lib/auditoria";
 
 // Paradas y su asignación a rutas. Las lecturas son públicas (las usa el mapa);
 // crear/editar/borrar/asignar es solo de administrador.
@@ -33,6 +34,7 @@ router.post(
       longitud: number;
     };
     const [parada] = await db.insert(paradas).values({ nombre, latitud, longitud }).returning();
+    registrarAuditoria(req.usuario?.id, "crear_parada", "parada", parada?.id, { nombre });
     res.status(201).json(parada);
   },
 );
@@ -56,7 +58,9 @@ router.patch(
       res.status(400).json({ error: "Nada que actualizar" });
       return;
     }
-    await db.update(paradas).set(cambios).where(eq(paradas.id, idParam(req.params["id"])));
+    const pid = idParam(req.params["id"]);
+    await db.update(paradas).set(cambios).where(eq(paradas.id, pid));
+    registrarAuditoria(req.usuario?.id, "editar_parada", "parada", pid, cambios);
     res.json({ mensaje: "Parada actualizada" });
   },
 );
@@ -69,6 +73,7 @@ router.delete(
     const id = idParam(req.params["id"]);
     await db.delete(ruta_paradas).where(eq(ruta_paradas.parada_id, id));
     await db.delete(paradas).where(eq(paradas.id, id));
+    registrarAuditoria(req.usuario?.id, "eliminar_parada", "parada", id);
     res.json({ mensaje: "Parada eliminada" });
   },
 );
@@ -115,6 +120,7 @@ router.post(
       return;
     }
     await db.insert(ruta_paradas).values({ ruta_id: rutaId, parada_id: pid, orden: ordenNum });
+    registrarAuditoria(req.usuario?.id, "asignar_parada", "ruta", rutaId, { parada_id: pid, orden: ordenNum });
     res.status(201).json({ mensaje: "Parada asignada" });
   },
 );
@@ -130,6 +136,7 @@ router.delete(
     await db
       .delete(ruta_paradas)
       .where(and(eq(ruta_paradas.ruta_id, rutaId), eq(ruta_paradas.parada_id, paradaId)));
+    registrarAuditoria(req.usuario?.id, "desasignar_parada", "ruta", rutaId, { parada_id: paradaId });
     res.json({ mensaje: "Parada quitada de la ruta" });
   },
 );

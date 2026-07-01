@@ -5,6 +5,7 @@ import { authMiddleware, requireRol } from "../middleware/auth";
 import { validarBody, requerido, texto } from "../middleware/validate";
 import { agruparRutasConParadas } from "../lib/agrupar-rutas";
 import { crearCacheTtl } from "../lib/cache";
+import { registrarAuditoria } from "../lib/auditoria";
 
 // Rutas (líneas de transporte). La asignación de paradas vive en paradas.ts.
 const router = Router();
@@ -46,6 +47,7 @@ router.post(
   async (req, res) => {
     const { nombre, color = "#3498db" } = req.body as { nombre: string; color?: string };
     const [ruta] = await db.insert(rutas).values({ nombre, color }).returning();
+    registrarAuditoria(req.usuario?.id, "crear_ruta", "ruta", ruta?.id, { nombre, color });
     res.status(201).json({ ...ruta, paradas: [] });
   },
 );
@@ -55,7 +57,9 @@ router.delete(
   authMiddleware,
   requireRol("admin"),
   async (req, res) => {
-    await db.delete(rutas).where(eq(rutas.id, idParam(req.params["id"])));
+    const rid = idParam(req.params["id"]);
+    await db.delete(rutas).where(eq(rutas.id, rid));
+    registrarAuditoria(req.usuario?.id, "eliminar_ruta", "ruta", rid);
     res.json({ mensaje: "Ruta eliminada" });
   },
 );
@@ -66,7 +70,9 @@ router.patch(
   requireRol("admin"),
   async (req, res) => {
     const { activa } = req.body as { activa: boolean };
-    await db.update(rutas).set({ activa }).where(eq(rutas.id, idParam(req.params["id"])));
+    const rid = idParam(req.params["id"]);
+    await db.update(rutas).set({ activa }).where(eq(rutas.id, rid));
+    registrarAuditoria(req.usuario?.id, "editar_ruta", "ruta", rid, { activa });
     res.json({ mensaje: "Ruta actualizada" });
   },
 );
@@ -85,7 +91,9 @@ router.patch(
       res.status(400).json({ error: "Nada que actualizar" });
       return;
     }
-    await db.update(rutas).set(cambios).where(eq(rutas.id, idParam(req.params["id"])));
+    const rid = idParam(req.params["id"]);
+    await db.update(rutas).set(cambios).where(eq(rutas.id, rid));
+    registrarAuditoria(req.usuario?.id, "editar_ruta", "ruta", rid, cambios);
     res.json({ mensaje: "Ruta actualizada" });
   },
 );

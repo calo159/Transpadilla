@@ -110,6 +110,23 @@ suite("API (integración)", () => {
     expect(Array.isArray(res.body.rutas)).toBe(true);
   });
 
+  it("auditoría: público 401; admin recibe la lista paginada", async () => {
+    const anon = await request(app).get("/api/auditoria");
+    expect(anon.status).toBe(401);
+
+    const login = await request(app)
+      .post("/api/auth/login")
+      .send({ correo: "admin@transpadilla.co", password: "admin123" });
+    if (login.status !== 200) return;
+    const token = login.body.token as string;
+    const res = await request(app)
+      .get("/api/auditoria?limite=10")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.registros)).toBe(true);
+    expect(typeof res.body.total).toBe("number");
+  });
+
   it("GET /api/rutas/:id/eta devuelve la forma esperada", async () => {
     const rutas = await request(app).get("/api/rutas");
     expect(rutas.status).toBe(200);
