@@ -28,10 +28,12 @@
   <body>
     <div id="root">
       <!-- Splash de carga: se muestra hasta que React monta la app (evita pantalla en blanco). -->
-      <div id="tp-splash" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(ellipse at 50% -10%, #1757C2 0%, #0D2461 35%, #080D18 70%);font-family:Inter,system-ui,sans-serif;">
-        <img src="/logo-transpadilla.png" alt="TransPadilla" width="84" height="84" style="border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,.4)" />
-        <div style="font-size:22px;font-weight:900;letter-spacing:.12em;color:#fff">Trans<span style="color:#F5C200">Padilla</span></div>
-        <div style="width:34px;height:34px;border:3px solid rgba(255,255,255,.25);border-top-color:#4BA9D8;border-radius:50%;animation:tp-spin .8s linear infinite"></div>
+      <div id="tp-splash" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:linear-gradient(135deg, #24487e 0%, #1B3B6F 60%, #16335f 100%);font-family:Inter,system-ui,sans-serif;">
+        <div style="width:84px;height:84px;border-radius:9999px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 30px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.08);overflow:hidden">
+          <img src="/logo-transpadilla.png" alt="TransPadilla" width="84" height="84" style="width:100%;height:100%;object-fit:cover" />
+        </div>
+        <div style="font-size:22px;font-weight:900;letter-spacing:.12em;color:#fff">Trans<span style="color:#F5B731">Padilla</span></div>
+        <div style="width:34px;height:34px;border:3px solid rgba(255,255,255,.25);border-top-color:#7BB8D5;border-radius:50%;animation:tp-spin .8s linear infinite"></div>
         <style>@keyframes tp-spin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){#tp-splash div[style*="tp-spin"]{animation:none!important}}</style>
       </div>
     </div>

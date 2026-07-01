@@ -20,16 +20,21 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 setAuthTokenGetter(() => localStorage.getItem("transpadilla_token"));
 
 // Pantalla de transición mientras se descarga el chunk de una ruta diferida.
+// Mismo diseño que el TopBar/header de la página principal (Pasajero): gradiente
+// navy de marca, logo y acento dorado/celeste (ver LogoTP y Pasajero.tsx).
 function RouteFallback() {
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center gap-4"
-      style={{ background: "radial-gradient(ellipse at 50% -10%, #1757C2 0%, #0D2461 35%, #080D18 70%)" }}
+      style={{ background: "linear-gradient(135deg, #24487e 0%, #1B3B6F 60%, #16335f 100%)" }}
     >
       <LogoTP size={72} />
+      <p className="font-display text-lg font-black tracking-wide text-white">
+        Trans<span style={{ color: "var(--tp-yellow)" }}>Padilla</span>
+      </p>
       <div
         className="w-8 h-8 rounded-full animate-spin"
-        style={{ border: "3px solid rgba(255,255,255,0.25)", borderTopColor: "#4BA9D8" }}
+        style={{ border: "3px solid rgba(255,255,255,0.25)", borderTopColor: "var(--tp-sky)" }}
       />
     </div>
   );
