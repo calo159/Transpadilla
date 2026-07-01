@@ -180,7 +180,7 @@ router.post(
     // Notificación push a quienes siguen esta ruta (best-effort).
     if (actualizado.rutaId != null) {
       void enviarPushARuta(actualizado.rutaId, {
-        titulo: "⚠️ Novedad en tu ruta",
+        titulo: "Novedad en tu ruta",
         cuerpo: novedad,
         url: "/",
       });

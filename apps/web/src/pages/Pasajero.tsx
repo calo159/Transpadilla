@@ -1187,7 +1187,7 @@ export default function Pasajero() {
           </button>
         )}
         <div className="mt-2.5 flex justify-center">
-          <NotificacionesToggle rutas={favoritos} compacto />
+          <NotificacionesToggle rutas={favoritos} variant="pill" />
         </div>
         <div className="flex items-center justify-center gap-2 mt-2.5 text-[10px]" style={{ color: "var(--color-gray-text)" }}>
           <a href="/privacidad" className="hover:underline">Privacidad</a>
@@ -1572,8 +1572,8 @@ export default function Pasajero() {
               <button onClick={() => setShowAyuda(true)} className="w-full flex items-center gap-3 px-4 py-3.5 text-left border-t border-gray-100 active:bg-gray-100" style={{ color: "var(--color-navy)" }}>
                 <HelpCircle className="w-5 h-5 flex-shrink-0" style={{ color: "var(--color-sky)" }} /><span className="font-semibold text-sm">¿Cómo funciona?</span>
               </button>
-              <div className="border-t border-gray-100 px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                <NotificacionesToggle rutas={favoritos} />
+              <div onClick={(e) => e.stopPropagation()}>
+                <NotificacionesToggle rutas={favoritos} variant="menu" />
               </div>
               {user && (
                 <>
