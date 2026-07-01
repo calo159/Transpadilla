@@ -864,7 +864,7 @@ export default function Pasajero() {
         {demorasBuses.length > 0 && (
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full" style={{ background: "var(--tp-yellow)" }} />
-            <span className="font-medium" style={{ color: "var(--tp-yellow)" }}>{demorasBuses.length} demora</span>
+            <span className="font-medium" style={{ color: "var(--tp-gold-ink)" }}>{demorasBuses.length} demora</span>
           </div>
         )}
         <div className="ml-auto flex items-center gap-3">
@@ -888,7 +888,7 @@ export default function Pasajero() {
             style={{ background: "#fff", color: "var(--color-navy)" }}
           />
           {busqueda && (
-            <button onClick={() => setBusqueda("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground">
+            <button onClick={() => setBusqueda("")} aria-label="Limpiar búsqueda" className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground">
               <X className="w-3 h-3" />
             </button>
           )}
@@ -907,7 +907,7 @@ export default function Pasajero() {
               <p className="text-xs font-bold" style={{ color: "var(--color-navy)" }}>Elige tu ruta para empezar</p>
               <p className="text-[11px] mt-0.5" style={{ color: "var(--color-gray-text)" }}>Haz clic en una ruta y verás el bus en vivo y en cuántos minutos llega.</p>
               {activeBuses.length === 0 && (
-                <p className="text-[11px] mt-1.5" style={{ color: "var(--tp-yellow)" }}>
+                <p className="text-[11px] mt-1.5" style={{ color: "var(--tp-gold-ink)" }}>
                   Aún no hay buses en ruta — aparecerán en el mapa apenas un conductor inicie su recorrido.
                 </p>
               )}
@@ -1091,7 +1091,7 @@ export default function Pasajero() {
                 </p>
               )}
               {b.novedad && (
-                <p className="mt-1 flex items-center gap-1" style={{ color: "var(--tp-yellow)" }}>
+                <p className="mt-1 flex items-center gap-1" style={{ color: "var(--tp-gold-ink)" }}>
                   <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />{b.novedad}
                 </p>
               )}
