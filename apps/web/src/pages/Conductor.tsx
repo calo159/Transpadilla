@@ -177,7 +177,7 @@ export default function Conductor() {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [activo, pedirWakeLock, iniciarWatch]);
 
-  const finalizar = async () => {
+  const finalizar = async (): Promise<boolean> => {
     // Primero confirmamos con el backend que el recorrido terminó. Si la red
     // falla, NO limpiamos el estado local: el bus sigue activo y el conductor
     // puede reintentar (evita que el front diga "finalizado" y el backend no).
@@ -187,7 +187,7 @@ export default function Conductor() {
         queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
       } catch {
         toast({ title: "No se pudo finalizar — revisa tu conexión e inténtalo de nuevo", variant: "destructive" });
-        return;
+        return false;
       }
     }
     if (gpsWatchRef.current !== null) {
@@ -203,6 +203,20 @@ export default function Conductor() {
     busMarkerRef.current?.remove(); busMarkerRef.current = null;
     setShowCustom(false); setOcupacion(null);
     toast({ title: "Recorrido finalizado", description: `Duración: ${elapsed}` });
+    return true;
+  };
+
+  // Cerrar sesión debe terminar la transmisión GPS si había un recorrido activo
+  // (si no, el bus queda "fantasma": activo y con la última posición congelada).
+  // Reutiliza finalizar(), que ya es best-effort-seguro: si el backend falla no
+  // limpia nada y avisa, así que aquí tampoco cerramos sesión en ese caso.
+  const salir = async () => {
+    if (activo) {
+      const finalizado = await finalizar();
+      if (!finalizado) return;
+    }
+    await cerrarSesion();
+    setLocation("/");
   };
 
   const enviarOcupacion = async (nivel: "vacio" | "medio" | "lleno") => {
@@ -264,7 +278,25 @@ export default function Conductor() {
           <span className="font-display font-extrabold text-xl tracking-wide text-white">TRANSPADILLA</span>
           <div className="flex items-center gap-1">
             <button onClick={() => setCambiarPass(true)} className="text-white p-2.5 active:scale-90 transition-transform" aria-label="Cambiar contraseña" title="Cambiar contraseña"><KeyRound className="w-5 h-5" /></button>
-            <button onClick={() => { void cerrarSesion().finally(() => setLocation("/")); }} className="text-white p-2.5 -mr-1 active:scale-90 transition-transform" data-testid="button-salir" aria-label="Cerrar sesión" title="Cerrar sesión"><LogOut className="w-5 h-5" /></button>
+            <button
+              onClick={() => {
+                if (activo) {
+                  setConfirmar({
+                    titulo: "Cerrar sesión",
+                    descripcion: "Tienes un recorrido activo. Se finalizará y dejarás de transmitir tu ubicación antes de cerrar sesión. ¿Continuar?",
+                    textoConfirmar: "Cerrar sesión",
+                    destructivo: true,
+                    accion: salir,
+                  });
+                } else {
+                  void salir();
+                }
+              }}
+              className="text-white p-2.5 -mr-1 active:scale-90 transition-transform"
+              data-testid="button-salir"
+              aria-label="Cerrar sesión"
+              title="Cerrar sesión"
+            ><LogOut className="w-5 h-5" /></button>
           </div>
         </header>
 
@@ -350,7 +382,7 @@ export default function Conductor() {
             </button>
           ) : (
             <button
-              onClick={() => setConfirmar({ titulo: "Finalizar recorrido", descripcion: "¿Seguro que quieres finalizar el recorrido? Dejarás de transmitir tu ubicación.", textoConfirmar: "Finalizar", destructivo: true, accion: finalizar })}
+              onClick={() => setConfirmar({ titulo: "Finalizar recorrido", descripcion: "¿Seguro que quieres finalizar el recorrido? Dejarás de transmitir tu ubicación.", textoConfirmar: "Finalizar", destructivo: true, accion: async () => { await finalizar(); } })}
               disabled={finalizarRecorrido.isPending}
               data-testid="button-finalizar"
               className="w-full rounded-2xl py-10 flex flex-col items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-transform text-white disabled:opacity-60"
