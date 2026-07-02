@@ -56,7 +56,7 @@ export default function DashboardTab({
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4">
           {[
             { label: "Total Buses",  value: stats?.totalBuses ?? 0,     icon: <BusIcon className="w-5 h-5" />,  tint: "#7BB8D5" },
             { label: "Activos",      value: stats?.busesActivos ?? 0,   icon: <Activity className="w-5 h-5" />, tint: "#22c55e" },
@@ -64,7 +64,7 @@ export default function DashboardTab({
             { label: "Rutas",        value: stats?.totalRutas ?? 0,     icon: <Map className="w-5 h-5" />,      tint: "#a78bfa" },
             { label: "Paradas",      value: stats?.totalParadas ?? 0,   icon: <MapPin className="w-5 h-5" />,   tint: "#38bdf8" },
           ].map((stat) => (
-            <div key={stat.label} className="bg-card border border-border rounded-xl p-4 transition-colors hover:border-primary/40">
+            <div key={stat.label} className="bg-card border border-border rounded-xl p-4 lg:p-5 transition-colors hover:border-primary/40">
               <div
                 className="w-9 h-9 rounded-lg flex items-center justify-center mb-3"
                 style={{ background: `${stat.tint}1f`, color: stat.tint }}

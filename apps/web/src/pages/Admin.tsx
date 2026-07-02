@@ -169,7 +169,7 @@ export default function Admin() {
         </div>
 
         {/* ── DESKTOP TOPBAR (claro) ── */}
-        <div className="hidden md:flex items-center justify-between px-6 py-3 shrink-0 bg-white border-b" style={{ borderColor: "#e8edf4" }}>
+        <div className="hidden md:flex items-center justify-between px-6 py-3 shrink-0 bg-white border-b md:sticky md:top-0 md:z-10" style={{ borderColor: "#e8edf4" }}>
           <div>
             <h1 className="font-display text-xl font-extrabold" style={{ color: "var(--color-navy)" }}>{tabTitle[tab]}</h1>
             <p className="text-xs" style={{ color: "var(--color-gray-text)" }}>Riohacha, La Guajira · TransPadilla</p>
@@ -189,7 +189,10 @@ export default function Admin() {
         </div>
 
         {/* ── CONTENT ── */}
+        {/* En pantallas anchas el contenido se centra y limita para leerse como un
+            panel real (no estirado de borde a borde); en móvil sigue full-width. */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
+         <div className="mx-auto w-full md:max-w-6xl">
 
           {/* DASHBOARD */}
           {tab === "dashboard" && (
@@ -241,6 +244,7 @@ export default function Admin() {
           {/* RESUMEN EJECUTIVO (KPIs + km por ruta + ocupación + descarga PDF/CSV) */}
           {tab === "ejecutivo" && <ResumenEjecutivoTab />}
 
+         </div>
         </div>
       </div>
 
