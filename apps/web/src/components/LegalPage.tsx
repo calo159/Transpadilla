@@ -6,7 +6,7 @@ import { LogoTP } from "@/components/LogoTP";
 /** Encabezado de sección dentro de una página legal. */
 export function LegalH2({ children }: { children: ReactNode }) {
   return (
-    <h2 className="font-display text-lg font-extrabold mt-7 mb-2" style={{ color: "var(--color-navy)" }}>
+    <h2 className="font-display text-lg font-extrabold mt-7 md:mt-9 mb-2" style={{ color: "var(--color-navy)" }}>
       {children}
     </h2>
   );
@@ -14,7 +14,7 @@ export function LegalH2({ children }: { children: ReactNode }) {
 
 /** Párrafo de cuerpo. */
 export function LegalP({ children }: { children: ReactNode }) {
-  return <p className="text-sm leading-relaxed mb-3" style={{ color: "#334155" }}>{children}</p>;
+  return <p className="text-sm md:text-base leading-relaxed mb-3" style={{ color: "#334155" }}>{children}</p>;
 }
 
 /** Lista con viñetas de marca. */
@@ -40,7 +40,7 @@ export function LegalPage({
     <div className="tp-light min-h-screen flex flex-col" style={{ background: "#EEF1F6" }}>
       {/* Cabecera navy de marca */}
       <header
-        className="px-4 h-14 flex items-center justify-between shrink-0"
+        className="px-4 md:px-8 h-14 md:h-16 flex items-center justify-between shrink-0"
         style={{ background: "linear-gradient(135deg, #24487e 0%, #1B3B6F 60%, #16335f 100%)" }}
       >
         <button
@@ -56,7 +56,7 @@ export function LegalPage({
       </header>
 
       {/* Contenido */}
-      <main className="flex-1 w-full max-w-3xl mx-auto px-4 py-8">
+      <main className="flex-1 w-full max-w-3xl mx-auto px-4 py-8 md:py-12">
         <div className="bg-white rounded-2xl shadow-sm p-6 md:p-8" style={{ border: "1px solid #e5e7eb" }}>
           <h1 className="font-display text-2xl font-black mb-1" style={{ color: "var(--color-navy)" }}>{titulo}</h1>
           <p className="text-xs mb-5" style={{ color: "var(--color-gray-text)" }}>Última actualización: {actualizado}</p>
