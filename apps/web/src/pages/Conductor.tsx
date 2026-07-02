@@ -269,7 +269,7 @@ export default function Conductor() {
 
   return (
     <div className="tp-light tp-conductor-bg min-h-screen">
-      <div className="tp-conductor-panel max-w-md mx-auto flex flex-col min-h-screen">
+      <div className="tp-conductor-panel max-w-md md:max-w-2xl mx-auto flex flex-col min-h-screen">
         {/* Header navy (estilo Stitch) */}
         <header className="flex items-center justify-between px-3 shrink-0" style={{ background: "var(--color-navy)", height: 56 }}>
           <button onClick={() => setLocation("/")} className="text-white p-2.5 -ml-1 active:scale-90 transition-transform" aria-label="Volver al mapa" title="Volver al mapa">
@@ -394,9 +394,10 @@ export default function Conductor() {
             </button>
           )}
 
-          {/* Ocupación + novedad (solo en turno activo) */}
+          {/* Ocupación + novedad (solo en turno activo). En escritorio van en dos
+              columnas para aprovechar el ancho; en celular quedan apiladas. */}
           {activo && (
-            <>
+            <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-4 md:items-start">
               {/* Ocupación del vehículo (cards grandes) */}
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-wider px-1 mb-2" style={{ color: "var(--color-gray-text)" }}>Ocupación del vehículo</h3>
@@ -458,7 +459,7 @@ export default function Conductor() {
                   </Button>
                 </div>
               )}
-            </>
+            </div>
           )}
 
           {/* Estado de transmisión + mapa opcional */}
