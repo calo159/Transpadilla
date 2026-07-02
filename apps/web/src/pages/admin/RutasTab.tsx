@@ -12,7 +12,7 @@ import { apiFetch } from "@/lib/api";
 import { COLORES } from "@/lib/constants";
 import type { ConfirmOpts } from "@/components/ConfirmDialog";
 import type { PromptOpts } from "@/components/PromptDialog";
-import { inputCls } from "./shared";
+import { inputCls, cardCls, stickyFormCls, SectionHeader } from "./shared";
 
 interface Props {
   rutas: Ruta[];
@@ -130,10 +130,8 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-      <div className="bg-card border border-border rounded-xl p-4 md:p-5 h-fit">
-        <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-          <Plus className="w-4 h-4 text-primary" /> Nueva ruta
-        </h3>
+      <div className={`${cardCls} ${stickyFormCls}`}>
+        <SectionHeader icon={<Plus className="w-4 h-4 text-primary" />} title="Nueva ruta" />
         <div className="space-y-3">
           <div>
             <Label className="text-xs mb-1.5">Nombre de la ruta</Label>
@@ -159,11 +157,8 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-4 md:p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center justify-between">
-          <span className="flex items-center gap-2"><Route className="w-4 h-4 text-purple-400" /> Rutas registradas</span>
-          <span className="text-xs text-muted-foreground font-normal">{rutas.length} en total</span>
-        </h3>
+      <div className={cardCls}>
+        <SectionHeader icon={<Route className="w-4 h-4 text-purple-400" />} title="Rutas registradas" count={`${rutas.length} en total`} />
         {rutasLoading ? (
           <div className="space-y-2">{[1,2,3].map((i) => <div key={i} className="h-12 bg-muted/40 rounded-xl animate-pulse" />)}</div>
         ) : rutas.length === 0 ? (
@@ -175,7 +170,7 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
             <p className="text-xs text-muted-foreground mt-0.5">Crea la primera con el formulario de la izquierda.</p>
           </div>
         ) : (
-          <div className="space-y-2 max-h-96 overflow-y-auto">
+          <div className="space-y-2 max-h-96 lg:max-h-[calc(100vh-14rem)] overflow-y-auto">
             {rutas.map((ruta) => (
               <div key={ruta.id} className="p-3 bg-secondary/30 border border-border rounded-xl" style={{ opacity: ruta.activa === false ? 0.6 : 1 }}>
                 <div className="flex items-center gap-3">
