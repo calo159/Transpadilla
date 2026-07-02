@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Loader2, ArrowLeft, Eye, EyeOff, MessageCircle, Instagram } from "lucide-react";
+import { Loader2, ArrowLeft, Eye, EyeOff, MessageCircle, Instagram, Radio, MapPin, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,7 +57,7 @@ export default function Login() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden"
+      className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden md:flex-row md:items-stretch md:justify-center md:gap-16 md:p-0"
       style={{
         background: "radial-gradient(ellipse at 50% -10%, #2558A5 0%, #1B3B6F 35%, #080D18 70%)",
       }}
@@ -113,9 +113,41 @@ export default function Login() {
         </a>
       </div>
 
+      {/* Panel de marca — solo escritorio; en móvil el logo va arriba del formulario */}
+      <div className="hidden md:flex md:w-[380px] flex-shrink-0 flex-col items-center justify-center gap-7 relative z-10">
+        <LogoTP size={112} />
+        <div className="text-center">
+          <h1 className="text-5xl font-black tracking-widest text-white mb-1">
+            Trans<span style={{ color: "var(--tp-yellow)" }}>Padilla</span>
+          </h1>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <div className="h-px w-10 opacity-40" style={{ background: "var(--tp-yellow)" }} />
+            <p className="text-xs font-bold tracking-[0.25em] uppercase text-white/70">
+              Moviendo la Ciudad
+            </p>
+            <div className="h-px w-10 opacity-40" style={{ background: "var(--tp-yellow)" }} />
+          </div>
+          <p className="text-white/50 text-sm">
+            Rastreo de buses en tiempo real para Riohacha
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 mt-2 w-full max-w-[260px]">
+          {[
+            { icon: <Radio className="w-4 h-4" />, t: "Posición de los buses en tiempo real" },
+            { icon: <MapPin className="w-4 h-4" />, t: "Cobertura de todas las rutas de la ciudad" },
+            { icon: <ShieldCheck className="w-4 h-4" />, t: "Acceso protegido para conductores y admins" },
+          ].map((f, i) => (
+            <div key={i} className="flex items-center gap-2.5 text-white/60 text-xs">
+              <span className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(123,184,213,0.15)", color: "var(--tp-sky)" }}>{f.icon}</span>
+              {f.t}
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="w-full max-w-sm relative z-10">
-        {/* Logo y marca */}
-        <div className="text-center mb-8">
+        {/* Logo y marca — solo móvil (en escritorio va en el panel de la izquierda) */}
+        <div className="text-center mb-8 md:hidden">
           <div className="flex items-center justify-center mb-5">
             <LogoTP size={96} />
           </div>
