@@ -115,4 +115,37 @@ router.get("/reportes/ocupacion", authMiddleware, requireRol("admin"), async (re
   res.json({ dias, ...base });
 });
 
+// Cobertura y alcance del servicio: no es de periodo, son conteos actuales
+// (footprint del servicio + adopción por la comunidad). Para el resumen
+// ejecutivo — qué tan grande es el sistema y si realmente está operando.
+router.get("/reportes/cobertura", authMiddleware, requireRol("admin"), async (_req, res) => {
+  const { rows } = await pool.query(
+    `SELECT
+       (SELECT COUNT(*)::int FROM rutas) AS total_rutas,
+       (SELECT COUNT(*)::int FROM paradas) AS total_paradas,
+       (SELECT COUNT(*)::int FROM buses) AS total_buses,
+       (SELECT COUNT(*)::int FROM buses WHERE estado = 'activo') AS buses_activos_ahora,
+       (SELECT COUNT(*)::int FROM usuarios WHERE rol = 'conductor') AS total_conductores,
+       (SELECT COUNT(*)::int FROM usuarios WHERE rol = 'pasajero') AS total_pasajeros,
+       (SELECT COUNT(*)::int FROM suscripciones_push) AS suscripciones_push,
+       (SELECT COUNT(*)::int
+          FROM rutas r
+          WHERE NOT EXISTS (
+            SELECT 1 FROM buses b WHERE b.ruta_id = r.id AND b.estado = 'activo'
+          )
+       ) AS rutas_sin_bus_activo`,
+  );
+  const r = rows[0] ?? {};
+  res.json({
+    totalRutas: Number(r.total_rutas ?? 0),
+    totalParadas: Number(r.total_paradas ?? 0),
+    totalBuses: Number(r.total_buses ?? 0),
+    busesActivosAhora: Number(r.buses_activos_ahora ?? 0),
+    rutasSinBusActivo: Number(r.rutas_sin_bus_activo ?? 0),
+    totalConductores: Number(r.total_conductores ?? 0),
+    totalPasajeros: Number(r.total_pasajeros ?? 0),
+    suscripcionesPush: Number(r.suscripciones_push ?? 0),
+  });
+});
+
 export default router;

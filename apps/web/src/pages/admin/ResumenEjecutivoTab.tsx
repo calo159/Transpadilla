@@ -4,10 +4,23 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from "recharts";
-import { Radio, Timer, Gauge, Route as RouteIcon, Loader2, BarChart3, FileDown, FileText } from "lucide-react";
+import {
+  Radio, Timer, Gauge, Route as RouteIcon, Loader2, BarChart3, FileDown, FileText,
+  MapPin, Bus, UserCheck, Users, BellRing, AlertTriangle,
+} from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
 interface Stats { totalBuses: number; busesActivos: number }
+interface Cobertura {
+  totalRutas: number;
+  totalParadas: number;
+  totalBuses: number;
+  busesActivosAhora: number;
+  rutasSinBusActivo: number;
+  totalConductores: number;
+  totalPasajeros: number;
+  suscripcionesPush: number;
+}
 interface ResumenRuta {
   ruta_id: number;
   nombre: string;
@@ -47,10 +60,21 @@ function csvCampo(v: string | number): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-/** Descarga el resumen en pantalla como CSV (KPIs + km por ruta + ocupación). */
-function descargarCSV(resumen: Resumen, ocup: Ocupacion, kpis: Kpis) {
+/** Descarga el resumen en pantalla como CSV (cobertura + KPIs + km por ruta + ocupación). */
+function descargarCSV(resumen: Resumen, ocup: Ocupacion, kpis: Kpis, cobertura: Cobertura) {
   const lineas: string[] = [];
   lineas.push(`TransPadilla - Resumen ejecutivo (${resumen.dias} dias) - ${hoyISO()}`);
+  lineas.push("");
+  lineas.push("Cobertura y alcance del servicio");
+  lineas.push(["Indicador", "Valor"].join(","));
+  lineas.push([csvCampo("Rutas registradas"), cobertura.totalRutas].join(","));
+  lineas.push([csvCampo("Paradas registradas"), cobertura.totalParadas].join(","));
+  lineas.push([csvCampo("Buses registrados"), cobertura.totalBuses].join(","));
+  lineas.push([csvCampo("Buses activos ahora"), cobertura.busesActivosAhora].join(","));
+  lineas.push([csvCampo("Rutas sin bus activo ahora"), cobertura.rutasSinBusActivo].join(","));
+  lineas.push([csvCampo("Conductores registrados"), cobertura.totalConductores].join(","));
+  lineas.push([csvCampo("Pasajeros registrados"), cobertura.totalPasajeros].join(","));
+  lineas.push([csvCampo("Suscripciones a notificaciones"), cobertura.suscripcionesPush].join(","));
   lineas.push("");
   lineas.push("Indicadores");
   lineas.push(["Indicador", "Valor"].join(","));
@@ -82,7 +106,7 @@ function descargarCSV(resumen: Resumen, ocup: Ocupacion, kpis: Kpis) {
 }
 
 /** Genera un PDF con jspdf (import dinámico para no cargar el bundle público). */
-async function descargarPDF(resumen: Resumen, ocup: Ocupacion, kpis: Kpis) {
+async function descargarPDF(resumen: Resumen, ocup: Ocupacion, kpis: Kpis, cobertura: Cobertura) {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
   const doc = new jsPDF();
@@ -95,9 +119,28 @@ async function descargarPDF(resumen: Resumen, ocup: Ocupacion, kpis: Kpis) {
   doc.text("Moviendo la Ciudad — Resumen ejecutivo", 14, 24);
   doc.text(`Periodo: últimos ${resumen.dias} días   ·   Generado: ${hoyISO()}`, 14, 30);
 
-  // Bloque de KPIs (lo que se muestra a una empresa de un vistazo).
+  // Bloque de cobertura y alcance (footprint del servicio + adopción comunitaria).
   autoTable(doc, {
     startY: 38,
+    head: [["Cobertura y alcance del servicio", "Valor"]],
+    body: [
+      ["Rutas registradas", String(cobertura.totalRutas)],
+      ["Paradas registradas", String(cobertura.totalParadas)],
+      ["Buses registrados", String(cobertura.totalBuses)],
+      ["Buses activos ahora", String(cobertura.busesActivosAhora)],
+      ["Rutas sin bus activo ahora", String(cobertura.rutasSinBusActivo)],
+      ["Conductores registrados", String(cobertura.totalConductores)],
+      ["Pasajeros registrados", String(cobertura.totalPasajeros)],
+      ["Suscripciones a notificaciones", String(cobertura.suscripcionesPush)],
+    ],
+    headStyles: { fillColor: [27, 59, 111] },
+    styles: { fontSize: 9 },
+  });
+
+  // Bloque de KPIs (lo que se muestra a una empresa de un vistazo).
+  let y = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 46;
+  autoTable(doc, {
+    startY: y + 8,
     head: [["Indicador", "Valor"]],
     body: [
       ["Buses con GPS activo", `${kpis.pctGps}% (${kpis.activos}/${kpis.totalBuses})`],
@@ -109,7 +152,7 @@ async function descargarPDF(resumen: Resumen, ocup: Ocupacion, kpis: Kpis) {
     styles: { fontSize: 9 },
   });
 
-  let y = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 46;
+  y = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 46;
   autoTable(doc, {
     startY: y + 8,
     head: [["Ruta", "Km", "Muestras", "Buses"]],
@@ -152,20 +195,41 @@ function KpiCard({ icon, label, valor, nota, color }: {
   );
 }
 
+/** Estadística compacta para la fila de cobertura (más densa que KpiCard). */
+function MiniStat({ icon, label, valor, tint, alerta }: {
+  icon: React.ReactNode; label: string; valor: string | number; tint: string; alerta?: boolean;
+}) {
+  return (
+    <div
+      className="rounded-xl p-3.5 flex flex-col gap-1.5"
+      style={alerta
+        ? { background: "rgba(229,62,62,0.06)", border: "1px solid rgba(229,62,62,0.3)" }
+        : { background: "#fff", border: "1px solid #e5e7eb" }}
+    >
+      <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${tint}1f`, color: tint }}>
+        {icon}
+      </div>
+      <p className="text-xl font-black leading-none" style={{ color: alerta ? "var(--color-danger, #E53E3E)" : "var(--color-navy, #1B3B6F)" }}>{valor}</p>
+      <span className="text-[10px] font-medium leading-tight" style={{ color: "var(--color-gray-text, #6B7280)" }}>{label}</span>
+    </div>
+  );
+}
+
 /**
  * Tab "Resumen ejecutivo": el reporte de cómo van las cosas, presentable a una
- * empresa. Combina KPIs de un vistazo, km recorridos por ruta, ocupación y la
- * descarga en PDF/CSV.
+ * empresa. Combina cobertura y alcance del servicio, KPIs de operación, km
+ * recorridos por ruta, ocupación y la descarga en PDF/CSV.
  */
 export default function ResumenEjecutivoTab() {
   const [dias, setDias] = useState<number>(7);
 
   const stats = useQuery({ queryKey: ["stats-exec"], queryFn: () => getJson<Stats>("/api/stats") });
+  const cobertura = useQuery({ queryKey: ["cobertura-exec"], queryFn: () => getJson<Cobertura>("/api/reportes/cobertura") });
   const resumen = useQuery({ queryKey: ["resumen-exec", dias], queryFn: () => getJson<Resumen>(`/api/reportes/resumen?dias=${dias}`) });
   const ocup = useQuery({ queryKey: ["ocup-exec", dias], queryFn: () => getJson<Ocupacion>(`/api/reportes/ocupacion?dias=${dias}`) });
   const frec = useQuery({ queryKey: ["frec-exec", dias], queryFn: () => getJson<Frecuencia>(`/api/reportes/frecuencia?dias=${dias}`) });
 
-  const cargando = stats.isLoading || resumen.isLoading || ocup.isLoading || frec.isLoading;
+  const cargando = stats.isLoading || cobertura.isLoading || resumen.isLoading || ocup.isLoading || frec.isLoading;
 
   const totalBuses = stats.data?.totalBuses ?? 0;
   const activos = stats.data?.busesActivos ?? 0;
@@ -187,7 +251,7 @@ export default function ResumenEjecutivoTab() {
       ].filter((d) => d.valor > 0)
     : [];
 
-  const puedeExportar = !cargando && resumen.data != null && ocup.data != null && !sinHistorial;
+  const puedeExportar = !cargando && resumen.data != null && ocup.data != null && cobertura.data != null && !sinHistorial;
 
   return (
     <div className="space-y-5">
@@ -209,7 +273,7 @@ export default function ResumenEjecutivoTab() {
         {puedeExportar && (
           <div className="ml-auto flex items-center gap-2">
             <button
-              onClick={() => descargarCSV(resumen.data!, ocup.data!, kpis)}
+              onClick={() => descargarCSV(resumen.data!, ocup.data!, kpis, cobertura.data!)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
               style={{ background: "var(--color-secondary, #eef2f7)", color: "var(--color-navy, #1B3B6F)" }}
               aria-label="Exportar resumen a CSV"
@@ -217,7 +281,7 @@ export default function ResumenEjecutivoTab() {
               <FileDown className="w-3.5 h-3.5" /> CSV
             </button>
             <button
-              onClick={() => { void descargarPDF(resumen.data!, ocup.data!, kpis); }}
+              onClick={() => { void descargarPDF(resumen.data!, ocup.data!, kpis, cobertura.data!); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-colors"
               style={{ background: "var(--color-blue, #2558A5)" }}
               aria-label="Exportar resumen a PDF"
@@ -234,7 +298,36 @@ export default function ResumenEjecutivoTab() {
         </div>
       ) : (
         <>
-          {/* KPIs grandes */}
+          {/* Cobertura y alcance del servicio: qué tan grande es el sistema, si
+              está operando de verdad ahora, y cuánta gente lo usa/confía en él. */}
+          {cobertura.data && (
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider mb-2 px-0.5" style={{ color: "var(--color-gray-text, #6B7280)" }}>
+                Cobertura y alcance del servicio
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                <MiniStat icon={<RouteIcon className="w-3.5 h-3.5" />} label="Rutas registradas" valor={cobertura.data.totalRutas} tint="#a78bfa" />
+                <MiniStat icon={<MapPin className="w-3.5 h-3.5" />} label="Paradas registradas" valor={cobertura.data.totalParadas} tint="#38bdf8" />
+                <MiniStat icon={<Bus className="w-3.5 h-3.5" />} label="Buses activos ahora" valor={`${cobertura.data.busesActivosAhora} / ${cobertura.data.totalBuses}`} tint="#38A169" />
+                <MiniStat
+                  icon={<AlertTriangle className="w-3.5 h-3.5" />}
+                  label="Rutas sin bus activo ahora"
+                  valor={cobertura.data.rutasSinBusActivo}
+                  tint={cobertura.data.rutasSinBusActivo > 0 ? "#E53E3E" : "#38A169"}
+                  alerta={cobertura.data.rutasSinBusActivo > 0}
+                />
+                <MiniStat icon={<UserCheck className="w-3.5 h-3.5" />} label="Conductores registrados" valor={cobertura.data.totalConductores} tint="#2558A5" />
+                <MiniStat icon={<Users className="w-3.5 h-3.5" />} label="Pasajeros registrados" valor={cobertura.data.totalPasajeros} tint="#F5B731" />
+                <MiniStat icon={<BellRing className="w-3.5 h-3.5" />} label="Suscripciones a notificaciones" valor={cobertura.data.suscripcionesPush} tint="#7BB8D5" />
+              </div>
+            </div>
+          )}
+
+          {/* KPIs de operación del periodo */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider mb-2 px-0.5" style={{ color: "var(--color-gray-text, #6B7280)" }}>
+              Operación del periodo
+            </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <KpiCard
               icon={<Radio className="w-4 h-4" />}
@@ -257,6 +350,7 @@ export default function ResumenEjecutivoTab() {
               nota={`en los últimos ${dias} días`}
               color="#F5B731"
             />
+          </div>
           </div>
 
           {sinHistorial ? (
