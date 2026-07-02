@@ -49,7 +49,9 @@ export default function Pasajero() {
   const userMarkerRef = useRef<L.Marker | null>(null);
   const destinoMarkerRef = useRef<L.Marker | null>(null);
   const miParadaMarkerRef = useRef<L.Marker | null>(null);
-  const novedadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Un timer de auto-cierre por bus (no uno global): así la novedad de un bus no
+  // se pisa ni reinicia el temporizador de la de otro.
+  const novedadTimersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   const queryClient = useQueryClient();
 
   const [selectedRutaId, setSelectedRutaId] = useState<number | null>(null);
@@ -62,7 +64,8 @@ export default function Pasajero() {
   const siguiendoBusRef = useRef<number | null>(null);
   // Espejo del ETA por parada para leerlo dentro de updateBusMarker (useCallback []).
   const etaRef = useRef<Record<number, { eta: number; placa: string }>>({});
-  const [novedad, setNovedad] = useState<Novedad | null>(null);
+  // Pila de novedades activas (una por bus como máximo, la más reciente de c/u).
+  const [novedades, setNovedades] = useState<Novedad[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   // Card de detalle inferior (móvil): minimizado (barra), medio o expandido.
   // Bajarlo NO lo cierra (solo la X); queda en "peek" dejando ver el mapa.
@@ -436,13 +439,24 @@ export default function Pasajero() {
     socket.on("bus:novedad", (data: Novedad) => {
       // Refresca los buses para que el ⚠ aparezca/desaparezca en el marcador.
       queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
-      // Solo muestra la alerta cuando hay novedad (no cuando el conductor la retira)
-      // y solo si es de la ruta que el pasajero está siguiendo. El servidor ya la
+      // Solo si es de la ruta que el pasajero está siguiendo. El servidor ya la
       // emite solo a la room de la ruta; esta guarda es defensa en profundidad.
-      if (data.novedad && (data.rutaId == null || data.rutaId === selectedRutaIdRef.current)) {
-        setNovedad(data);
-        if (novedadTimerRef.current) clearTimeout(novedadTimerRef.current);
-        novedadTimerRef.current = setTimeout(() => setNovedad(null), 15000);
+      if (data.rutaId != null && data.rutaId !== selectedRutaIdRef.current) return;
+      const timerPrevio = novedadTimersRef.current.get(data.busId);
+      if (timerPrevio) clearTimeout(timerPrevio);
+      novedadTimersRef.current.delete(data.busId);
+      if (data.novedad) {
+        // Nueva novedad de este bus: reemplaza solo SU entrada en la pila (no toca
+        // las de otros buses), así 2+ novedades simultáneas se ven todas.
+        setNovedades((prev) => [...prev.filter((n) => n.busId !== data.busId), data].slice(-3));
+        const t = setTimeout(() => {
+          setNovedades((prev) => prev.filter((n) => n.busId !== data.busId));
+          novedadTimersRef.current.delete(data.busId);
+        }, 15000);
+        novedadTimersRef.current.set(data.busId, t);
+      } else {
+        // El conductor retiró la novedad: se quita su alerta de inmediato.
+        setNovedades((prev) => prev.filter((n) => n.busId !== data.busId));
       }
     });
     socket.on("bus:ocupacion", () => {
@@ -450,7 +464,8 @@ export default function Pasajero() {
     });
     return () => {
       socket.disconnect();
-      if (novedadTimerRef.current) clearTimeout(novedadTimerRef.current);
+      novedadTimersRef.current.forEach((t) => clearTimeout(t));
+      novedadTimersRef.current.clear();
     };
   }, [updateBusMarker, queryClient]);
 
@@ -1257,7 +1272,7 @@ export default function Pasajero() {
           const proxEtaMin = nextI >= 0 ? etaPorParada[paradas[nextI]!.id]?.eta : undefined;
           const progresoPct = nextI >= 0 && paradas.length > 1 ? (nextI / (paradas.length - 1)) * 100 : 0;
           const hayDemora = busesRutaSel.some((x) => x.bus.estado === "demora");
-          const nov = busesRutaSel.find((x) => x.bus.novedad)?.bus.novedad;
+          const busesConNovedad = busesRutaSel.filter((x) => x.bus.novedad);
           const proxBus = proximoBus ? buses.find((b) => b.placa === proximoBus.placa) : undefined;
           const ocupProx = proxBus?.ocupacion
             ? ({ vacio: { l: "Disponible", c: "#38A169" }, medio: { l: "Medio lleno", c: "#F5B731" }, lleno: { l: "Lleno", c: "#E53E3E" } } as Record<string, { l: string; c: string }>)[proxBus.ocupacion]
@@ -1323,11 +1338,17 @@ export default function Pasajero() {
                 <p className="text-sm" style={{ color: "var(--color-gray-text)" }}>No hay buses en circulación en esta ruta ahora.</p>
               )}
             </div>
-            {/* Banner de novedad */}
-            {nov && (
-              <div className="flex items-start gap-2 px-4 py-2.5" style={{ background: "rgba(245,183,49,0.14)" }}>
-                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "var(--color-gold)" }} />
-                <span className="text-xs font-semibold leading-snug" style={{ color: "#9a6a00" }}>{nov}</span>
+            {/* Banner de novedad — una línea por cada bus con novedad activa */}
+            {busesConNovedad.length > 0 && (
+              <div className="px-4 py-2.5 flex flex-col gap-1.5" style={{ background: "rgba(245,183,49,0.14)" }}>
+                {busesConNovedad.map(({ bus: b }) => (
+                  <div key={b.id} className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "var(--color-gold)" }} />
+                    <span className="text-xs font-semibold leading-snug" style={{ color: "#9a6a00" }}>
+                      {busesConNovedad.length > 1 ? `Bus ${b.placa}: ` : ""}{b.novedad}
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
             {/* Lista de paraderos */}
@@ -1802,28 +1823,38 @@ export default function Pasajero() {
           </div>
         )}
 
-        {/* Alerta de novedad — vistosa, con animación de entrada y botón de cerrar */}
-        {novedad && (
-          <div
-            role="alert"
-            className="absolute top-16 left-3 right-3 md:top-4 md:left-1/2 md:-translate-x-1/2 md:right-auto md:max-w-md z-[1002] rounded-2xl px-4 py-3.5 flex items-start gap-3 animate-in slide-in-from-top-4 fade-in duration-300"
-            style={{ background: "var(--tp-yellow)", color: "#1a1300", boxShadow: "0 12px 40px rgba(245,183,49,0.55)" }}
-          >
-            <AlertTriangle className="w-6 h-6 flex-shrink-0 mt-0.5 animate-pulse" style={{ color: "#1a1300" }} />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-black uppercase tracking-wide">
-                Alerta {novedad.placa ? `— Bus ${novedad.placa}` : "de un conductor"}
-              </p>
-              <p className="text-sm font-medium mt-0.5" style={{ color: "#2a2000" }}>{novedad.novedad}</p>
-            </div>
-            <button
-              onClick={() => setNovedad(null)}
-              className="flex-shrink-0 -mr-1 -mt-0.5 w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-black/10 active:bg-black/20"
-              style={{ color: "#1a1300" }}
-              aria-label="Cerrar alerta"
-            >
-              <X className="w-5 h-5" />
-            </button>
+        {/* Alertas de novedad — se apilan: cada bus con novedad tiene su propia tarjeta. */}
+        {novedades.length > 0 && (
+          <div className="absolute top-16 left-3 right-3 md:top-4 md:left-1/2 md:-translate-x-1/2 md:right-auto md:max-w-md z-[1002] flex flex-col gap-2">
+            {novedades.map((n) => (
+              <div
+                key={n.busId}
+                role="alert"
+                className="rounded-2xl px-4 py-3.5 flex items-start gap-3 animate-in slide-in-from-top-4 fade-in duration-300"
+                style={{ background: "var(--tp-yellow)", color: "#1a1300", boxShadow: "0 12px 40px rgba(245,183,49,0.55)" }}
+              >
+                <AlertTriangle className="w-6 h-6 flex-shrink-0 mt-0.5 animate-pulse" style={{ color: "#1a1300" }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-black uppercase tracking-wide">
+                    Alerta {n.placa ? `— Bus ${n.placa}` : "de un conductor"}
+                  </p>
+                  <p className="text-sm font-medium mt-0.5" style={{ color: "#2a2000" }}>{n.novedad}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    const t = novedadTimersRef.current.get(n.busId);
+                    if (t) clearTimeout(t);
+                    novedadTimersRef.current.delete(n.busId);
+                    setNovedades((prev) => prev.filter((x) => x.busId !== n.busId));
+                  }}
+                  className="flex-shrink-0 -mr-1 -mt-0.5 w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-black/10 active:bg-black/20"
+                  style={{ color: "#1a1300" }}
+                  aria-label="Cerrar alerta"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
