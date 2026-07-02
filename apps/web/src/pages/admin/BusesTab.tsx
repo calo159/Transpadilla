@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/api";
 import type { ConfirmOpts } from "@/components/ConfirmDialog";
-import { inputCls, selectTriggerCls } from "./shared";
+import { inputCls, selectTriggerCls, cardCls, stickyFormCls, SectionHeader } from "./shared";
 
 interface Props {
   buses: Bus[];
@@ -79,10 +79,8 @@ export default function BusesTab({ buses, busesLoading, rutas, setConfirmar }: P
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-      <div className="bg-card border border-border rounded-xl p-4 md:p-5 h-fit">
-        <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-          <Plus className="w-4 h-4 text-primary" /> Registrar bus
-        </h3>
+      <div className={`${cardCls} ${stickyFormCls}`}>
+        <SectionHeader icon={<Plus className="w-4 h-4 text-primary" />} title="Registrar bus" />
         <div className="space-y-3">
           <div>
             <Label className="text-xs mb-1.5">Placa del vehículo</Label>
@@ -104,11 +102,8 @@ export default function BusesTab({ buses, busesLoading, rutas, setConfirmar }: P
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-4 md:p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center justify-between">
-          <span className="flex items-center gap-2"><BusIcon className="w-4 h-4 text-primary" /> Flota de buses</span>
-          <span className="text-xs text-muted-foreground font-normal">{buses.length} en total</span>
-        </h3>
+      <div className={cardCls}>
+        <SectionHeader icon={<BusIcon className="w-4 h-4 text-primary" />} title="Flota de buses" count={`${buses.length} en total`} />
         {busesLoading ? (
           <div className="space-y-2">{[1,2,3].map((i) => <div key={i} className="h-16 bg-muted/40 rounded-xl animate-pulse" />)}</div>
         ) : buses.length === 0 ? (
@@ -120,7 +115,7 @@ export default function BusesTab({ buses, busesLoading, rutas, setConfirmar }: P
             <p className="text-xs text-muted-foreground mt-0.5">Registra el primero con su placa.</p>
           </div>
         ) : (
-          <div className="space-y-2 max-h-96 overflow-y-auto">
+          <div className="space-y-2 max-h-96 lg:max-h-[calc(100vh-14rem)] overflow-y-auto">
             {buses.map((b) => (
               <div key={b.id} className="flex items-start gap-3 p-3 bg-secondary/30 border border-border rounded-xl">
                 <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${b.estado === "activo" ? "bg-green-500" : b.estado === "demora" ? "bg-amber-500" : "bg-muted-foreground"}`} />

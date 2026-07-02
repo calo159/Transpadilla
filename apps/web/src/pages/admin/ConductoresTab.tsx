@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/api";
 import type { Conductor } from "@/lib/types";
 import type { ConfirmOpts } from "@/components/ConfirmDialog";
-import { inputCls } from "./shared";
+import { inputCls, cardCls, stickyFormCls, SectionHeader } from "./shared";
 
 interface Props {
   /** Buses disponibles para asignar a cada conductor. */
@@ -125,10 +125,8 @@ export default function ConductoresTab({ buses, setConfirmar }: Props) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
       {/* Formulario de registro */}
-      <div className="bg-card border border-border rounded-xl p-4 md:p-5 h-fit">
-        <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-          <UserCheck className="w-4 h-4 text-primary" /> Registrar conductor
-        </h3>
+      <div className={`${cardCls} ${stickyFormCls}`}>
+        <SectionHeader icon={<UserCheck className="w-4 h-4 text-primary" />} title="Registrar conductor" />
         <div className="space-y-3">
           <div>
             <Label className="text-xs mb-1.5">Nombre completo</Label>
@@ -194,15 +192,16 @@ export default function ConductoresTab({ buses, setConfirmar }: Props) {
       </div>
 
       {/* Lista de conductores */}
-      <div className="bg-card border border-border rounded-xl p-4 md:p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-primary" /> Conductores registrados
-          </span>
-          <button onClick={() => fetchConductores()} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-            <RefreshCw className="w-3 h-3" /> Actualizar
-          </button>
-        </h3>
+      <div className={cardCls}>
+        <SectionHeader
+          icon={<Users className="w-4 h-4 text-primary" />}
+          title="Conductores registrados"
+          action={
+            <button onClick={() => fetchConductores()} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+              <RefreshCw className="w-3 h-3" /> Actualizar
+            </button>
+          }
+        />
         {loading ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => <div key={i} className="h-16 bg-muted/40 rounded-xl animate-pulse" />)}
@@ -216,7 +215,7 @@ export default function ConductoresTab({ buses, setConfirmar }: Props) {
             <p className="text-xs text-muted-foreground mt-0.5">Crea el primero con el formulario de la izquierda.</p>
           </div>
         ) : (
-          <div className="space-y-2 max-h-[500px] overflow-y-auto">
+          <div className="space-y-2 max-h-[500px] lg:max-h-[calc(100vh-14rem)] overflow-y-auto">
             {conductores.map((c) => {
               const assignedBus = buses.find((b) => b.conductor_id === c.id);
               return (

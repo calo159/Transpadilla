@@ -18,7 +18,7 @@ import { apiFetch } from "@/lib/api";
 import { escHtml } from "@/lib/html";
 import type { ConfirmOpts } from "@/components/ConfirmDialog";
 import type { PromptOpts } from "@/components/PromptDialog";
-import { inputCls, selectTriggerCls } from "./shared";
+import { inputCls, selectTriggerCls, cardCls, SectionHeader } from "./shared";
 
 interface Props {
   rutas: Ruta[];
@@ -54,6 +54,10 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
     const map = mapRef.current;
     if (!map) return;
     const t = setTimeout(() => map.invalidateSize(), 80); // el tab acaba de montarse
+    // El contenedor cambia de alto entre móvil y escritorio (`lg:h-[420px]`);
+    // recalcular el tamaño de los tiles al cruzar el breakpoint evita mapa gris.
+    const onResize = () => map.invalidateSize();
+    window.addEventListener("resize", onResize);
     const onClick = (e: L.LeafletMouseEvent) => {
       setLat(e.latlng.lat.toFixed(6));
       setLng(e.latlng.lng.toFixed(6));
@@ -67,7 +71,7 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
       map.panTo(e.latlng);
     };
     map.on("click", onClick);
-    return () => { clearTimeout(t); map.off("click", onClick); };
+    return () => { clearTimeout(t); window.removeEventListener("resize", onResize); map.off("click", onClick); };
   }, [mapRef]);
 
   // Dibuja las paradas existentes como referencia (puntos pequeños, no interactivos).
@@ -164,10 +168,8 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
       <div className="space-y-5">
-        <div className="bg-card border border-border rounded-xl p-4 md:p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Plus className="w-4 h-4 text-primary" /> Nueva parada
-          </h3>
+        <div className={cardCls}>
+          <SectionHeader icon={<Plus className="w-4 h-4 text-primary" />} title="Nueva parada" />
           <div className="space-y-3">
             <div>
               <Label className="text-xs mb-1.5">Nombre de la parada</Label>
@@ -180,7 +182,7 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
               <div className="relative">
                 <div
                   ref={mapContainerRef}
-                  className="w-full h-64 rounded-xl overflow-hidden border border-border"
+                  className="w-full h-64 lg:h-[420px] rounded-xl overflow-hidden border border-border"
                   data-testid="map-parada-picker"
                 />
                 {!(lat && lng) && (
@@ -205,10 +207,8 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
           </div>
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-4 md:p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Route className="w-4 h-4 text-purple-400" /> Asignar parada a ruta
-          </h3>
+        <div className={cardCls}>
+          <SectionHeader icon={<Route className="w-4 h-4 text-purple-400" />} title="Asignar parada a ruta" />
           {rutas.length === 0 || paradas.length === 0 ? (
             <p className="text-xs text-muted-foreground">
               {rutas.length === 0 ? "Crea al menos una ruta (pestaña Rutas)" : "Crea al menos una parada arriba"} para poder asignarla a una ruta.
@@ -282,11 +282,8 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-4 md:p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center justify-between">
-          <span className="flex items-center gap-2"><MapPin className="w-4 h-4 text-sky-400" /> Paradas registradas</span>
-          <span className="text-xs text-muted-foreground font-normal">{paradas.length} en total</span>
-        </h3>
+      <div className={cardCls}>
+        <SectionHeader icon={<MapPin className="w-4 h-4 text-sky-400" />} title="Paradas registradas" count={`${paradas.length} en total`} />
         {paradas.length === 0 ? (
           <div className="text-center py-10">
             <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center bg-muted/40">
@@ -296,7 +293,7 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
             <p className="text-xs text-muted-foreground mt-0.5">Crea la primera tocando el mapa de la izquierda.</p>
           </div>
         ) : (
-          <div className="space-y-2 max-h-[500px] overflow-y-auto">
+          <div className="space-y-2 max-h-[500px] lg:max-h-[calc(100vh-14rem)] overflow-y-auto">
             {paradas.map((p) => (
               <div key={p.id} className="flex items-start gap-3 p-3 bg-secondary/30 border border-border rounded-xl">
                 <MapPin className="w-3.5 h-3.5 text-sky-400 flex-shrink-0 mt-0.5" />
