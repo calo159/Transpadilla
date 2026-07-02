@@ -10,6 +10,7 @@ import statsRouter from "./stats";
 import reportesRouter from "./reportes";
 import auditoriaRouter from "./auditoria";
 import pushRouter from "./push";
+import metricsRouter from "./metrics";
 import seedRouter from "./seed";
 
 const router: IRouter = Router();
@@ -25,6 +26,7 @@ router.use(statsRouter);
 router.use(reportesRouter);
 router.use(auditoriaRouter);
 router.use(pushRouter);
+router.use(metricsRouter);
 router.use(seedRouter);
 
 export default router;

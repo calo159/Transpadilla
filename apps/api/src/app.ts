@@ -6,6 +6,8 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { rateLimit } from "./middleware/rate-limit";
+import { registrarRespuesta, registrarError } from "./lib/metrics";
+import { notificarAlerta } from "./lib/alertas";
 
 const app: Express = express();
 const isProd = process.env["NODE_ENV"] === "production";
@@ -36,6 +38,13 @@ app.use(
     },
   }),
 );
+
+// Contador liviano de respuestas por clase de estado (2xx/3xx/4xx/5xx), para
+// /api/metrics. No reemplaza los logs; es un resumen barato en memoria.
+app.use((_req, res, next) => {
+  res.on("finish", () => registrarRespuesta(res.statusCode));
+  next();
+});
 // ── Content-Security-Policy ──────────────────────────────────────────────────
 // Política a la medida de esta app (React/Vite + Leaflet + Socket.IO):
 //  - script-src 'self': el build de Vite solo emite scripts externos (sin inline),
@@ -188,6 +197,9 @@ if (process.env["NODE_ENV"] === "production") {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   req.log?.error({ err }, "Unhandled error");
+  registrarError(err, req.originalUrl);
+  const mensaje = err instanceof Error ? err.message : String(err);
+  notificarAlerta(`⚠️ TransPadilla — error en ${req.method} ${req.originalUrl}: ${mensaje.slice(0, 200)}`);
   if (res.headersSent) return;
   res.status(500).json({ error: "Error interno del servidor" });
 });
