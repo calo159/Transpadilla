@@ -14,6 +14,7 @@ export interface Novedad {
   busId: number;
   novedad: string;
   placa?: string;
+  rutaId?: number;
 }
 
 /** Conductor tal como lo devuelve el API en el panel Admin (GET /conductores). */

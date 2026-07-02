@@ -436,8 +436,10 @@ export default function Pasajero() {
     socket.on("bus:novedad", (data: Novedad) => {
       // Refresca los buses para que el ⚠ aparezca/desaparezca en el marcador.
       queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
-      // Solo muestra la alerta cuando hay novedad (no cuando el conductor la retira).
-      if (data.novedad) {
+      // Solo muestra la alerta cuando hay novedad (no cuando el conductor la retira)
+      // y solo si es de la ruta que el pasajero está siguiendo. El servidor ya la
+      // emite solo a la room de la ruta; esta guarda es defensa en profundidad.
+      if (data.novedad && (data.rutaId == null || data.rutaId === selectedRutaIdRef.current)) {
         setNovedad(data);
         if (novedadTimerRef.current) clearTimeout(novedadTimerRef.current);
         novedadTimerRef.current = setTimeout(() => setNovedad(null), 15000);
