@@ -86,3 +86,9 @@ services:
       #   sync: false
       # - key: VAPID_PRIVATE_KEY
       #   sync: false
+      # ── Observabilidad / alertas (opcional) ──
+      # Webhook de Slack/Discord/Telegram para avisar de errores no controlados
+      # (throttled a 1/min). Sin esto, GET /api/metrics (solo admin) sigue
+      # disponible igual, solo no se envían alertas push.
+      # - key: ALERTA_WEBHOOK_URL
+      #   sync: false

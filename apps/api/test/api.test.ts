@@ -127,6 +127,25 @@ suite("API (integración)", () => {
     expect(typeof res.body.total).toBe("number");
   });
 
+  it("metrics: público 401; admin recibe el snapshot de observabilidad", async () => {
+    const anon = await request(app).get("/api/metrics");
+    expect(anon.status).toBe(401);
+
+    const login = await request(app)
+      .post("/api/auth/login")
+      .send({ correo: "admin@transpadilla.co", password: "admin123" });
+    if (login.status !== 200) return;
+    const token = login.body.token as string;
+    const res = await request(app)
+      .get("/api/metrics")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(typeof res.body.uptime_s).toBe("number");
+    expect(typeof res.body.requests).toBe("number");
+    expect(res.body.por_estado).toHaveProperty("2xx");
+    expect(Array.isArray(res.body.ultimos_errores)).toBe(true);
+  });
+
   it("cerrar sesión revoca el token (queda inválido)", async () => {
     const correo = `logout_${Date.now()}@ejemplo.com`;
     await request(app).post("/api/auth/register").send({ nombre: "LO", correo, password: "secreto123" });
