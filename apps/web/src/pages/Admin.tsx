@@ -9,16 +9,14 @@ import { getUser, cerrarSesion, homeForRol } from "@/lib/auth";
 import {
   Bus, LogOut, Map, MapPin, BarChart3,
   RefreshCw, Users, Route,
-  Radio, UserCheck, KeyRound, LineChart, TrendingUp, ShieldCheck,
+  Radio, UserCheck, KeyRound, TrendingUp,
 } from "lucide-react";
 import DashboardTab from "./admin/DashboardTab";
 import RutasTab from "./admin/RutasTab";
 import BusesTab from "./admin/BusesTab";
 import ParadasTab from "./admin/ParadasTab";
 import ConductoresTab from "./admin/ConductoresTab";
-import ReportesTab from "./admin/ReportesTab";
 import ResumenEjecutivoTab from "./admin/ResumenEjecutivoTab";
-import AuditoriaTab from "./admin/AuditoriaTab";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { LogoTP } from "@/components/LogoTP";
@@ -27,7 +25,7 @@ import { PromptDialog, type PromptOpts } from "@/components/PromptDialog";
 import { CambiarPasswordDialog } from "@/components/CambiarPasswordDialog";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 
-type Tab = "dashboard" | "ejecutivo" | "rutas" | "buses" | "paradas" | "conductores" | "reportes" | "auditoria";
+type Tab = "dashboard" | "ejecutivo" | "rutas" | "buses" | "paradas" | "conductores";
 
 export default function Admin() {
   useDocumentTitle("Panel admin · TransPadilla");
@@ -71,8 +69,6 @@ export default function Admin() {
     { id: "buses"       as Tab, label: "Buses",       icon: <Bus className="w-4 h-4" /> },
     { id: "paradas"     as Tab, label: "Paradas",     icon: <MapPin className="w-4 h-4" /> },
     { id: "conductores" as Tab, label: "Conductores", icon: <UserCheck className="w-4 h-4" /> },
-    { id: "reportes"    as Tab, label: "Reportes",    icon: <LineChart className="w-4 h-4" /> },
-    { id: "auditoria"   as Tab, label: "Auditoría",   icon: <ShieldCheck className="w-4 h-4" /> },
   ];
 
 
@@ -83,8 +79,6 @@ export default function Admin() {
     buses:       "Gestión de Buses",
     paradas:     "Gestión de Paradas",
     conductores: "Conductores",
-    reportes:    "Reportes",
-    auditoria:   "Auditoría",
   };
 
   // Evita que el panel admin se muestre (aunque sea un instante) a quien no es admin;
@@ -244,14 +238,8 @@ export default function Admin() {
             <ConductoresTab buses={buses} setConfirmar={setConfirmar} />
           )}
 
-          {/* RESUMEN EJECUTIVO */}
+          {/* RESUMEN EJECUTIVO (KPIs + km por ruta + ocupación + descarga PDF/CSV) */}
           {tab === "ejecutivo" && <ResumenEjecutivoTab />}
-
-          {/* REPORTES */}
-          {tab === "reportes" && <ReportesTab />}
-
-          {/* AUDITORÍA */}
-          {tab === "auditoria" && <AuditoriaTab />}
 
         </div>
       </div>
