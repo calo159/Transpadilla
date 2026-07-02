@@ -31,11 +31,12 @@ function inicializarPendientes(): void {
   if (!ns) return;
   for (const id of pendientes) {
     if (inicializados.has(id) || !document.getElementById(id)) continue;
+    // Layout por defecto (sin InlineLayout.SIMPLE) → renderiza un <select>
+    // `.goog-te-combo` que index.css estiliza compacto en navy.
     new ns.TranslateElement(
       {
         pageLanguage: "es",
         includedLanguages: "en,fr,pt,de,it",
-        layout: ns.TranslateElement.InlineLayout.SIMPLE,
         autoDisplay: false,
       },
       id,
