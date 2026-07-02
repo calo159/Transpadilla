@@ -56,10 +56,15 @@ app.use((_req, res, next) => {
 //  - connect-src https: wss: ws:: fetch a OSRM (router.project-osrm.org o el propio)
 //    y el WebSocket de Socket.IO.
 //  - worker-src 'self' blob:: el service worker de la PWA (vite-plugin-pwa/workbox).
-//  - script-src/frame-src incluyen translate.google(apis).com: widget de
-//    traducción automática (GoogleTranslate.tsx) — inyecta su propio script y
-//    abre su menú de idiomas en un iframe propio.
+//  - script-src incluye los dominios de Google Translate + 'unsafe-inline' y
+//    'unsafe-eval': el widget de traducción automática (GoogleTranslate.tsx)
+//    inyecta scripts inline y usa eval, y carga recursos de gstatic/google.
+//    ⚠️ Esto RELAJA el script-src (antes 'self' estricto). Es el costo conocido
+//    de usar el widget de Google Translate; si algún día se quita, volver a
+//    "script-src 'self'". El resto de defensas (RLS, authz backend, escape
+//    anti-XSS en los popups) siguen intactas.
 // Se puede sobreescribir por entorno con la variable CSP.
+const GT = "https://translate.google.com https://translate.googleapis.com https://www.gstatic.com https://www.google.com";
 const csp =
   process.env["CSP"] ??
   [
@@ -68,14 +73,14 @@ const csp =
     "object-src 'none'",
     "frame-ancestors 'self'",
     "form-action 'self'",
-    "script-src 'self' https://translate.google.com https://translate.googleapis.com",
+    `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${GT}`,
     // Google Fonts: el CSS viene de fonts.googleapis.com y los archivos .woff2
     // de fonts.gstatic.com (la fuente Inter que usa el index.html).
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https://fonts.gstatic.com",
     "connect-src 'self' https: wss: ws:",
-    "frame-src https://translate.google.com https://translate.googleapis.com",
+    `frame-src ${GT}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
     ...(isProd ? ["upgrade-insecure-requests"] : []),
