@@ -176,7 +176,15 @@ router.post(
       .returning({ placa: buses.placa, rutaId: buses.ruta_id });
     if (!actualizado) { res.status(404).json({ error: "Bus no encontrado" }); return; }
 
-    emitirSeguro("bus:novedad", { busId, novedad, placa: actualizado.placa });
+    // Solo a quienes siguen esta ruta (room `ruta_<id>`), igual que el GPS.
+    // Un bus sin ruta no se muestra a pasajeros, así que no se difunde.
+    if (actualizado.rutaId != null) {
+      emitirSeguro(
+        "bus:novedad",
+        { busId, novedad, placa: actualizado.placa, rutaId: actualizado.rutaId },
+        `ruta_${actualizado.rutaId}`,
+      );
+    }
     // Notificación push a quienes siguen esta ruta (best-effort).
     if (actualizado.rutaId != null) {
       void enviarPushARuta(actualizado.rutaId, {
@@ -200,10 +208,18 @@ router.post(
       .update(buses)
       .set({ novedad: null, estado: "activo", actualizado: new Date() })
       .where(eq(buses.id, busId))
-      .returning({ placa: buses.placa });
+      .returning({ placa: buses.placa, rutaId: buses.ruta_id });
     if (!actualizado) { res.status(404).json({ error: "Bus no encontrado" }); return; }
 
-    emitirSeguro("bus:novedad", { busId, novedad: null, placa: actualizado.placa });
+    // El "novedad retirada" también solo a la room de la ruta, para que el ⚠ se
+    // limpie en quienes la siguen (los demás nunca vieron la novedad).
+    if (actualizado.rutaId != null) {
+      emitirSeguro(
+        "bus:novedad",
+        { busId, novedad: null, placa: actualizado.placa, rutaId: actualizado.rutaId },
+        `ruta_${actualizado.rutaId}`,
+      );
+    }
     res.json({ mensaje: "Reporte retirado" });
   },
 );
