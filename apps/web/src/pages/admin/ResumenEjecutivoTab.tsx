@@ -305,7 +305,7 @@ export default function ResumenEjecutivoTab() {
               <h3 className="text-xs font-bold uppercase tracking-wider mb-2 px-0.5" style={{ color: "var(--color-gray-text, #6B7280)" }}>
                 Cobertura y alcance del servicio
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5">
                 <MiniStat icon={<RouteIcon className="w-3.5 h-3.5" />} label="Rutas registradas" valor={cobertura.data.totalRutas} tint="#a78bfa" />
                 <MiniStat icon={<MapPin className="w-3.5 h-3.5" />} label="Paradas registradas" valor={cobertura.data.totalParadas} tint="#38bdf8" />
                 <MiniStat icon={<Bus className="w-3.5 h-3.5" />} label="Buses activos ahora" valor={`${cobertura.data.busesActivosAhora} / ${cobertura.data.totalBuses}`} tint="#38A169" />
@@ -363,7 +363,7 @@ export default function ResumenEjecutivoTab() {
               </p>
             </div>
           ) : (
-            <>
+            <div className="space-y-5 lg:grid lg:grid-cols-2 lg:gap-5 lg:space-y-0">
               {/* Km recorridos por ruta */}
               <div className="rounded-2xl p-5 shadow-sm" style={{ background: "#fff", border: "1px solid #e5e7eb" }}>
                 <h3 className="text-sm font-bold mb-3 flex items-center gap-2" style={{ color: "var(--color-navy, #1B3B6F)" }}>
@@ -401,7 +401,7 @@ export default function ResumenEjecutivoTab() {
                   </ResponsiveContainer>
                 )}
               </div>
-            </>
+            </div>
           )}
 
           <p className="text-[11px] text-center" style={{ color: "var(--color-gray-text, #6B7280)" }}>

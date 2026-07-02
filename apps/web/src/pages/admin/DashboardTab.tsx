@@ -1,5 +1,6 @@
 import { Bus as BusIcon, Activity, Clock, Map, MapPin, Route, AlertTriangle, UserCheck } from "lucide-react";
 import type { Bus, Ruta, Stats } from "@workspace/api-client";
+import { cardCls, SectionHeader } from "./shared";
 
 interface Props {
   stats: Stats | undefined;
@@ -82,10 +83,8 @@ export default function DashboardTab({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Estado de la flota */}
-        <div className="bg-card border border-border rounded-xl p-4 md:p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-            <BusIcon className="w-4 h-4 text-primary" /> Estado de la flota
-          </h3>
+        <div className={cardCls}>
+          <SectionHeader icon={<BusIcon className="w-4 h-4 text-primary" />} title="Estado de la flota" />
           {busesLoading ? (
             <div className="space-y-2">{[1,2,3].map((i) => <div key={i} className="h-10 bg-muted/40 rounded-lg animate-pulse" />)}</div>
           ) : buses.length === 0 ? (
@@ -114,16 +113,14 @@ export default function DashboardTab({
         </div>
 
         {/* Rutas activas */}
-        <div className="bg-card border border-border rounded-xl p-4 md:p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Route className="w-4 h-4 text-purple-400" /> Rutas activas
-          </h3>
+        <div className={cardCls}>
+          <SectionHeader icon={<Route className="w-4 h-4 text-purple-400" />} title="Rutas activas" />
           {rutasLoading ? (
             <div className="space-y-2">{[1,2,3].map((i) => <div key={i} className="h-10 bg-muted/40 rounded-lg animate-pulse" />)}</div>
           ) : rutas.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">No hay rutas configuradas</p>
           ) : (
-            <div className="space-y-2 max-h-56 overflow-y-auto">
+            <div className="space-y-2 max-h-56 lg:max-h-72 overflow-y-auto">
               {rutas.map((ruta) => {
                 const rb = buses.filter((b) => b.ruta_id === ruta.id);
                 return (
@@ -146,7 +143,7 @@ export default function DashboardTab({
 
       {/* Novedades activas */}
       {buses.filter((b) => b.novedad).length > 0 && (
-        <div className="rounded-xl p-4 md:p-5 border" style={{ borderColor: "rgba(245,183,49,0.3)", background: "rgba(245,183,49,0.05)" }}>
+        <div className={cardCls} style={{ borderColor: "rgba(245,183,49,0.3)", background: "rgba(245,183,49,0.05)" }}>
           <h3 className="text-sm font-semibold flex items-center gap-2 mb-3" style={{ color: "var(--tp-yellow)" }}>
             <AlertTriangle className="w-4 h-4" /> Novedades activas
           </h3>
