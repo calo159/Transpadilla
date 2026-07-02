@@ -243,6 +243,23 @@
   .tp-rail { width: 380px !important; min-width: 380px !important; }
 }
 
+/* ── Reskin (handoff de diseño): escala de sombras claras + live-dot ──────────
+   Sombras suaves para tarjetas sobre fondo claro (el token --shadow-* del sistema
+   es para tema oscuro y no encaja aquí). Clases aditivas: solo afectan donde se
+   apliquen, así que no cambian el aspecto de ninguna pantalla existente. */
+.tp-shadow-card  { box-shadow: 0 8px 22px rgba(15, 30, 60, .06); }
+.tp-shadow-float { box-shadow: 0 18px 44px rgba(15, 30, 60, .22); }
+.tp-shadow-fab   { box-shadow: 0 8px 20px rgba(15, 30, 60, .18); }
+
+/* Punto "en vivo" con pulso suave (badge EN VIVO / estado GPS). Reutilizable. */
+@keyframes tp-blink { 0%, 100% { opacity: 1 } 50% { opacity: .35 } }
+.tp-livedot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--color-success);
+  animation: tp-blink 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { .tp-livedot { animation: none; } }
+
 @layer base {
   * { @apply border-border; }
   body {
