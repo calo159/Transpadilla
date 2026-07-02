@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LogoTP } from "@/components/LogoTP";
 import { NotificacionesToggle } from "@/components/NotificacionesToggle";
-import { GoogleTranslate } from "@/components/GoogleTranslate";
 import { io, type Socket } from "socket.io-client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -1187,9 +1186,8 @@ export default function Pasajero() {
             <ChevronRight className="w-3.5 h-3.5" style={{ color: "var(--color-gray-text)" }} />
           </button>
         )}
-        <div className="mt-2.5 flex justify-center gap-2">
+        <div className="mt-2.5 flex justify-center">
           <NotificacionesToggle rutas={favoritos} variant="pill" />
-          <GoogleTranslate variant="pill" />
         </div>
         <div className="flex items-center justify-center gap-2 mt-2.5 text-[10px]" style={{ color: "var(--color-gray-text)" }}>
           <a href="/privacidad" className="hover:underline">Privacidad</a>
@@ -1574,9 +1572,6 @@ export default function Pasajero() {
               <button onClick={() => setShowAyuda(true)} className="w-full flex items-center gap-3 px-4 py-3.5 text-left border-t border-gray-100 active:bg-gray-100" style={{ color: "var(--color-navy)" }}>
                 <HelpCircle className="w-5 h-5 flex-shrink-0" style={{ color: "var(--color-sky)" }} /><span className="font-semibold text-sm">¿Cómo funciona?</span>
               </button>
-              <div onClick={(e) => e.stopPropagation()}>
-                <GoogleTranslate variant="menu" />
-              </div>
               <div onClick={(e) => e.stopPropagation()}>
                 <NotificacionesToggle rutas={favoritos} variant="menu" />
               </div>
