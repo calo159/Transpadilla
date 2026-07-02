@@ -232,6 +232,15 @@
     box-shadow: var(--shadow-2xl);
     background: #EEF1F6;
   }
+  /* Pasajero (escritorio): columna de detalle de la ruta seleccionada, junto al
+     riel de navegación. Ancho fijo para que el mapa siga siendo el protagonista. */
+  .tp-detail-col { width: 360px; min-width: 360px; }
+}
+
+/* En monitores anchos, riel y detalle un poco más holgados. */
+@media (min-width: 1280px) {
+  .tp-detail-col { width: 400px; min-width: 400px; }
+  .tp-rail { width: 380px !important; min-width: 380px !important; }
 }
 
 @layer base {

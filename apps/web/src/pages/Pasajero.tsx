@@ -503,6 +503,13 @@ export default function Pasajero() {
     return () => clearTimeout(t);
   }, [sidebarOpen]);
 
+  // En escritorio, al abrir/cerrar la columna de detalle el mapa cambia de ancho:
+  // reencuadra su tamaño para que Leaflet no quede con tiles en blanco.
+  useEffect(() => {
+    const t = setTimeout(() => mapRef.current?.invalidateSize(), 310);
+    return () => clearTimeout(t);
+  }, [selectedRutaId]);
+
   // Modo destino: mientras está armado, el siguiente toque en el mapa fija el
   // destino, recomienda la ruta (la resalta/encuadra) y desarma el modo.
   useEffect(() => {
@@ -867,8 +874,8 @@ export default function Pasajero() {
   // ─── SIDEBAR DESKTOP ────────────────────────────────────────────────────────
   const DesktopSidebar = () => (
     <div
-      className="hidden md:flex flex-col overflow-hidden transition-all duration-300 ease-in-out"
-      style={{ width: sidebarOpen ? 310 : 0, minWidth: sidebarOpen ? 310 : 0, borderRight: "1px solid #e5e7eb", background: "#E8EDF4" }}
+      className={`hidden md:flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${sidebarOpen ? "tp-rail" : ""}`}
+      style={{ width: sidebarOpen ? 340 : 0, minWidth: sidebarOpen ? 340 : 0, borderRight: "1px solid #e5e7eb", background: "#E8EDF4" }}
     >
       {/* Stats en vivo */}
       <div className="flex items-center gap-3 px-4 py-2.5 text-xs shrink-0" style={{ borderBottom: "1px solid #f1f5f9" }}>
@@ -1020,112 +1027,10 @@ export default function Pasajero() {
                   </button>
                 </div>
               </div>
-              {isSelected && (
-                <div className="px-3 pb-3 space-y-2">
-                  {/* Hero: tiempo de llegada del próximo bus */}
-                  {proximoBus && (
-                    <div className="flex items-end justify-between px-2.5 py-2 rounded-lg" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
-                      <div>
-                        <p className="text-[9px] font-bold uppercase tracking-widest mb-0.5 text-green-400/80">Próximo bus</p>
-                        {proximoBus.eta <= 0 ? (
-                          <span className="text-lg font-black text-green-400 leading-none">¡Llegando!</span>
-                        ) : (
-                          <span className="flex items-baseline gap-1 text-green-400">
-                            <span className="text-3xl font-black leading-none">{proximoBus.eta}</span>
-                            <span className="text-xs font-bold">min</span>
-                          </span>
-                        )}
-                      </div>
-                      <span className="flex items-center gap-1 text-[11px] font-mono font-bold text-foreground/80 px-2 py-1 rounded-lg bg-background/50">
-                        <Bus className="w-3 h-3" />{proximoBus.placa}
-                      </span>
-                    </div>
-                  )}
-                  {ruta.paradas.length > 0 && (
-                    <div>
-                      {ruta.paradas.map((p, i, arr) => {
-                        const eta = etaPorParada[p.id];
-                        const first = i === 0;
-                        const last = i === arr.length - 1;
-                        return (
-                          <div key={p.id} className="relative flex items-center gap-2.5 py-1">
-                            <div className="relative flex flex-col items-center self-stretch w-3">
-                              <div className="w-0.5 flex-1" style={{ background: first ? "transparent" : ruta.color + "55" }} />
-                              <div className="w-2 h-2 rounded-full ring-2 ring-background flex-shrink-0" style={{ background: ruta.color }} />
-                              <div className="w-0.5 flex-1" style={{ background: last ? "transparent" : ruta.color + "55" }} />
-                            </div>
-                            <span className="flex-1 truncate text-xs" style={{ color: "var(--color-navy)" }}>{p.nombre}</span>
-                            {(first || last) && <span className="text-[9px] font-bold flex-shrink-0" style={{ color: "#94a3b8" }}>{first ? "INICIO" : "FIN"}</span>}
-                            {eta && (
-                              <span className="text-[10px] font-bold text-green-600 whitespace-nowrap flex-shrink-0 px-1.5 py-0.5 rounded-full" style={{ background: "rgba(34,197,94,0.1)" }}>
-                                {eta.eta <= 0 ? "llegando" : `~${eta.eta} min`}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           );
         })}
       </div>
-
-      {/* Buses en ruta seleccionada — ordenados del más cercano a mí, con ETA a mi ubicación */}
-      {selectedRuta && busesRutaSel.length > 0 && (
-        <div className="p-3 shrink-0" style={{ borderTop: "1px solid #f1f5f9" }}>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-gray-text)" }}>
-              {userPos ? "Buses — más cercano primero" : "Buses en ruta"}
-            </p>
-            {!userPos && (
-              <button onClick={locateMe} className="text-[10px] font-semibold flex items-center gap-1" style={{ color: "var(--color-blue)" }}>
-                <LocateFixed className="w-3 h-3" /> Mi ubicación
-              </button>
-            )}
-          </div>
-          {busesRutaSel.map(({ bus: b, distKm, etaMin }) => (
-            <div key={b.id} className="rounded-lg p-2.5 mb-2 text-xs" style={{ background: "#f8fafc", border: "1px solid #e5e7eb" }}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-mono font-bold tracking-wide" style={{ color: "var(--color-navy)" }}>{b.placa}</span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${b.estado === "demora" ? "bg-amber-100 text-amber-600" : "bg-green-100 text-green-700"}`}>
-                  {b.estado}
-                </span>
-              </div>
-              {distKm != null ? (
-                <p style={{ color: "var(--color-navy)" }}>
-                  A {distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${distKm.toFixed(1)} km`} de ti ·{" "}
-                  <span className="text-green-600 font-semibold">{etaMin === 0 ? "llegando" : `~${etaMin} min`}</span>
-                </p>
-              ) : (
-                <p style={{ color: "var(--color-gray-text)" }}>Activa tu ubicación para ver el tiempo de llegada</p>
-              )}
-              {b.actualizado && (
-                <p className="flex items-center gap-1 mt-0.5" style={{ color: "var(--color-gray-text)" }}>
-                  <Clock className="w-3 h-3" />{tiempoRelativo(b.actualizado)}
-                </p>
-              )}
-              {b.novedad && (
-                <p className="mt-1 flex items-center gap-1" style={{ color: "var(--tp-gold-ink)" }}>
-                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />{b.novedad}
-                </p>
-              )}
-              <button
-                onClick={() => seguirBus(b.id)}
-                className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg font-semibold transition-colors"
-                style={siguiendoBusId === b.id
-                  ? { background: "var(--tp-sky)", color: "#001018" }
-                  : { background: "rgba(123,184,213,0.15)", color: "var(--tp-sky)" }}
-              >
-                <LocateFixed className="w-3.5 h-3.5" />
-                {siguiendoBusId === b.id ? "Siguiendo este bus" : "Seguir este bus"}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Atención al cliente */}
       <div className="px-3 py-2.5 shrink-0 space-y-2" style={{ borderTop: "1px solid #f1f5f9" }}>
@@ -1214,6 +1119,145 @@ export default function Pasajero() {
       </div>
     </div>
   );
+
+  // ─── COLUMNA DE DETALLE (DESKTOP) ────────────────────────────────────────────
+  // Al seleccionar una ruta, su detalle (próximo bus, paraderos y buses en vivo)
+  // se abre en una segunda columna junto al riel, estilo Google/Moovit, dejando el
+  // mapa grande. Solo escritorio (hidden md:flex); el móvil usa la hoja inferior.
+  const DesktopDetail = () => {
+    if (!selectedRuta) return null;
+    const ruta = selectedRuta;
+    const rutaNumero = rutas.findIndex((r) => r.id === ruta.id) + 1;
+    return (
+      <div
+        className="tp-detail-col hidden md:flex flex-col overflow-hidden animate-in slide-in-from-left-4 fade-in duration-300"
+        style={{ borderRight: "1px solid #e5e7eb", background: "#fff" }}
+      >
+        {/* Header navy sticky */}
+        <div className="flex items-center gap-3 px-4 py-3 shrink-0" style={{ background: "var(--color-navy)" }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-lg shrink-0" style={{ background: "#fff", color: "var(--color-navy)" }}>{rutaNumero}</div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-display font-bold text-base text-white leading-tight truncate">{ruta.nombre}</h3>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="w-2 h-2 rounded-full" style={{ background: ruta.color }} />
+              {proximoBus ? (
+                <span className="text-[11px] font-bold flex items-center gap-1" style={{ color: "var(--color-gold)" }}>
+                  <Bus className="w-3 h-3" /> Próx · {proximoBus.eta <= 0 ? "llegando" : `${proximoBus.eta} min`}
+                </span>
+              ) : (
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-white/70">Ruta</span>
+              )}
+            </div>
+          </div>
+          <button onClick={() => setSelectedRutaId(null)} aria-label="Cerrar detalle" title="Cerrar detalle" className="text-white/80 p-2 -mr-1.5 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
+        </div>
+
+        {/* Cuerpo con scroll */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">
+          {/* Hero: tiempo de llegada del próximo bus */}
+          {proximoBus && (
+            <div className="flex items-end justify-between px-3 py-2.5 rounded-xl" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
+              <div>
+                <p className="text-[9px] font-bold uppercase tracking-widest mb-0.5 text-green-600/80">Próximo bus</p>
+                {proximoBus.eta <= 0 ? (
+                  <span className="text-xl font-black text-green-600 leading-none">¡Llegando!</span>
+                ) : (
+                  <span className="flex items-baseline gap-1 text-green-600">
+                    <span className="text-3xl font-black leading-none">{proximoBus.eta}</span>
+                    <span className="text-xs font-bold">min</span>
+                  </span>
+                )}
+              </div>
+              <span className="flex items-center gap-1 text-[11px] font-mono font-bold px-2 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.7)", color: "var(--color-navy)" }}>
+                <Bus className="w-3 h-3" />{proximoBus.placa}
+              </span>
+            </div>
+          )}
+
+          {/* Timeline de paraderos */}
+          {ruta.paradas.length > 0 && (
+            <div>
+              {ruta.paradas.map((p, i, arr) => {
+                const eta = etaPorParada[p.id];
+                const first = i === 0;
+                const last = i === arr.length - 1;
+                return (
+                  <div key={p.id} className="relative flex items-center gap-2.5 py-1">
+                    <div className="relative flex flex-col items-center self-stretch w-3">
+                      <div className="w-0.5 flex-1" style={{ background: first ? "transparent" : ruta.color + "55" }} />
+                      <div className="w-2 h-2 rounded-full ring-2 ring-white flex-shrink-0" style={{ background: ruta.color }} />
+                      <div className="w-0.5 flex-1" style={{ background: last ? "transparent" : ruta.color + "55" }} />
+                    </div>
+                    <span className="flex-1 truncate text-xs" style={{ color: "var(--color-navy)" }}>{p.nombre}</span>
+                    {(first || last) && <span className="text-[9px] font-bold flex-shrink-0" style={{ color: "#94a3b8" }}>{first ? "INICIO" : "FIN"}</span>}
+                    {eta && (
+                      <span className="text-[10px] font-bold text-green-600 whitespace-nowrap flex-shrink-0 px-1.5 py-0.5 rounded-full" style={{ background: "rgba(34,197,94,0.1)" }}>
+                        {eta.eta <= 0 ? "llegando" : `~${eta.eta} min`}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Buses en la ruta — más cercano primero, con ETA a mi ubicación */}
+          {busesRutaSel.length > 0 && (
+            <div className="pt-1">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-gray-text)" }}>
+                  {userPos ? "Buses — más cercano primero" : "Buses en ruta"}
+                </p>
+                {!userPos && (
+                  <button onClick={locateMe} className="text-[10px] font-semibold flex items-center gap-1" style={{ color: "var(--color-blue)" }}>
+                    <LocateFixed className="w-3 h-3" /> Mi ubicación
+                  </button>
+                )}
+              </div>
+              {busesRutaSel.map(({ bus: b, distKm, etaMin }) => (
+                <div key={b.id} className="rounded-lg p-2.5 mb-2 text-xs" style={{ background: "#f8fafc", border: "1px solid #e5e7eb" }}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-mono font-bold tracking-wide" style={{ color: "var(--color-navy)" }}>{b.placa}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${b.estado === "demora" ? "bg-amber-100 text-amber-600" : "bg-green-100 text-green-700"}`}>
+                      {b.estado}
+                    </span>
+                  </div>
+                  {distKm != null ? (
+                    <p style={{ color: "var(--color-navy)" }}>
+                      A {distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${distKm.toFixed(1)} km`} de ti ·{" "}
+                      <span className="text-green-600 font-semibold">{etaMin === 0 ? "llegando" : `~${etaMin} min`}</span>
+                    </p>
+                  ) : (
+                    <p style={{ color: "var(--color-gray-text)" }}>Activa tu ubicación para ver el tiempo de llegada</p>
+                  )}
+                  {b.actualizado && (
+                    <p className="flex items-center gap-1 mt-0.5" style={{ color: "var(--color-gray-text)" }}>
+                      <Clock className="w-3 h-3" />{tiempoRelativo(b.actualizado)}
+                    </p>
+                  )}
+                  {b.novedad && (
+                    <p className="mt-1 flex items-center gap-1" style={{ color: "var(--tp-gold-ink)" }}>
+                      <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />{b.novedad}
+                    </p>
+                  )}
+                  <button
+                    onClick={() => seguirBus(b.id)}
+                    className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg font-semibold transition-colors"
+                    style={siguiendoBusId === b.id
+                      ? { background: "var(--tp-sky)", color: "#001018" }
+                      : { background: "rgba(123,184,213,0.15)", color: "var(--tp-sky)" }}
+                  >
+                    <LocateFixed className="w-3.5 h-3.5" />
+                    {siguiendoBusId === b.id ? "Siguiendo este bus" : "Seguir este bus"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   // ─── MOBILE BOTTOM SHEET ─────────────────────────────────────────────────────
   // Card de detalle deslizable: aparece SOLO al seleccionar una ruta/bus o al pedir
@@ -1485,6 +1529,7 @@ export default function Pasajero() {
       {/* ── Fila sidebar + mapa ── */}
       <div className="flex flex-1 overflow-hidden">
       {DesktopSidebar()}
+      {DesktopDetail()}
 
       {/* Mapa */}
       <div className="flex-1 relative">
@@ -1531,16 +1576,8 @@ export default function Pasajero() {
         )}
 
 
-        {/* ── Controles desktop ── */}
-        {selectedRutaId !== null && (
-          <button
-            onClick={() => setSelectedRutaId(null)}
-            className="hidden md:flex absolute top-3 left-3 z-[1000] items-center gap-1.5 rounded-xl px-3 py-2.5 text-xs font-semibold shadow-lg transition-colors"
-            style={{ background: "#fff", border: "1px solid #e5e7eb", color: "var(--color-navy)" }}
-          >
-            <X className="w-3 h-3" />Ver todas
-          </button>
-        )}
+        {/* En escritorio, la columna de detalle tiene su propia ✕; no hace falta
+            un botón "Ver todas" flotante (el móvil cierra desde la hoja inferior). */}
 
         {/* Backdrop para cerrar el menú ☰ al tocar fuera */}
         {menuAbierto && (
@@ -1825,7 +1862,7 @@ export default function Pasajero() {
 
         {/* Alertas de novedad — se apilan: cada bus con novedad tiene su propia tarjeta. */}
         {novedades.length > 0 && (
-          <div className="absolute top-16 left-3 right-3 md:top-4 md:left-1/2 md:-translate-x-1/2 md:right-auto md:max-w-md z-[1002] flex flex-col gap-2">
+          <div className="absolute top-16 left-3 right-3 md:top-4 md:left-1/2 md:-translate-x-1/2 md:right-auto md:max-w-lg z-[1002] flex flex-col gap-2">
             {novedades.map((n) => (
               <div
                 key={n.busId}
