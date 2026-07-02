@@ -330,12 +330,17 @@ export default function Pasajero() {
       const novBadge = bus?.novedad
         ? `<span style="position:absolute;top:-6px;right:-6px;width:15px;height:15px;border-radius:50%;background:#F5B731;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.4)">${svgAlerta}</span>`
         : "";
-      // Halo pulsante cuando el pasajero sigue este bus (sensación "en vivo").
-      const haloRing = seguido ? "box-shadow:0 4px 14px rgba(0,0,0,.4),0 0 0 4px rgba(245,183,49,.9),0 0 0 9px rgba(245,183,49,.35);" : "box-shadow:0 4px 14px rgba(0,0,0,.4);";
+      // Halo pulsante cuando el pasajero sigue este bus (sensación "en vivo") +
+      // anillo expansivo (ping) detrás de la píldora, estilo mockup.
+      const haloRing = seguido ? "box-shadow:0 4px 14px rgba(0,0,0,.4),0 0 0 4px rgba(245,183,49,.9);" : "box-shadow:0 4px 14px rgba(0,0,0,.4);";
+      const pingRing = seguido
+        ? `<span class="tp-marker-ping" style="position:absolute;left:50%;top:50%;width:36px;height:36px;border-radius:50%;background:${color};z-index:-1;pointer-events:none"></span>`
+        : "";
       const icon = L.divIcon({
         className: seguido ? "tp-bus-seguido" : "",
-        html: `<div style="display:flex;flex-direction:column;align-items:center;font-family:'Inter',system-ui,sans-serif">
+        html: `<div class="tp-marker-bob" style="display:flex;flex-direction:column;align-items:center;font-family:'Inter',system-ui,sans-serif">
             <div style="position:relative;display:flex;align-items:center;gap:4px;background:${color};color:#fff;min-height:30px;padding:4px 9px;border-radius:12px;font-size:11px;font-weight:800;white-space:nowrap;${haloRing}border:2px solid #fff;letter-spacing:.3px">
+              ${pingRing}
               <span style="display:flex;line-height:0">${svgBus}</span>${placaSafe}
               <span style="position:absolute;bottom:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:${ocupDot};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.45)"></span>
               ${novBadge}
@@ -1510,8 +1515,8 @@ export default function Pasajero() {
           >
             <span
               aria-hidden="true"
-              className={`w-1.5 h-1.5 rounded-full ${conectado ? "animate-pulse" : ""}`}
-              style={{ background: conectado ? "var(--color-gold)" : "#fcd34d" }}
+              className="tp-livedot"
+              style={{ width: 6, height: 6, background: conectado ? "var(--color-gold)" : "#fcd34d", animationPlayState: conectado ? "running" : "paused" }}
             />
             {conectado ? "EN VIVO" : "SIN CONEXIÓN"}
           </span>
@@ -1600,7 +1605,7 @@ export default function Pasajero() {
             <div className="flex items-center justify-between mt-1 px-1">
               <span className="text-[11px] font-medium text-white/80">Moviendo la Ciudad</span>
               <span role="status" aria-live="polite" className="notranslate flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full" style={conectado ? { background: "rgba(245,183,49,0.2)", color: "var(--color-gold)" } : { background: "rgba(255,255,255,0.15)", color: "#fff" }}>
-                <span aria-hidden="true" className={`w-1.5 h-1.5 rounded-full ${conectado ? "animate-pulse" : ""}`} style={{ background: conectado ? "var(--color-gold)" : "#fcd34d" }} />
+                <span aria-hidden="true" className="tp-livedot" style={{ width: 6, height: 6, background: conectado ? "var(--color-gold)" : "#fcd34d", animationPlayState: conectado ? "running" : "paused" }} />
                 {conectado ? "EN VIVO" : "SIN CONEXIÓN"}
               </span>
             </div>

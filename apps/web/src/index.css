@@ -391,6 +391,19 @@
   50%      { filter: drop-shadow(0 0 7px rgba(245,183,49,.85)); }
 }
 
+/* Flotación suave de los marcadores de bus en el mapa (todos, siempre). */
+@keyframes tp-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.tp-marker-bob { animation: tp-bob 3.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .tp-marker-bob, .tp-bus-seguido { animation: none; } }
+
+/* Anillo expansivo detrás del bus que el pasajero está siguiendo. */
+@keyframes tp-marker-ping {
+  0%   { transform: translate(-50%, -50%) scale(.6); opacity: .7; }
+  100% { transform: translate(-50%, -50%) scale(2.4); opacity: 0; }
+}
+.tp-marker-ping { animation: tp-marker-ping 2.2s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) { .tp-marker-ping { animation: none; opacity: 0; } }
+
 /* Gradiente de marca TransPadilla */
 .tp-gradient { background: linear-gradient(135deg, var(--tp-navy) 0%, var(--tp-blue) 100%); }
 .tp-gradient-sky { background: linear-gradient(135deg, var(--tp-blue) 0%, var(--tp-sky) 100%); }
