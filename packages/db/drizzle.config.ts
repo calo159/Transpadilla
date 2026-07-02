@@ -24,6 +24,7 @@ export default defineConfig({
   // Path relativo (no absoluto): el directorio del proyecto puede contener
   // caracteres como paréntesis que el glob de drizzle-kit malinterpreta.
   schema: "./src/schema/index.ts",
+  out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
     url: process.env.DATABASE_URL,
