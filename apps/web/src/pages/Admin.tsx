@@ -9,7 +9,7 @@ import { getUser, cerrarSesion, homeForRol } from "@/lib/auth";
 import {
   Bus, LogOut, Map, MapPin, BarChart3,
   RefreshCw, Users, Route,
-  Radio, UserCheck, KeyRound, TrendingUp,
+  UserCheck, KeyRound, TrendingUp,
 } from "lucide-react";
 import DashboardTab from "./admin/DashboardTab";
 import RutasTab from "./admin/RutasTab";
@@ -89,7 +89,7 @@ export default function Admin() {
     <div className="tp-light tp-admin-bg flex h-screen overflow-hidden">
 
       {/* ─── DESKTOP SIDEBAR (navy, estilo Stitch) ───────────────────────── */}
-      <div className="hidden md:flex flex-col w-60 min-w-60 text-white" style={{ background: "var(--color-navy)" }}>
+      <div className="hidden md:flex flex-col w-60 min-w-60 text-white" style={{ background: "linear-gradient(180deg, #1B3B6F, #16305c)" }}>
         <div className="flex items-center gap-2.5 px-5 py-5">
           <LogoTP size={34} />
           <div>
@@ -127,12 +127,17 @@ export default function Admin() {
           <button onClick={() => setTab("rutas")} className="w-full flex items-center justify-center gap-2 h-11 rounded-xl font-bold mb-3 active:scale-[0.98]" style={{ background: "var(--color-blue)", color: "#fff" }}>
             <Route className="w-4 h-4" /> Nueva ruta
           </button>
-          <div className="flex items-center gap-2 text-xs text-white/70 px-1 py-1">
-            <Users className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="truncate">{user?.nombre ?? "Admin"}</span>
+          {/* Tarjeta de usuario (estilo mockup): avatar dorado + nombre + acciones */}
+          <div className="flex items-center gap-2.5 rounded-xl p-2.5" style={{ background: "rgba(255,255,255,0.06)" }}>
+            <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "var(--color-gold)" }}>
+              <Users className="w-4 h-4" style={{ color: "var(--color-navy)" }} />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-white truncate">{user?.nombre ?? "Admin"}</p>
+              <button onClick={() => setCambiarPass(true)} className="text-[10px] text-white/60 hover:text-white">Cambiar contraseña</button>
+            </div>
+            <button onClick={() => { void cerrarSesion().finally(() => setLocation("/")); }} data-testid="button-salir" className="p-1.5 text-white/60 hover:text-white flex-shrink-0" aria-label="Cerrar sesión" title="Cerrar sesión"><LogOut className="w-4 h-4" /></button>
           </div>
-          <button onClick={() => setCambiarPass(true)} className="w-full flex items-center gap-2 px-1 py-1.5 text-xs text-white/70 hover:text-white"><KeyRound className="w-3.5 h-3.5" />Cambiar contraseña</button>
-          <button onClick={() => { void cerrarSesion().finally(() => setLocation("/")); }} data-testid="button-salir" className="w-full flex items-center gap-2 px-1 py-1.5 text-xs text-white/70 hover:text-white"><LogOut className="w-3.5 h-3.5" />Cerrar sesión</button>
         </div>
       </div>
 
@@ -175,8 +180,8 @@ export default function Admin() {
             <p className="text-xs" style={{ color: "var(--color-gray-text)" }}>Riohacha, La Guajira · TransPadilla</p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 text-xs rounded-lg px-3 py-1.5" style={{ background: "rgba(56,161,105,0.12)", color: "var(--color-success)" }}>
-              <Radio className="w-3 h-3" /><span>Sistema en vivo</span>
+            <div role="status" aria-live="polite" className="flex items-center gap-2 text-xs font-bold rounded-full px-3 py-1.5" style={{ background: "rgba(56,161,105,0.12)", color: "var(--color-success)" }}>
+              <span className="tp-livedot" style={{ width: 6, height: 6, background: "var(--color-success)" }} aria-hidden="true" /><span>EN VIVO</span>
             </div>
             <Button
               variant="outline" size="sm"

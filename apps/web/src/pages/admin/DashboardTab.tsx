@@ -1,5 +1,9 @@
+import { useEffect, useRef } from "react";
 import { Bus as BusIcon, Activity, Clock, Map, MapPin, Route, AlertTriangle, UserCheck } from "lucide-react";
 import type { Bus, Ruta, Stats } from "@workspace/api-client";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { useLeafletMap } from "@/hooks/use-leaflet-map";
 import { cardCls, SectionHeader } from "./shared";
 
 interface Props {
@@ -9,6 +13,75 @@ interface Props {
   busesLoading: boolean;
   rutas: Ruta[];
   rutasLoading: boolean;
+}
+
+/**
+ * Mini-mapa en vivo del dashboard (solo escritorio): rutas como líneas de color
+ * (rectas entre paradas, sin seguir calles — es una referencia, no el mapa
+ * detallado del pasajero) + un punto por bus con GPS activo. Reusa el mismo
+ * hook de mapa (`useLeafletMap`) que ya usa ParadasTab.
+ */
+function DashboardMiniMap({ rutas, buses }: { rutas: Ruta[]; buses: Bus[] }) {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useLeafletMap(mapContainerRef, { zoom: 13 });
+  const layerRef = useRef<L.LayerGroup | null>(null);
+
+  const busesConGps = buses.filter((b) => b.lat != null && b.lng != null && b.estado !== "inactivo");
+  const rutasConTrazo = rutas.filter((r) => r.paradas.length >= 2);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const t = setTimeout(() => map.invalidateSize(), 80); // el tab acaba de montarse
+    return () => clearTimeout(t);
+  }, [mapRef]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    layerRef.current?.remove();
+    const grupo = L.layerGroup();
+    rutasConTrazo.forEach((ruta) => {
+      const puntos: [number, number][] = ruta.paradas
+        .slice()
+        .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
+        .map((p) => [p.latitud, p.longitud]);
+      L.polyline(puntos, { color: ruta.color, weight: 4, opacity: 0.75, lineCap: "round" }).addTo(grupo);
+    });
+    busesConGps.forEach((b) => {
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="width:14px;height:14px;border-radius:50%;background:${b.color_ruta ?? "#2558A5"};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.35)"></div>`,
+        iconSize: [14, 14], iconAnchor: [7, 7],
+      });
+      L.marker([b.lat!, b.lng!], { icon, interactive: false }).addTo(grupo);
+    });
+    grupo.addTo(map);
+    layerRef.current = grupo;
+    const todosPuntos = rutasConTrazo.flatMap((r) => r.paradas.map((p): [number, number] => [p.latitud, p.longitud]));
+    if (todosPuntos.length >= 2) map.fitBounds(L.latLngBounds(todosPuntos), { padding: [24, 24] });
+    return () => { grupo.remove(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rutas, buses, mapRef]);
+
+  return (
+    <div className="hidden md:block rounded-2xl overflow-hidden relative tp-shadow-card" style={{ height: 260 }}>
+      <div ref={mapContainerRef} className="w-full h-full" role="application" aria-label="Mapa en vivo de la flota" />
+      <div className="absolute left-3.5 top-3.5 z-[500] flex items-center gap-2 bg-white rounded-full px-3 py-1.5 tp-shadow-fab">
+        <span className="tp-livedot" style={{ width: 6, height: 6, background: "var(--color-success)" }} />
+        <span className="text-[11px] font-bold" style={{ color: "var(--color-navy)" }}>Mapa en vivo · {busesConGps.length} bus{busesConGps.length !== 1 ? "es" : ""}</span>
+      </div>
+      {rutasConTrazo.length > 0 && (
+        <div className="absolute left-3.5 bottom-3.5 z-[500] flex gap-2.5 flex-wrap bg-white/90 rounded-xl px-2.5 py-2" style={{ maxWidth: "calc(100% - 28px)" }}>
+          {rutasConTrazo.slice(0, 4).map((r) => (
+            <span key={r.id} className="inline-flex items-center gap-1.5 text-[10px] font-semibold" style={{ color: "var(--color-navy)" }}>
+              <span className="w-3 h-0.5 rounded-full inline-block" style={{ background: r.color }} />{r.nombre}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /** Tab "Dashboard" del panel Admin: resumen de la flota, rutas y novedades. */
@@ -80,6 +153,9 @@ export default function DashboardTab({
           ))}
         </div>
       )}
+
+      {/* Mapa en vivo (solo escritorio) */}
+      {!rutasLoading && rutas.length > 0 && <DashboardMiniMap rutas={rutas} buses={buses} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Estado de la flota */}
