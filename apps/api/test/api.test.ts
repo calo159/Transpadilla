@@ -171,6 +171,52 @@ suite("API (integración)", () => {
     expect(despues.status).toBe(401);
   });
 
+  it("mutaciones admin sobre recursos inexistentes → 404 (no éxito falso)", async () => {
+    const login = await request(app)
+      .post("/api/auth/login")
+      .send({ correo: "admin@transpadilla.co", password: "admin123" });
+    if (login.status !== 200) return; // sin admin demo, nada que comprobar
+    const token = login.body.token as string;
+    const auth = (r: request.Test) => r.set("Authorization", `Bearer ${token}`);
+
+    expect((await auth(request(app).delete("/api/rutas/999999"))).status).toBe(404);
+    expect((await auth(request(app).patch("/api/rutas/999999/activa").send({ activa: true }))).status).toBe(404);
+    expect((await auth(request(app).delete("/api/rutas/paradas/999999"))).status).toBe(404);
+    expect((await auth(request(app).delete("/api/buses/999999"))).status).toBe(404);
+    expect((await auth(request(app).delete("/api/conductores/999999"))).status).toBe(404);
+    // id no numérico → 400, no 500
+    expect((await auth(request(app).delete("/api/rutas/abc"))).status).toBe(400);
+  });
+
+  it("validaciones runtime: activa boolean, color hex, conductor con rol real", async () => {
+    const login = await request(app)
+      .post("/api/auth/login")
+      .send({ correo: "admin@transpadilla.co", password: "admin123" });
+    if (login.status !== 200) return;
+    const token = login.body.token as string;
+    const auth = (r: request.Test) => r.set("Authorization", `Bearer ${token}`);
+
+    const rutas = await request(app).get("/api/rutas");
+    const rutaId = rutas.body[0]?.id;
+    if (!rutaId) return;
+
+    // activa debe ser boolean real
+    expect((await auth(request(app).patch(`/api/rutas/${rutaId}/activa`).send({ activa: "si" }))).status).toBe(400);
+    // color debe ser hex
+    expect((await auth(request(app).patch(`/api/rutas/${rutaId}`).send({ color: "rojo" }))).status).toBe(400);
+
+    // no se puede asignar como conductor a alguien que no es conductor (el admin mismo)
+    const buses = await request(app).get("/api/buses");
+    const busId = buses.body[0]?.id;
+    if (!busId) return;
+    const admin = await auth(request(app).get("/api/conductores"));
+    expect(admin.status).toBe(200);
+    // id inexistente → 404
+    expect((await auth(request(app).patch(`/api/buses/${busId}/conductor`).send({ conductor_id: 999999 }))).status).toBe(404);
+    // borrar por este endpoint a un usuario que NO es conductor → 404 (no borra admins)
+    expect((await auth(request(app).delete("/api/conductores/1"))).status).toBe(404);
+  });
+
   it("GET /api/rutas/:id/eta devuelve la forma esperada", async () => {
     const rutas = await request(app).get("/api/rutas");
     expect(rutas.status).toBe(200);

@@ -3,13 +3,12 @@ import { db, paradas, ruta_paradas, buses } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { calcularEtaPorParada } from "../lib/eta-calc";
 import { crearCacheTtl, type CacheTtl } from "../lib/cache";
+import { parseIdParam } from "../middleware/validate";
 
 // Estimación de tiempo de llegada (ETA) del próximo bus a cada parada de una
 // ruta, calculada en el API Node (Haversine sobre las paradas de la ruta).
 // Lectura pública (la usa el mapa del pasajero, sin login).
 const router = Router();
-
-const idParam = (raw: unknown): number => parseInt(String(raw));
 
 /**
  * Algoritmo:
@@ -64,7 +63,8 @@ function etaCache(rutaId: number): CacheTtl<EtaResultado> {
 }
 
 router.get("/rutas/:id/eta", async (req, res) => {
-  const rutaId = idParam(req.params["id"]);
+  const rutaId = parseIdParam(req.params["id"]);
+  if (rutaId === null) { res.status(400).json({ error: "Id de ruta inválido" }); return; }
   res.json(await etaCache(rutaId).obtener());
 });
 

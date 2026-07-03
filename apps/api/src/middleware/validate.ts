@@ -67,3 +67,32 @@ export const enLista = (campo: string, valores: readonly string[]): Regla => (b)
   }
   return null;
 };
+
+export const booleano = (campo: string): Regla => (b) => {
+  const v = b[campo];
+  if (v === undefined || v === null) return null; // usar junto a requerido() si es obligatorio
+  if (typeof v !== "boolean") return `"${campo}" debe ser true o false.`;
+  return null;
+};
+
+/** Color CSS hex (#RGB o #RRGGBB) — lo que pinta rutas y buses en el mapa. */
+export const colorHex = (campo: string): Regla => (b) => {
+  const v = b[campo];
+  if (v === undefined || v === null) return null;
+  if (typeof v !== "string" || !/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v.trim())) {
+    return `"${campo}" debe ser un color hex (#RGB o #RRGGBB).`;
+  }
+  return null;
+};
+
+/**
+ * Parsea un :id de la URL a entero positivo, o `null` si no lo es.
+ * (parseInt("abc") da NaN y parseInt("12abc") da 12 — ambos inaceptables
+ * como id; esto exige que TODO el segmento sea un entero > 0.)
+ */
+export function parseIdParam(raw: unknown): number | null {
+  const s = String(raw ?? "").trim();
+  if (!/^\d+$/.test(s)) return null;
+  const n = Number(s);
+  return Number.isSafeInteger(n) && n > 0 ? n : null;
+}

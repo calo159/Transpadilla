@@ -1,15 +1,13 @@
 import { Router } from "express";
-import { db, paradas, ruta_paradas } from "@workspace/db";
+import { db, paradas, ruta_paradas, rutas } from "@workspace/db";
 import { eq, asc, and } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
-import { validarBody, requerido, texto, numeroEnRango } from "../middleware/validate";
+import { validarBody, requerido, texto, numeroEnRango, parseIdParam } from "../middleware/validate";
 import { registrarAuditoria } from "../lib/auditoria";
 
 // Paradas y su asignación a rutas. Las lecturas son públicas (las usa el mapa);
 // crear/editar/borrar/asignar es solo de administrador.
 const router = Router();
-
-const idParam = (raw: unknown): number => parseInt(String(raw));
 
 // ─── Catálogo de paradas ──────────────────────────────────────────────────────
 
@@ -58,8 +56,10 @@ router.patch(
       res.status(400).json({ error: "Nada que actualizar" });
       return;
     }
-    const pid = idParam(req.params["id"]);
-    await db.update(paradas).set(cambios).where(eq(paradas.id, pid));
+    const pid = parseIdParam(req.params["id"]);
+    if (pid === null) { res.status(400).json({ error: "Id de parada inválido" }); return; }
+    const [actualizada] = await db.update(paradas).set(cambios).where(eq(paradas.id, pid)).returning({ id: paradas.id });
+    if (!actualizada) { res.status(404).json({ error: "Parada no encontrada" }); return; }
     registrarAuditoria(req.usuario?.id, "editar_parada", "parada", pid, cambios);
     res.json({ mensaje: "Parada actualizada" });
   },
@@ -70,9 +70,11 @@ router.delete(
   authMiddleware,
   requireRol("admin"),
   async (req, res) => {
-    const id = idParam(req.params["id"]);
+    const id = parseIdParam(req.params["id"]);
+    if (id === null) { res.status(400).json({ error: "Id de parada inválido" }); return; }
     await db.delete(ruta_paradas).where(eq(ruta_paradas.parada_id, id));
-    await db.delete(paradas).where(eq(paradas.id, id));
+    const [borrada] = await db.delete(paradas).where(eq(paradas.id, id)).returning({ id: paradas.id });
+    if (!borrada) { res.status(404).json({ error: "Parada no encontrada" }); return; }
     registrarAuditoria(req.usuario?.id, "eliminar_parada", "parada", id);
     res.json({ mensaje: "Parada eliminada" });
   },
@@ -81,7 +83,8 @@ router.delete(
 // ─── Asignación de paradas a una ruta (tabla ruta_paradas) ────────────────────
 
 router.get("/rutas/:id/paradas", async (req, res) => {
-  const rutaId = idParam(req.params["id"]);
+  const rutaId = parseIdParam(req.params["id"]);
+  if (rutaId === null) { res.status(400).json({ error: "Id de ruta inválido" }); return; }
   const stops = await db
     .select({
       id: paradas.id,
@@ -102,7 +105,8 @@ router.post(
   authMiddleware,
   requireRol("admin"),
   async (req, res) => {
-    const rutaId = idParam(req.params["id"]);
+    const rutaId = parseIdParam(req.params["id"]);
+    if (rutaId === null) { res.status(400).json({ error: "Id de ruta inválido" }); return; }
     const { parada_id, orden } = req.body as { parada_id: number; orden?: number };
     const pid = Number(parada_id);
     if (!Number.isInteger(pid) || pid <= 0) {
@@ -110,6 +114,9 @@ router.post(
       return;
     }
     const ordenNum = Number.isFinite(Number(orden)) ? Number(orden) : 0;
+    // La ruta debe existir (si no, el insert revienta con error de FK → 500 confuso).
+    const [rutaExiste] = await db.select({ id: rutas.id }).from(rutas).where(eq(rutas.id, rutaId));
+    if (!rutaExiste) { res.status(404).json({ error: "Ruta no encontrada" }); return; }
     // Evita duplicar la misma parada en la misma ruta.
     const [existe] = await db
       .select({ id: ruta_paradas.id })
@@ -131,11 +138,14 @@ router.delete(
   authMiddleware,
   requireRol("admin"),
   async (req, res) => {
-    const rutaId = idParam(req.params["rutaId"]);
-    const paradaId = idParam(req.params["paradaId"]);
-    await db
+    const rutaId = parseIdParam(req.params["rutaId"]);
+    const paradaId = parseIdParam(req.params["paradaId"]);
+    if (rutaId === null || paradaId === null) { res.status(400).json({ error: "Id inválido" }); return; }
+    const [quitada] = await db
       .delete(ruta_paradas)
-      .where(and(eq(ruta_paradas.ruta_id, rutaId), eq(ruta_paradas.parada_id, paradaId)));
+      .where(and(eq(ruta_paradas.ruta_id, rutaId), eq(ruta_paradas.parada_id, paradaId)))
+      .returning({ id: ruta_paradas.id });
+    if (!quitada) { res.status(404).json({ error: "Esa parada no está asignada a esa ruta" }); return; }
     registrarAuditoria(req.usuario?.id, "desasignar_parada", "ruta", rutaId, { parada_id: paradaId });
     res.json({ mensaje: "Parada quitada de la ruta" });
   },

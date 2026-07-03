@@ -4,7 +4,7 @@ import { eq, sql } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
 import { busAutorizado } from "../middleware/bus-autorizado";
 import { emitirSeguro } from "../lib/socket";
-import { validarBody, requerido, texto, numeroEnRango } from "../middleware/validate";
+import { validarBody, requerido, texto, numeroEnRango, parseIdParam } from "../middleware/validate";
 import { crearCacheTtl } from "../lib/cache";
 import { registrarAuditoria } from "../lib/auditoria";
 import { enviarPushARuta, notificarProximidad } from "../lib/push";
@@ -12,9 +12,6 @@ import { enviarPushARuta, notificarProximidad } from "../lib/push";
 const router = Router();
 
 const OCUPACIONES = ["vacio", "medio", "lleno"] as const;
-
-// id de parámetro de ruta → entero (Express 5 tipa params como string | string[]).
-const idParam = (raw: unknown): number => parseInt(String(raw));
 
 // ─── Lectura pública (la usa el mapa del pasajero, sin login) ─────────────────
 
@@ -58,6 +55,10 @@ router.post(
   validarBody(requerido("placa"), texto("placa", 3, 20)),
   async (req, res) => {
     const { placa, ruta_id } = req.body as { placa: string; ruta_id?: number | null };
+    if (ruta_id !== null && ruta_id !== undefined && (!Number.isInteger(Number(ruta_id)) || Number(ruta_id) <= 0)) {
+      res.status(400).json({ error: "ruta_id inválido" });
+      return;
+    }
     const [bus] = await db
       .insert(buses)
       .values({ placa: placa.toUpperCase(), ruta_id: ruta_id ?? null })
@@ -72,8 +73,10 @@ router.delete(
   authMiddleware,
   requireRol("admin"),
   async (req, res) => {
-    const bid = idParam(req.params["id"]);
-    await db.delete(buses).where(eq(buses.id, bid));
+    const bid = parseIdParam(req.params["id"]);
+    if (bid === null) { res.status(400).json({ error: "Id de bus inválido" }); return; }
+    const [borrado] = await db.delete(buses).where(eq(buses.id, bid)).returning({ id: buses.id });
+    if (!borrado) { res.status(404).json({ error: "Bus no encontrado" }); return; }
     registrarAuditoria(req.usuario?.id, "eliminar_bus", "bus", bid);
     res.json({ mensaje: "Bus eliminado" });
   },
@@ -107,10 +110,12 @@ router.patch(
       res.status(400).json({ error: "Nada que actualizar" });
       return;
     }
+    const bid = parseIdParam(req.params["id"]);
+    if (bid === null) { res.status(400).json({ error: "Id de bus inválido" }); return; }
     const [actualizado] = await db
       .update(buses)
       .set(cambios)
-      .where(eq(buses.id, idParam(req.params["id"])))
+      .where(eq(buses.id, bid))
       .returning({ id: buses.id });
     if (!actualizado) { res.status(404).json({ error: "Bus no encontrado" }); return; }
     registrarAuditoria(req.usuario?.id, "editar_bus", "bus", actualizado.id, cambios);

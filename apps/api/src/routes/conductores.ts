@@ -1,9 +1,9 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { db, buses, usuarios } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
-import { validarBody, requerido, texto, correoValido } from "../middleware/validate";
+import { validarBody, requerido, texto, correoValido, parseIdParam } from "../middleware/validate";
 import { registrarAuditoria } from "../lib/auditoria";
 
 // Toda la gestión de conductores es exclusiva del administrador autenticado.
@@ -12,8 +12,6 @@ import { registrarAuditoria } from "../lib/auditoria";
 // bloquearía también las rutas públicas montadas después (rutas, paradas, eta…).
 const router = Router();
 const soloAdmin = [authMiddleware, requireRol("admin")] as const;
-
-const idParam = (raw: unknown): number => parseInt(String(raw));
 
 router.get("/conductores", ...soloAdmin, async (_req, res) => {
   const rows = await db
@@ -73,23 +71,47 @@ router.post(
 );
 
 router.delete("/conductores/:id", ...soloAdmin, async (req, res) => {
-  const id = idParam(req.params["id"]);
-  // Libera el bus que tuviera asignado antes de borrar al conductor.
-  await db.update(buses).set({ conductor_id: null }).where(eq(buses.conductor_id, id));
-  await db.delete(usuarios).where(eq(usuarios.id, id));
+  const id = parseIdParam(req.params["id"]);
+  if (id === null) { res.status(400).json({ error: "Id de conductor inválido" }); return; }
+  // SOLO usuarios con rol conductor: sin este filtro, el endpoint podía borrar
+  // CUALQUIER usuario por id (incluidos otros admins) — escalada accidental.
+  const [borrado] = await db
+    .delete(usuarios)
+    .where(and(eq(usuarios.id, id), eq(usuarios.rol, "conductor")))
+    .returning({ id: usuarios.id });
+  if (!borrado) { res.status(404).json({ error: "Conductor no encontrado" }); return; }
+  // Su bus queda libre solo: la FK buses.conductor_id es ON DELETE SET NULL.
   registrarAuditoria(req.usuario?.id, "eliminar_conductor", "conductor", id);
   res.json({ mensaje: "Conductor eliminado" });
 });
 
 // Asignar / desasignar el conductor de un bus.
 router.patch("/buses/:id/conductor", ...soloAdmin, async (req, res) => {
-  const { conductor_id } = req.body as { conductor_id: number | null };
-  const busId = idParam(req.params["id"]);
-  await db
+  const { conductor_id } = req.body as { conductor_id?: number | null };
+  const busId = parseIdParam(req.params["id"]);
+  if (busId === null) { res.status(400).json({ error: "Id de bus inválido" }); return; }
+  let nuevoConductor: number | null = null;
+  if (conductor_id !== null && conductor_id !== undefined) {
+    const cid = Number(conductor_id);
+    if (!Number.isInteger(cid) || cid <= 0) {
+      res.status(400).json({ error: "conductor_id inválido" });
+      return;
+    }
+    // Debe existir y SER conductor (no se puede asignar un admin/pasajero a un bus).
+    const [existe] = await db
+      .select({ id: usuarios.id })
+      .from(usuarios)
+      .where(and(eq(usuarios.id, cid), eq(usuarios.rol, "conductor")));
+    if (!existe) { res.status(404).json({ error: "Conductor no encontrado" }); return; }
+    nuevoConductor = cid;
+  }
+  const [actualizado] = await db
     .update(buses)
-    .set({ conductor_id: conductor_id ?? null })
-    .where(eq(buses.id, busId));
-  registrarAuditoria(req.usuario?.id, "asignar_conductor", "bus", busId, { conductor_id: conductor_id ?? null });
+    .set({ conductor_id: nuevoConductor })
+    .where(eq(buses.id, busId))
+    .returning({ id: buses.id });
+  if (!actualizado) { res.status(404).json({ error: "Bus no encontrado" }); return; }
+  registrarAuditoria(req.usuario?.id, "asignar_conductor", "bus", busId, { conductor_id: nuevoConductor });
   res.json({ mensaje: "Conductor actualizado" });
 });
 
