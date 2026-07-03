@@ -1,15 +1,43 @@
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
 import { usuarios, rutas, paradas, ruta_paradas, buses } from "@workspace/db";
+import { logger } from "./logger";
+
+/**
+ * Decide qué debe sembrarse en una base VACÍA, a partir del entorno.
+ * Función pura (testeable sin BD).
+ *
+ * - "demo":  SEED_DEMO === "true" explícito y NO producción. El modo demo crea
+ *            credenciales CONOCIDAS (admin123…), así que es opt-in — nunca el
+ *            default, y nunca en producción.
+ * - "admin": el default — crea solo el administrador de ADMIN_EMAIL/ADMIN_PASSWORD.
+ * - "error": configuración peligrosa o incompleta (demo pedido en producción, o
+ *            producción sin credenciales de admin) — el arranque debe fallar claro
+ *            en vez de dejar un sistema sin admin o con claves públicas.
+ * - "nada":  desarrollo sin credenciales configuradas — no se siembra (warn).
+ */
+export function modoSeed(env: {
+  SEED_DEMO?: string;
+  NODE_ENV?: string;
+  ADMIN_EMAIL?: string;
+  ADMIN_PASSWORD?: string;
+}): "demo" | "admin" | "nada" | "error" {
+  const esProd = env.NODE_ENV === "production";
+  if (env.SEED_DEMO === "true") return esProd ? "error" : "demo";
+  const tieneAdmin = !!env.ADMIN_EMAIL?.trim() && !!env.ADMIN_PASSWORD;
+  if (tieneAdmin) return "admin";
+  return esProd ? "error" : "nada";
+}
 
 /**
  * Prepara la base de datos en su primer arranque (solo si está vacía):
  *
- * - SEED_DEMO !== "false" (por defecto): carga datos DEMO completos (usuarios de
- *   prueba, rutas, paradas y buses) — útil para demostraciones.
- * - SEED_DEMO === "false" (producción real, p.ej. la Alcaldía): NO crea datos
- *   demo; crea ÚNICAMENTE un administrador a partir de ADMIN_EMAIL / ADMIN_PASSWORD.
- *   Así el sistema arranca limpio, sin buses ni cuentas de prueba.
+ * - SEED_DEMO === "true" (opt-in, solo fuera de producción): carga datos DEMO
+ *   completos (usuarios de prueba con claves conocidas, rutas, paradas y buses).
+ * - Default: crea ÚNICAMENTE un administrador a partir de ADMIN_EMAIL /
+ *   ADMIN_PASSWORD. Así el sistema arranca limpio, sin cuentas de prueba.
+ * - En PRODUCCIÓN con base vacía y sin admin configurado, FALLA el arranque
+ *   (mejor un error claro que un despliegue sin admin o con admin123 público).
  *
  * Es idempotente: si ya hay usuarios, no hace nada.
  */
@@ -17,11 +45,27 @@ export async function seedIfEmpty(): Promise<{ seeded: boolean }> {
   const [yaExiste] = await db.select().from(usuarios).limit(1);
   if (yaExiste) return { seeded: false };
 
-  // Modo producción: solo el admin configurado por entorno, sin datos demo.
-  if (process.env["SEED_DEMO"] === "false") {
-    const email = process.env["ADMIN_EMAIL"]?.trim().toLowerCase();
-    const pass = process.env["ADMIN_PASSWORD"];
-    if (!email || !pass) return { seeded: false };
+  const modo = modoSeed(process.env);
+
+  if (modo === "error") {
+    throw new Error(
+      "FATAL: base de datos vacía en producción sin configuración segura de seed. " +
+        "Define ADMIN_EMAIL y ADMIN_PASSWORD (y nunca SEED_DEMO=true en producción).",
+    );
+  }
+
+  if (modo === "nada") {
+    logger.warn(
+      "Base de datos vacía y sin ADMIN_EMAIL/ADMIN_PASSWORD: no se sembró nada. " +
+        "Define esas variables (o SEED_DEMO=true solo en desarrollo) para crear el primer usuario.",
+    );
+    return { seeded: false };
+  }
+
+  // Modo admin (default): solo el administrador configurado por entorno.
+  if (modo === "admin") {
+    const email = process.env["ADMIN_EMAIL"]!.trim().toLowerCase();
+    const pass = process.env["ADMIN_PASSWORD"]!;
     const hash = await bcrypt.hash(pass, 10);
     await db.insert(usuarios).values({
       nombre: "Administrador",

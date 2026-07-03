@@ -55,7 +55,8 @@ services:
       # prueba. Se crea ÚNICAMENTE el administrador definido en ADMIN_EMAIL /
       # ADMIN_PASSWORD. Esto evita publicar un admin con contraseña conocida
       # (admin123) en el sitio en producción.
-      # Para una demo desechable con datos de ejemplo, cambia SEED_DEMO a "true".
+      # Nota: el demo (SEED_DEMO=true) solo funciona FUERA de producción; con
+      # NODE_ENV=production el arranque falla a propósito si se define.
       - key: SEED_DEMO
         value: "false"
       # Render te pedirá estos valores al desplegar (sync:false = no van en el repo).
