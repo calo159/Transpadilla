@@ -1,16 +1,26 @@
 import { Router } from "express";
 import { pool } from "@workspace/db";
 import { pushHabilitado, clavePublicaVapid } from "../lib/push";
+import { rateLimit } from "../middleware/rate-limit";
 
 // Suscripción a notificaciones Web Push. PÚBLICO: el pasajero no tiene cuenta;
 // se identifica por el endpoint único de su suscripción del navegador.
 const router = Router();
 
+// Límite propio (además del global): estos endpoints son públicos y escriben
+// en la BD — sin esto, un atacante podría inflar suscripciones_push con
+// endpoints falsos al ritmo generoso del límite global del mapa.
+const pushLimiter = rateLimit({
+  ventanaMs: 60_000,
+  max: 10,
+  mensaje: "Demasiados cambios de notificaciones. Espera un minuto.",
+});
+
 router.get("/push/clave-publica", (_req, res) => {
   res.json({ habilitado: pushHabilitado, clave: clavePublicaVapid });
 });
 
-router.post("/push/suscribir", async (req, res) => {
+router.post("/push/suscribir", pushLimiter, async (req, res) => {
   const { subscription, rutas } = req.body as {
     subscription?: { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
     rutas?: unknown;
@@ -19,6 +29,16 @@ router.post("/push/suscribir", async (req, res) => {
   const p256dh = subscription?.keys?.p256dh;
   const auth = subscription?.keys?.auth;
   if (!endpoint || !p256dh || !auth) {
+    res.status(400).json({ error: "Suscripción inválida" });
+    return;
+  }
+  // Tamaños razonables (los endpoints reales de FCM/Mozilla rondan 150–400
+  // caracteres) y solo HTTPS — corta basura y payloads inflados en la BD.
+  const esLocal = process.env["NODE_ENV"] !== "production" && endpoint.startsWith("http://localhost");
+  if (
+    endpoint.length > 600 || p256dh.length > 256 || auth.length > 128 ||
+    (!endpoint.startsWith("https://") && !esLocal)
+  ) {
     res.status(400).json({ error: "Suscripción inválida" });
     return;
   }
@@ -37,9 +57,11 @@ router.post("/push/suscribir", async (req, res) => {
   res.json({ ok: true });
 });
 
-router.post("/push/desuscribir", async (req, res) => {
+router.post("/push/desuscribir", pushLimiter, async (req, res) => {
   const { endpoint } = req.body as { endpoint?: string };
-  if (endpoint) await pool.query(`DELETE FROM suscripciones_push WHERE endpoint = $1`, [endpoint]);
+  if (endpoint && typeof endpoint === "string" && endpoint.length <= 600) {
+    await pool.query(`DELETE FROM suscripciones_push WHERE endpoint = $1`, [endpoint]);
+  }
   res.json({ ok: true });
 });
 

@@ -194,8 +194,10 @@ if (process.env["NODE_ENV"] === "production") {
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   req.log?.error({ err }, "Unhandled error");
   registrarError(err, req.originalUrl);
-  const mensaje = err instanceof Error ? err.message : String(err);
-  notificarAlerta(`⚠️ TransPadilla — error en ${req.method} ${req.originalUrl}: ${mensaje.slice(0, 200)}`);
+  // La alerta externa (webhook a Slack/Discord/etc.) NO incluye err.message:
+  // podría filtrar detalles internos (SQL, hosts, mensajes de librerías). El
+  // detalle completo queda en los logs internos y en GET /api/metrics (admin).
+  notificarAlerta(`⚠️ TransPadilla — error 500 en ${req.method} ${req.originalUrl.split("?")[0]}`);
   if (res.headersSent) return;
   res.status(500).json({ error: "Error interno del servidor" });
 });
