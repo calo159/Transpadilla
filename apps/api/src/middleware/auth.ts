@@ -51,6 +51,10 @@ export async function authMiddleware(
     return;
   }
   // Lista negra: si el token fue revocado (cierre de sesión), se rechaza.
+  // FAIL-CLOSED: si no se puede comprobar la revocación (BD caída, error de
+  // red), se responde 503 en vez de dejar pasar — de lo contrario un token
+  // revocado por logout volvería a funcionar justo cuando la BD falla, y el
+  // "cerrar sesión real" dejaría de ser una garantía.
   try {
     const { rowCount } = await pool.query(
       `SELECT 1 FROM tokens_revocados WHERE token_hash = $1 LIMIT 1`,
@@ -61,7 +65,8 @@ export async function authMiddleware(
       return;
     }
   } catch {
-    // Si la comprobación falla (BD caída), no bloqueamos: el token ya es válido.
+    res.status(503).json({ error: "No se pudo validar la sesión. Inténtalo de nuevo." });
+    return;
   }
   req.usuario = payload;
   next();
