@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Bus as BusIcon, Activity, Clock, Map, MapPin, Route, AlertTriangle, UserCheck } from "lucide-react";
+import { Bus as BusIcon, Activity, MapPin, Route, AlertTriangle, UserCheck } from "lucide-react";
 import type { Bus, Ruta, Stats } from "@workspace/api-client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -121,38 +121,39 @@ export default function DashboardTab({
           </ol>
         </div>
       )}
-      {statsLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="bg-card border border-border rounded-xl p-4 animate-pulse">
-              <div className="h-3 bg-muted rounded mb-3 w-1/2" /><div className="h-7 bg-muted rounded" />
-            </div>
-          ))}
+      {/* Banda hero institucional: las cifras clave en vivo como una tira con
+          divisores (no mosaicos), sobre el navy de marca con halo dorado. */}
+      <div className="tp-admin-hero p-5 md:px-7 md:py-6">
+        <div className="flex items-center gap-2 mb-4 relative">
+          <span className="tp-livedot" style={{ width: 7, height: 7, background: "var(--color-gold)" }} />
+          <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/70">Estado del sistema en vivo</span>
         </div>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4">
-          {[
-            { label: "Total Buses",  value: stats?.totalBuses ?? 0,     icon: <BusIcon className="w-5 h-5" />,  tint: "#7BB8D5" },
-            { label: "Activos",      value: stats?.busesActivos ?? 0,   icon: <Activity className="w-5 h-5" />, tint: "#22c55e" },
-            { label: "Con Demora",   value: stats?.busesConDemora ?? 0, icon: <Clock className="w-5 h-5" />,    tint: "#F5B731" },
-            { label: "Rutas",        value: stats?.totalRutas ?? 0,     icon: <Map className="w-5 h-5" />,      tint: "#a78bfa" },
-            { label: "Paradas",      value: stats?.totalParadas ?? 0,   icon: <MapPin className="w-5 h-5" />,   tint: "#38bdf8" },
-          ].map((stat) => (
-            <div key={stat.label} className="bg-card border border-border rounded-xl p-4 lg:p-5 transition-colors hover:border-primary/40">
-              <div
-                className="w-9 h-9 rounded-lg flex items-center justify-center mb-3"
-                style={{ background: `${stat.tint}1f`, color: stat.tint }}
-              >
-                {stat.icon}
+        {statsLoading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-y-5 relative">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="lg:pl-5 lg:first:pl-0">
+                <div className="h-9 w-16 rounded bg-white/15 animate-pulse" />
+                <div className="h-3 w-20 rounded bg-white/10 mt-2.5 animate-pulse" />
               </div>
-              <p className="text-2xl md:text-3xl font-black leading-none" style={{ color: stat.tint }}>
-                {stat.value}
-              </p>
-              <span className="text-xs font-medium text-muted-foreground mt-1.5 block">{stat.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-y-5 relative">
+            {[
+              { label: "Total buses", value: stats?.totalBuses ?? 0,     hi: false },
+              { label: "Activos",     value: stats?.busesActivos ?? 0,   hi: true },
+              { label: "Con demora",  value: stats?.busesConDemora ?? 0, hi: false },
+              { label: "Rutas",       value: stats?.totalRutas ?? 0,     hi: false },
+              { label: "Paradas",     value: stats?.totalParadas ?? 0,   hi: false },
+            ].map((s) => (
+              <div key={s.label} className="lg:border-l lg:border-white/[0.14] lg:pl-5 lg:first:border-l-0 lg:first:pl-0">
+                <p className="font-display text-3xl md:text-4xl font-extrabold leading-none" style={{ color: s.hi ? "var(--color-gold)" : "#fff" }}>{s.value}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-white/60 mt-2">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Mapa en vivo (solo escritorio) */}
       {!rutasLoading && rutas.length > 0 && <DashboardMiniMap rutas={rutas} buses={buses} />}

@@ -175,9 +175,12 @@ export default function Admin() {
 
         {/* ── DESKTOP TOPBAR (claro) ── */}
         <div className="hidden md:flex items-center justify-between px-6 py-3 shrink-0 bg-white border-b md:sticky md:top-0 md:z-10" style={{ borderColor: "#e8edf4" }}>
-          <div>
-            <h1 className="font-display text-xl font-extrabold" style={{ color: "var(--color-navy)" }}>{tabTitle[tab]}</h1>
-            <p className="text-xs" style={{ color: "var(--color-gray-text)" }}>Riohacha, La Guajira · TransPadilla</p>
+          <div className="flex items-center gap-3">
+            <span aria-hidden className="w-1 h-9 rounded-full" style={{ background: "var(--color-gold)" }} />
+            <div>
+              <h1 className="font-display text-xl font-extrabold" style={{ color: "var(--color-navy)" }}>{tabTitle[tab]}</h1>
+              <p className="text-xs" style={{ color: "var(--color-gray-text)" }}>Riohacha, La Guajira · TransPadilla</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <div role="status" aria-live="polite" className="flex items-center gap-2 text-xs font-bold rounded-full px-3 py-1.5" style={{ background: "rgba(56,161,105,0.12)", color: "var(--color-success)" }}>

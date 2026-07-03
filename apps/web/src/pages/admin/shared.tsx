@@ -8,8 +8,9 @@ export const inputCls =
 /** Mismo estilo para los <SelectTrigger> del panel. */
 export const selectTriggerCls = inputCls;
 
-/** Tarjeta estándar de los tabs: igual que antes en móvil, un poco más rica en escritorio. */
-export const cardCls = "bg-card border border-border rounded-xl p-4 md:rounded-2xl md:p-5 md:shadow-sm";
+/** Tarjeta estándar de los tabs: borde nítido + sombra deliberada (no la sombra
+ *  difusa "flotante" típica de dashboard autogenerado). */
+export const cardCls = "bg-card border border-border rounded-xl p-4 md:rounded-2xl md:p-5 tp-shadow-card";
 
 /**
  * Deja el formulario "pegado" (sticky) bajo la topbar mientras la lista de al
@@ -18,9 +19,10 @@ export const cardCls = "bg-card border border-border rounded-xl p-4 md:rounded-2
 export const stickyFormCls = "h-fit lg:sticky lg:top-20";
 
 /**
- * Encabezado de sección estándar de los tabs del admin: mismo markup que ya
- * usaban (`h3` con ícono + título, y un slot opcional a la derecha para un
- * conteo o una acción), para que los 4 tabs CRUD se vean consistentes.
+ * Encabezado de sección institucional: barra dorada + ícono + título en
+ * versalitas (Plus Jakarta), con un slot opcional a la derecha para conteo o
+ * acción. Le da identidad de marca al panel (vs. el h3 gris genérico anterior)
+ * y, al vivir aquí, se propaga a los 4 tabs CRUD + Dashboard.
  */
 export function SectionHeader({ icon, title, count, action }: {
   icon: ReactNode;
@@ -29,10 +31,14 @@ export function SectionHeader({ icon, title, count, action }: {
   action?: ReactNode;
 }) {
   return (
-    <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center justify-between">
-      <span className="flex items-center gap-2">{icon} {title}</span>
+    <div className="mb-4 flex items-center justify-between gap-2">
+      <span className="flex items-center gap-2.5">
+        <span aria-hidden className="inline-block w-1 h-4 rounded-full" style={{ background: "var(--color-gold)" }} />
+        {icon}
+        <span className="font-display text-[13px] font-extrabold uppercase tracking-wide" style={{ color: "var(--color-navy)" }}>{title}</span>
+      </span>
       {count != null && <span className="text-xs text-muted-foreground font-normal">{count}</span>}
       {action}
-    </h3>
+    </div>
   );
 }

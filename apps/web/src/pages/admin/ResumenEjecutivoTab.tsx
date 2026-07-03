@@ -302,7 +302,8 @@ export default function ResumenEjecutivoTab() {
               está operando de verdad ahora, y cuánta gente lo usa/confía en él. */}
           {cobertura.data && (
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider mb-2 px-0.5" style={{ color: "var(--color-gray-text, #6B7280)" }}>
+              <h3 className="font-display text-[13px] font-extrabold uppercase tracking-wide mb-2.5 flex items-center gap-2.5" style={{ color: "var(--color-navy, #1B3B6F)" }}>
+                <span aria-hidden className="inline-block w-1 h-4 rounded-full" style={{ background: "var(--color-gold, #F5B731)" }} />
                 Cobertura y alcance del servicio
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5">
@@ -325,7 +326,8 @@ export default function ResumenEjecutivoTab() {
 
           {/* KPIs de operación del periodo */}
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider mb-2 px-0.5" style={{ color: "var(--color-gray-text, #6B7280)" }}>
+            <h3 className="font-display text-[13px] font-extrabold uppercase tracking-wide mb-2.5 flex items-center gap-2.5" style={{ color: "var(--color-navy, #1B3B6F)" }}>
+              <span aria-hidden className="inline-block w-1 h-4 rounded-full" style={{ background: "var(--color-gold, #F5B731)" }} />
               Operación del periodo
             </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

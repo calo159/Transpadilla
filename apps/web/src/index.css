@@ -217,8 +217,16 @@
 .tp-admin-bg     { background: #F4F6F9; }
 .tp-conductor-bg { background: #EEF1F6; }
 @media (min-width: 768px) {
-  /* Admin: el área de contenido pasa a un gris-azulado más suave. */
-  .tp-admin-bg { background: #E4E9F1; }
+  /* Admin: gris-azulado con un motivo MUY tenue de cuadrícula (evoca un plano de
+     calles) en vez del gris plano — le da carácter "institucional" al panel sin
+     estorbar la lectura de las tarjetas encima. */
+  .tp-admin-bg {
+    background-color: #E7ECF4;
+    background-image:
+      linear-gradient(rgba(27, 59, 111, .04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27, 59, 111, .04) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
   /* Conductor: telón navy de marca; la columna central flota como una "app",
      eliminando la pared casi blanca de los costados. */
   .tp-conductor-bg {
@@ -250,6 +258,25 @@
 .tp-shadow-card  { box-shadow: 0 8px 22px rgba(15, 30, 60, .06); }
 .tp-shadow-float { box-shadow: 0 18px 44px rgba(15, 30, 60, .22); }
 .tp-shadow-fab   { box-shadow: 0 8px 20px rgba(15, 30, 60, .18); }
+
+/* ── Panel admin "institucional" (look de autoridad de transporte) ──────────────
+   Banda hero navy de marca con las cifras clave en vivo; halo dorado en la esquina
+   (motivo de marca). Reemplaza los mosaicos de KPI típicos de dashboard genérico. */
+.tp-admin-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  color: #fff;
+  background: linear-gradient(135deg, #1B3B6F 0%, #24487e 55%, #16335f 100%);
+  box-shadow: 0 14px 34px rgba(15, 30, 60, .18);
+}
+.tp-admin-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 150% at 92% -25%, rgba(245, 183, 49, .22), transparent 46%);
+  pointer-events: none;
+}
 
 /* Punto "en vivo" con pulso suave (badge EN VIVO / estado GPS). Reutilizable. */
 @keyframes tp-blink { 0%, 100% { opacity: 1 } 50% { opacity: .35 } }
