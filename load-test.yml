@@ -1,0 +1,77 @@
+config:
+  target: "https://transpadilla-web.onrender.com"
+  phases:
+    - duration: 60
+      arrivalRate: 2
+      rampTo: 5
+      name: "Rampa de usuarios"
+    - duration: 120
+      arrivalRate: 5
+      name: "Carga sostenida"
+  defaults:
+    headers:
+      Accept: "application/json"
+  http:
+    pool: 10
+
+scenarios:
+  - name: "Pasajero viendo el mapa"
+    flow:
+      - get:
+          url: "/api/healthz"
+      - get:
+          url: "/api/buses"
+      - get:
+          url: "/api/rutas"
+      - get:
+          url: "/api/rutas/paradas/todas"
+      - get:
+          url: "/api/stats"
+      - get:
+          url: "/api/push/clave-publica"
+
+  - name: "Consulta de ETA"
+    flow:
+      - get:
+          url: "/api/rutas"
+          capture:
+            - json: "$[0].id"
+              as: "rutaId"
+      - think: 1
+      - get:
+          url: "/api/rutas/{{ rutaId }}/eta"
+      - get:
+          url: "/api/rutas/{{ rutaId }}/paradas"
+      - get:
+          url: "/api/buses"
+
+  - name: "Admin autenticado"
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "admin@transpadilla.co"
+            password: "admin123"
+          capture:
+            - json: "$.token"
+              as: "jwt"
+      - get:
+          url: "/api/buses"
+          headers:
+            Authorization: "Bearer {{ jwt }}"
+      - get:
+          url: "/api/conductores"
+          headers:
+            Authorization: "Bearer {{ jwt }}"
+      - get:
+          url: "/api/auditoria"
+          headers:
+            Authorization: "Bearer {{ jwt }}"
+      - get:
+          url: "/api/metrics"
+          headers:
+            Authorization: "Bearer {{ jwt }}"
+      - post:
+          url: "/api/auth/cerrar-sesion"
+          headers:
+            Authorization: "Bearer {{ jwt }}"

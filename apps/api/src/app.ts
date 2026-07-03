@@ -117,6 +117,15 @@ app.use(
 
 // Límites de tamaño de body: payloads pequeños bastan para esta API; cerrar la
 // puerta a cuerpos enormes evita un vector de DoS por memoria/parseo.
+// Se verifica Content-Length ANTES de parsear para devolver 413 sin tocar el body.
+app.use((req, res, next) => {
+  const len = parseInt(req.headers["content-length"] ?? "0", 10);
+  if (len > 33_000) {
+    res.status(413).json({ error: "Payload demasiado grande" });
+    return;
+  }
+  next();
+});
 app.use(express.json({ limit: "32kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 
@@ -192,13 +201,20 @@ if (process.env["NODE_ENV"] === "production") {
 // llega aquí y responde JSON, en vez de una página HTML de error por defecto.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
+  // Si Express ya empezó a responder, no podemos enviar el error como JSON.
+  if (res.headersSent) return;
+  // Express lanza un error con type "entity.too.large" cuando el body excede
+  // el limit de express.json() — debe responder 413, no 500.
+  if ((err as Record<string, unknown>)["type"] === "entity.too.large") {
+    res.status(413).json({ error: "Payload demasiado grande" });
+    return;
+  }
   req.log?.error({ err }, "Unhandled error");
   registrarError(err, req.originalUrl);
   // La alerta externa (webhook a Slack/Discord/etc.) NO incluye err.message:
   // podría filtrar detalles internos (SQL, hosts, mensajes de librerías). El
   // detalle completo queda en los logs internos y en GET /api/metrics (admin).
   notificarAlerta(`⚠️ TransPadilla — error 500 en ${req.method} ${req.originalUrl.split("?")[0]}`);
-  if (res.headersSent) return;
   res.status(500).json({ error: "Error interno del servidor" });
 });
 

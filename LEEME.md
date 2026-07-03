@@ -24,7 +24,7 @@ Esto abre dos ventanas (servidor API + frontend). Luego abre el navegador en:
 
 Para detener: cierra las dos ventanas de PowerShell.
 
-### Cuentas demo
+### Cuentas demo (solo local con `SEED_DEMO=true`)
 | Rol | Correo | Contraseña |
 |-----|--------|-----------|
 | Admin | admin@transpadilla.co | admin123 |

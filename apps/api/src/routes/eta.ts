@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, paradas, ruta_paradas, buses } from "@workspace/db";
+import { db, rutas, paradas, ruta_paradas, buses } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { calcularEtaPorParada } from "../lib/eta-calc";
 import { crearCacheTtl, type CacheTtl } from "../lib/cache";
@@ -65,6 +65,8 @@ function etaCache(rutaId: number): CacheTtl<EtaResultado> {
 router.get("/rutas/:id/eta", async (req, res) => {
   const rutaId = parseIdParam(req.params["id"]);
   if (rutaId === null) { res.status(400).json({ error: "Id de ruta inválido" }); return; }
+  const existe = await db.select({ id: rutas.id }).from(rutas).where(eq(rutas.id, rutaId)).limit(1);
+  if (!existe.length) { res.status(404).json({ error: "Ruta no encontrada" }); return; }
   res.json(await etaCache(rutaId).obtener());
 });
 

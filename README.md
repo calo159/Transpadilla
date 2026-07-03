@@ -135,7 +135,7 @@ pnpm --filter @workspace/api run test   # unitarias siempre; integración si hay
 ```
 Luego abre **http://localhost:5173**.
 
-### Cuentas demo
+### Cuentas demo (solo local con `SEED_DEMO=true`)
 | Rol | Correo | Contraseña |
 |-----|--------|-----------|
 | Admin | admin@transpadilla.co | admin123 |
