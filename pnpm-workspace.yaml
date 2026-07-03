@@ -66,10 +66,8 @@ onlyBuiltDependencies:
   - msw
   - unrs-resolver
 
-overrides:
-  # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
-  "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
-  esbuild: "0.27.3"
-  # Parches de seguridad de dependencias transitivas (DoS) — ver `pnpm audit`.
-  ws: "8.21.0"
-  qs: "6.15.2"
+# ⚠️ Los OVERRIDES de dependencias NO van aquí: pnpm 9 (el fijado en
+# packageManager) solo los lee del package.json RAÍZ, campo "pnpm"."overrides".
+# Un bloque `overrides:` en este archivo es config muerta hasta pnpm 10 —
+# estuvo aquí un tiempo sin aplicarse (nunca llegaba al pnpm-lock.yaml).
+# Los parches de seguridad de transitivas viven en package.json.
