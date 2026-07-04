@@ -136,11 +136,10 @@ pnpm --filter @workspace/api run test   # unitarias siempre; integración si hay
 Luego abre **http://localhost:5173**.
 
 ### Cuentas demo (solo local con `SEED_DEMO=true`)
-| Rol | Correo | Contraseña |
-|-----|--------|-----------|
-| Admin | admin@transpadilla.co | admin123 |
-| Conductor | conductor@transpadilla.co | conductor123 |
-| Pasajero | pasajero@transpadilla.co | pasajero123 |
+Con `SEED_DEMO=true` sobre una base vacía se crean automáticamente 3 cuentas de prueba
+(admin, conductor, pasajero). Sus credenciales exactas están en
+[`apps/api/src/lib/seed.ts`](apps/api/src/lib/seed.ts) — **nunca se crean en producción**
+(ver [`docs/SEGURIDAD.md`](docs/SEGURIDAD.md)).
 
 ---
 

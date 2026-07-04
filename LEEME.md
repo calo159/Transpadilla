@@ -25,11 +25,9 @@ Esto abre dos ventanas (servidor API + frontend). Luego abre el navegador en:
 Para detener: cierra las dos ventanas de PowerShell.
 
 ### Cuentas demo (solo local con `SEED_DEMO=true`)
-| Rol | Correo | Contraseña |
-|-----|--------|-----------|
-| Admin | admin@transpadilla.co | admin123 |
-| Conductor | conductor@transpadilla.co | conductor123 |
-| Pasajero | pasajero@transpadilla.co | pasajero123 |
+Se crean automáticamente 3 cuentas de prueba (admin, conductor, pasajero) la primera vez que
+arrancas con la base vacía. Las credenciales exactas están en `apps/api/src/lib/seed.ts` —
+**nunca se crean en producción**.
 
 ---
 

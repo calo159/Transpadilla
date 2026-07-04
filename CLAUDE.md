@@ -47,7 +47,8 @@ pnpm --filter @workspace/web run dev     # Frontend en :5173
 ```
 
 **Cuentas demo** (solo si `SEED_DEMO=true` y la DB está vacía, **nunca en producción**):
-admin@transpadilla.co / admin123 · conductor@transpadilla.co / conductor123.
+credenciales exactas en `apps/api/src/lib/seed.ts` (no se repiten aquí para no quedar
+destacadas en texto plano en un repo público).
 ⚠️ La Supabase actual usa `SEED_DEMO=false` y ya tiene un admin real (no demo) — esas
 credenciales no existen ahí.
 

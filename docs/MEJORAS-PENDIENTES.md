@@ -431,17 +431,22 @@ Buscar en codigo actual:
 
 ---
 
-## Checklist rapido
+## Checklist rapido (verificado contra el codigo el 2026-07-03)
 
-- [ ] 🔴 Body >32KB no causa 500
-- [ ] 🔴 Credenciales demo removidas de README publico
-- [ ] 🔴 Revocacion JWT fail-closed (verificar)
-- [ ] 🔴 Seed demo opt-in (verificar)
-- [ ] 🔴 pnpm audit en 0 (verificar)
-- [ ] 🟡 ETA retorna 404 para ruta inexistente
-- [ ] 🟡 CRUD admin con 404 reales (verificar)
-- [ ] 🟡 Validacion runtime completa (verificar)
-- [ ] 🟡 Push rate limit propio (verificar)
-- [ ] 🟡 Reportes con cache
-- [ ] 🟡 Stats publicos: decision tomada
-- [ ] 🟢 Error handler sin mensajes internos (verificar)
+- [x] 🔴 Body >32KB no causa 500 ✅ (desplegado, `app.ts`)
+- [x] 🔴 Revocacion JWT fail-closed ✅ (verificado, `auth.ts` responde 503)
+- [x] 🔴 Seed demo opt-in ✅ (verificado, `modoSeed()` en `seed.ts`)
+- [x] 🔴 pnpm audit en 0 ✅ (verificado, `pnpm audit --audit-level moderate` → 0 vulns)
+- [x] 🔴 Credenciales demo removidas de README/LEEME/CLAUDE.md ✅ (reemplazadas por
+      referencia a `seed.ts`, ya no aparecen en texto plano en esos 3 archivos)
+- [x] 🟡 ETA retorna 404 para ruta inexistente ✅ (desplegado, `eta.ts`)
+- [x] 🟡 CRUD admin con 404 reales ✅ (verificado, `rutas/paradas/buses/conductores.ts`)
+- [x] 🟡 Validacion runtime completa ✅ (verificado, `booleano`/`colorHex`/`parseIdParam`)
+- [x] 🟡 Push rate limit propio ✅ (verificado, `push.ts`)
+- [x] 🟡 Reportes con cache ✅ (implementado, TTL 60s por `dias` en `reportes.ts`,
+      mismo patron que el cache de ETA)
+- [ ] 🟡 Stats publicos: decision tomada — **pendiente, decision de producto** (se
+      mantiene publico por ahora; revisar si algun dia deja de alimentar el mapa)
+- [x] 🟢 Error handler sin mensajes internos ✅ (verificado, `notificarAlerta` sin `err.message`)
+- [ ] 🟢 Rate limit multi-instancia — solo aplica si se escala a mas de una instancia
+- [ ] 🟢 Header `Server: cloudflare` — se configura en Cloudflare, no en el codigo
