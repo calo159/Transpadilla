@@ -10,10 +10,13 @@
     "start": "pnpm --filter @workspace/api run start",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./apps/**\" --filter \"./scripts\" --if-present run typecheck",
-    "test": "pnpm -r --if-present run test"
+    "test": "pnpm -r --if-present run test",
+    "load-test": "artillery run load-test.yml",
+    "load-test:report": "artillery run load-test.yml --output load-test-report.json && artillery report load-test-report.json"
   },
   "private": true,
   "devDependencies": {
+    "artillery": "^2.0.33",
     "prettier": "^3.8.3",
     "typescript": "~5.9.3"
   },

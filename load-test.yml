@@ -1,77 +1,21 @@
 config:
-  target: "https://transpadilla-web.onrender.com"
+  target: "http://localhost:8080"
   phases:
-    - duration: 60
-      arrivalRate: 2
-      rampTo: 5
-      name: "Rampa de usuarios"
-    - duration: 120
-      arrivalRate: 5
-      name: "Carga sostenida"
-  defaults:
-    headers:
-      Accept: "application/json"
-  http:
-    pool: 10
+    - arrivalCount: 5000
+      duration: 1
+      maxVusers: 50
+      name: "5000 requests (50 concurrencia)"
 
 scenarios:
-  - name: "Pasajero viendo el mapa"
+  - name: "GET /healthz"
     flow:
       - get:
-          url: "/api/healthz"
-      - get:
-          url: "/api/buses"
-      - get:
-          url: "/api/rutas"
-      - get:
-          url: "/api/rutas/paradas/todas"
-      - get:
-          url: "/api/stats"
-      - get:
-          url: "/api/push/clave-publica"
-
-  - name: "Consulta de ETA"
+          url: "/healthz"
+  - name: "GET /buses"
     flow:
       - get:
-          url: "/api/rutas"
-          capture:
-            - json: "$[0].id"
-              as: "rutaId"
-      - think: 1
-      - get:
-          url: "/api/rutas/{{ rutaId }}/eta"
-      - get:
-          url: "/api/rutas/{{ rutaId }}/paradas"
-      - get:
-          url: "/api/buses"
-
-  - name: "Admin autenticado"
+          url: "/buses"
+  - name: "GET /rutas"
     flow:
-      - post:
-          url: "/api/auth/login"
-          json:
-            email: "admin@transpadilla.co"
-            password: "admin123"
-          capture:
-            - json: "$.token"
-              as: "jwt"
       - get:
-          url: "/api/buses"
-          headers:
-            Authorization: "Bearer {{ jwt }}"
-      - get:
-          url: "/api/conductores"
-          headers:
-            Authorization: "Bearer {{ jwt }}"
-      - get:
-          url: "/api/auditoria"
-          headers:
-            Authorization: "Bearer {{ jwt }}"
-      - get:
-          url: "/api/metrics"
-          headers:
-            Authorization: "Bearer {{ jwt }}"
-      - post:
-          url: "/api/auth/cerrar-sesion"
-          headers:
-            Authorization: "Bearer {{ jwt }}"
+          url: "/rutas"
