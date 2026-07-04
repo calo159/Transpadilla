@@ -440,16 +440,19 @@
 @media (prefers-reduced-motion: reduce) { .tp-dialog-pop { animation: none; } }
 
 /* Contenedor del diálogo: sube + escala + aparece con easing "caro" (easeOutExpo).
-   El keyframe fija `transform` completo (incluye el centrado -50%/-50% del base)
-   porque sustituye al `animate-in zoom-in-95 slide-in-from-*` de shadcn; con
-   `fill: both` el frame final queda centrado y visible. */
+   Tailwind v4 compila `translate-x-[-50%] translate-y-[-50%]` a la propiedad CSS
+   independiente `translate` (no `transform`); animar aquí con `transform: translate(...)`
+   se SUMABA al centrado del base en vez de reemplazarlo, empujando el diálogo fuera de
+   pantalla (visible sobre todo en móvil). Por eso el keyframe usa las mismas propiedades
+   independientes `translate`/`scale` que ya usa el base, para reemplazarlas en vez de
+   componerse con ellas. Con `fill: both` el frame final queda centrado y visible. */
 @keyframes tp-dialog-in {
-  0%   { opacity: 0; transform: translate(-50%, -46%) scale(.94); }
-  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  0%   { opacity: 0; translate: -50% -46%; scale: .94; }
+  100% { opacity: 1; translate: -50% -50%; scale: 1; }
 }
 @keyframes tp-dialog-out {
-  0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -48%) scale(.97); }
+  0%   { opacity: 1; translate: -50% -50%; scale: 1; }
+  100% { opacity: 0; translate: -50% -48%; scale: .97; }
 }
 .tp-dialog[data-state="open"]   { animation: tp-dialog-in  .42s cubic-bezier(.16, 1, .3, 1) both; }
 .tp-dialog[data-state="closed"] { animation: tp-dialog-out .18s ease-in both; }
