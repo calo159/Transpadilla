@@ -114,7 +114,7 @@ export default function Login() {
       </div>
 
       {/* Panel de marca — solo escritorio; en móvil el logo va arriba del formulario */}
-      <div className="hidden md:flex md:w-[380px] flex-shrink-0 flex-col items-center justify-center gap-7 relative z-10">
+      <div className="hidden md:flex md:w-[380px] flex-shrink-0 flex-col items-center justify-center gap-7 relative z-10 animate-in fade-in slide-in-from-left-4 duration-700">
         <LogoTP size={112} />
         <div className="text-center">
           <h1 className="text-5xl font-black tracking-widest text-white mb-1">
@@ -145,7 +145,7 @@ export default function Login() {
         </div>
       </div>
 
-      <div className="w-full max-w-sm relative z-10">
+      <div className="w-full max-w-sm relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {/* Logo y marca — solo móvil (en escritorio va en el panel de la izquierda) */}
         <div className="text-center mb-8 md:hidden">
           <div className="flex items-center justify-center mb-5">

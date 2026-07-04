@@ -431,6 +431,15 @@
 .tp-marker-ping { animation: tp-marker-ping 2.2s ease-out infinite; }
 @media (prefers-reduced-motion: reduce) { .tp-marker-ping { animation: none; opacity: 0; } }
 
+/* "Pop" del círculo del ícono en los diálogos (entra con leve overshoot). */
+@keyframes tp-dialog-pop {
+  0%   { transform: scale(.6); opacity: 0; }
+  70%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.tp-dialog-pop { animation: tp-dialog-pop .38s cubic-bezier(.34, 1.56, .64, 1) both; }
+@media (prefers-reduced-motion: reduce) { .tp-dialog-pop { animation: none; } }
+
 /* Gradiente de marca TransPadilla */
 .tp-gradient { background: linear-gradient(135deg, var(--tp-navy) 0%, var(--tp-blue) 100%); }
 .tp-gradient-sky { background: linear-gradient(135deg, var(--tp-blue) 0%, var(--tp-sky) 100%); }

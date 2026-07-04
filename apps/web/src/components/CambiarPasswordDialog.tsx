@@ -5,7 +5,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/api";
 
@@ -58,11 +58,22 @@ export function CambiarPasswordDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) cerrar(); }}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Cambiar contraseña</DialogTitle>
+      <DialogContent
+        className="tp-light max-w-sm gap-0 border-0 rounded-2xl p-0 overflow-hidden tp-shadow-float"
+        style={{ background: "#fff" }}
+      >
+        <div style={{ height: 4, background: "var(--color-navy)" }} />
+        <div className="p-6">
+        <DialogHeader className="items-center sm:items-center text-center sm:text-center">
+          <span
+            className="tp-dialog-pop w-14 h-14 rounded-full flex items-center justify-center mb-1"
+            style={{ background: "color-mix(in srgb, var(--color-navy) 12%, #fff)", color: "var(--color-navy)" }}
+          >
+            <KeyRound className="w-6 h-6" />
+          </span>
+          <DialogTitle className="font-display text-lg" style={{ color: "var(--color-navy)" }}>Cambiar contraseña</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
+        <div className="space-y-3 mt-4">
           <div>
             <Label className="text-xs mb-1.5">Contraseña actual</Label>
             <div className="relative">
@@ -106,12 +117,25 @@ export function CambiarPasswordDialog({
             />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={cerrar} className="rounded-xl">Cancelar</Button>
-          <Button onClick={guardar} disabled={pending} className="rounded-xl">
+        <DialogFooter className="mt-5 gap-2 sm:gap-2">
+          <Button
+            variant="outline"
+            onClick={cerrar}
+            className="rounded-xl border-0 active:scale-95 transition-transform"
+            style={{ background: "#fff", color: "var(--color-navy)", boxShadow: "inset 0 0 0 1px #e2e8f0" }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={guardar}
+            disabled={pending}
+            className="rounded-xl text-white active:scale-95 transition-transform hover:opacity-90"
+            style={{ background: "var(--color-navy)" }}
+          >
             {pending ? "Guardando..." : "Guardar"}
           </Button>
         </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
