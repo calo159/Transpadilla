@@ -37,15 +37,18 @@ El destinatario real es la **empresa TransPadilla**, como herramienta para mejor
    dibujadas sobre las calles reales y paradas, sin requerir inicio de sesión.
 2. **Autenticación por roles** (JWT) — pasajero, conductor y administrador, cada
    uno con su propia interfaz.
-3. **Panel del conductor** — transmisión de GPS real, inicio/fin de recorrido,
-   reporte de **ocupación** (vacío/medio/lleno) y de **novedades** en vivo. El bus
-   lo asigna el administrador.
+3. **Panel del conductor** — transmisión de GPS real, inicio/fin de recorrido
+   (el viaje **no inicia si el GPS está apagado o sin permiso**, con aviso para
+   activarlo), reporte de **ocupación** (vacío/medio/lleno) y de **novedades** en
+   vivo (solo llegan a quien sigue esa ruta). El bus lo asigna el administrador;
+   al cerrar sesión, su recorrido se finaliza automáticamente en el servidor.
 4. **Panel de administración (CRUD)** — gestión de rutas, paradas, buses y
    conductores con persistencia en base de datos.
 5. **ETA "próximo bus en ~X min"** — el backend estima el tiempo de llegada del
    próximo bus a cada parada (distancia Haversine ÷ velocidad real).
-6. **Comodidad del pasajero** — rutas favoritas, "seguir mi bus" (el mapa lo
-   sigue), botón de ubicación y ocupación visible en cada bus.
+6. **Comodidad del pasajero** — listas de rutas y paraderos con trayecto
+   (origen → destino) y estado en vivo, rutas favoritas, "seguir mi bus" (el
+   mapa lo sigue), botón de ubicación y ocupación visible en cada bus.
 7. **Reportes e historial** — el backend toma una "foto" periódica de las posiciones
    y el panel admin muestra gráficas (km recorridos por ruta, ocupación) por periodo.
 8. **App Android del conductor (APK)** — empaquetada con Capacitor; transmite el GPS
@@ -201,7 +204,8 @@ packages/
   api-client/       Hooks React generados con orval (useGetBuses…) — NO editar a mano
   api-types/        Tipos Zod generados — NO editar a mano
 docs/               Guías: ONBOARDING, DESPLIEGUE-PRODUCCION, SUPABASE, SEGURIDAD,
-                    CLOUDFLARE, MAPA, CAPACITOR-ANDROID, UI-SKILL (+ maquetas stitch/)
+                    CLOUDFLARE, MAPA, CAPACITOR-ANDROID, UI-SKILL,
+                    ESCALADO-MULTI-INSTANCIA (+ maquetas stitch/)
 .github/workflows/  CI: typecheck, build, test (con Postgres), audit
 render.yaml         Blueprint de Render (servicio web)
 CLAUDE.md           Referencia profunda de arquitectura y decisiones
