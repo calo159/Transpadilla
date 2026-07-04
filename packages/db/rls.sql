@@ -66,6 +66,15 @@ CREATE POLICY anon_read_buses        ON buses         FOR SELECT TO anon USING (
 -- sin política que la permita, el rol anónimo NO puede leer correos ni hashes
 -- de contraseña. Solo `service_role` (el backend) accede a esta tabla.
 
+-- 5) `favoritos` — solo el backend ------------------------------------------
+-- Registro anónimo de favoritos por dispositivo (base del reporte "ruta más
+-- solicitada"). La escritura pública pasa por el endpoint rate-limited de Express;
+-- a nivel BD la blindamos: RLS forzado y solo `service_role` accede (nada de anon).
+ALTER TABLE favoritos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE favoritos FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS service_all_favoritos ON favoritos;
+CREATE POLICY service_all_favoritos ON favoritos FOR ALL TO service_role USING (true) WITH CHECK (true);
+
 -- ============================================================================
 -- Verificación rápida (opcional):
 --   SELECT relname, relrowsecurity, relforcerowsecurity

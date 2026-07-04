@@ -8,6 +8,7 @@ import {
   text,
   timestamp,
   index,
+  uniqueIndex,
   jsonb,
 } from "drizzle-orm/pg-core";
 
@@ -112,6 +113,25 @@ export const suscripciones_push = pgTable("suscripciones_push", {
   rutas: jsonb("rutas").notNull().$type<number[]>().default([]),
   creado_en: timestamp("creado_en").notNull().defaultNow(),
 });
+
+// Favoritos del pasajero (sin cuenta): qué rutas marcó como favoritas cada
+// dispositivo. `cliente_id` es un id anónimo generado en el navegador (localStorage);
+// sirve para el reporte "ruta más solicitada" (COUNT DISTINCT cliente_id por ruta).
+export const favoritos = pgTable(
+  "favoritos",
+  {
+    id: serial("id").primaryKey(),
+    cliente_id: varchar("cliente_id", { length: 64 }).notNull(),
+    ruta_id: integer("ruta_id")
+      .notNull()
+      .references(() => rutas.id, { onDelete: "cascade" }),
+    creado_en: timestamp("creado_en").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("idx_favoritos_cliente_ruta").on(t.cliente_id, t.ruta_id),
+    index("idx_favoritos_ruta").on(t.ruta_id),
+  ],
+);
 
 // Lista negra de tokens JWT revocados (cierre de sesión real). Se guarda el hash
 // del token, no el token. Se purga cuando `expira_en` pasa (ya no hace falta).

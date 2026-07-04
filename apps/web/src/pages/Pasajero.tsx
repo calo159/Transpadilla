@@ -97,6 +97,26 @@ export default function Pasajero() {
       return next;
     });
   };
+  // Sincroniza los favoritos con el backend (anónimo, por dispositivo) para el
+  // reporte "ruta más solicitada". Best-effort: si falla, la UX no se ve afectada.
+  // Corre al montar (backfill de los favoritos ya guardados) y cuando cambian.
+  useEffect(() => {
+    let clienteId: string;
+    try {
+      clienteId = localStorage.getItem("tp_cliente_id") ?? "";
+      if (!clienteId) {
+        clienteId = (crypto.randomUUID?.() ?? String(Date.now()) + Math.random().toString(36).slice(2));
+        localStorage.setItem("tp_cliente_id", clienteId);
+      }
+    } catch { return; }
+    const t = setTimeout(() => {
+      void apiFetch("/api/favoritos", {
+        method: "POST",
+        body: JSON.stringify({ cliente_id: clienteId, rutas: favoritos }),
+      }).catch(() => { /* red caída: se reintenta en el próximo cambio */ });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [favoritos]);
   // Última ruta vista (se recuerda en localStorage) para acceso rápido a ella.
   const [recientes, setRecientes] = useState<number[]>(() => {
     try { return (JSON.parse(localStorage.getItem("tp_recientes") ?? "[]") as number[]).slice(0, 1); }

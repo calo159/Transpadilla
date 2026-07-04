@@ -1,50 +1,35 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell,
 } from "recharts";
 import {
-  Radio, Timer, Gauge, Route as RouteIcon, Loader2, BarChart3, FileDown, FileText,
-  MapPin, Bus, UserCheck, Users, BellRing, AlertTriangle,
+  Star, Clock, CalendarDays, Users2, Loader2, BarChart3, FileDown, FileText,
+  Trophy, ArrowUpDown, Route as RouteIcon,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
-interface Stats { totalBuses: number; busesActivos: number }
-interface Cobertura {
-  totalRutas: number;
-  totalParadas: number;
-  totalBuses: number;
-  busesActivosAhora: number;
-  rutasSinBusActivo: number;
-  totalConductores: number;
-  totalPasajeros: number;
-  suscripcionesPush: number;
+interface RutaInsight {
+  ruta_id: number; nombre: string; color: string;
+  km: number; buses: number; muestras: number;
+  vacio: number; medio: number; lleno: number;
+  seguidores: number; opero: boolean;
 }
-interface ResumenRuta {
-  ruta_id: number;
-  nombre: string;
-  color: string;
-  km: number;
-  muestras: number;
-  buses: number;
-}
-interface Resumen {
+interface RutasInsights { dias: number; rutas: RutaInsight[] }
+interface Actividad {
   dias: number;
-  km_total: number;
-  buses_activos: number;
-  rutas: ResumenRuta[];
+  horas: { h: number; muestras: number; llenos: number }[];
+  dias_semana: { dow: number; muestras: number; llenos: number }[];
 }
-interface Ocupacion { dias: number; vacio: number; medio: number; lleno: number }
-interface Frecuencia { espera_estimada_min: number | null; global_headway_min: number | null }
-
-interface Kpis { pctGps: number; activos: number; totalBuses: number; esperaTxt: string }
 
 const RANGOS = [
   { label: "7 días", dias: 7 },
   { label: "30 días", dias: 30 },
   { label: "90 días", dias: 90 },
 ] as const;
+
+const DOW = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"] as const;
+const MEDALLA = ["#F5B731", "#9ca3af", "#b45309"] as const; // oro, plata, bronce
 
 async function getJson<T>(path: string): Promise<T> {
   const res = await apiFetch(path);
@@ -53,205 +38,122 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 const hoyISO = () => new Date().toISOString().slice(0, 10);
+const fmtHora = (h: number) => `${String(h).padStart(2, "0")}:00`;
+const pctLleno = (r: RutaInsight) => {
+  const tot = r.vacio + r.medio + r.lleno;
+  return tot > 0 ? Math.round((r.lleno / tot) * 100) : 0;
+};
 
-/** Escapa un campo para CSV (comillas si trae coma/comilla/salto de línea). */
+/** Escapa un campo para CSV. */
 function csvCampo(v: string | number): string {
   const s = String(v);
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-/** Descarga el resumen en pantalla como CSV (cobertura + KPIs + km por ruta + ocupación). */
-function descargarCSV(resumen: Resumen, ocup: Ocupacion, kpis: Kpis, cobertura: Cobertura) {
-  const lineas: string[] = [];
-  lineas.push(`TransPadilla - Resumen ejecutivo (${resumen.dias} dias) - ${hoyISO()}`);
-  lineas.push("");
-  lineas.push("Cobertura y alcance del servicio");
-  lineas.push(["Indicador", "Valor"].join(","));
-  lineas.push([csvCampo("Rutas registradas"), cobertura.totalRutas].join(","));
-  lineas.push([csvCampo("Paradas registradas"), cobertura.totalParadas].join(","));
-  lineas.push([csvCampo("Buses registrados"), cobertura.totalBuses].join(","));
-  lineas.push([csvCampo("Buses activos ahora"), cobertura.busesActivosAhora].join(","));
-  lineas.push([csvCampo("Rutas sin bus activo ahora"), cobertura.rutasSinBusActivo].join(","));
-  lineas.push([csvCampo("Conductores registrados"), cobertura.totalConductores].join(","));
-  lineas.push([csvCampo("Pasajeros registrados"), cobertura.totalPasajeros].join(","));
-  lineas.push([csvCampo("Suscripciones a notificaciones"), cobertura.suscripcionesPush].join(","));
-  lineas.push("");
-  lineas.push("Indicadores");
-  lineas.push(["Indicador", "Valor"].join(","));
-  lineas.push([csvCampo("Buses con GPS activo"), csvCampo(`${kpis.pctGps}% (${kpis.activos}/${kpis.totalBuses})`)].join(","));
-  lineas.push([csvCampo("Espera estimada"), csvCampo(kpis.esperaTxt)].join(","));
-  lineas.push([csvCampo("Km recorridos"), resumen.km_total].join(","));
-  lineas.push([csvCampo("Buses con actividad"), resumen.buses_activos].join(","));
-  lineas.push("");
-  lineas.push("Kilometros recorridos por ruta");
-  lineas.push(["Ruta", "Km", "Muestras", "Buses"].join(","));
-  for (const r of resumen.rutas) {
-    lineas.push([csvCampo(r.nombre), r.km, r.muestras, r.buses].join(","));
+function descargarCSV(dias: number, rutas: RutaInsight[], act: Actividad) {
+  const L: string[] = [];
+  L.push(`TransPadilla - Resumen ejecutivo (${dias} dias) - ${hoyISO()}`);
+  L.push("");
+  L.push("Ranking de rutas");
+  L.push(["Ruta", "Seguidores", "% Lleno", "Km", "Buses", "Opero"].join(","));
+  for (const r of rutas) {
+    L.push([csvCampo(r.nombre), r.seguidores, `${pctLleno(r)}%`, r.km, r.buses, r.opero ? "Si" : "No"].join(","));
   }
-  lineas.push(["TOTAL", resumen.km_total, "", resumen.buses_activos].join(","));
-  lineas.push("");
-  lineas.push("Reportes de ocupacion");
-  lineas.push(["Nivel", "Muestras"].join(","));
-  lineas.push(["Vacio", ocup.vacio].join(","));
-  lineas.push(["Medio", ocup.medio].join(","));
-  lineas.push(["Lleno", ocup.lleno].join(","));
+  L.push("");
+  L.push("Actividad por hora (muestras de buses circulando)");
+  L.push(["Hora", "Muestras", "Con bus lleno"].join(","));
+  for (const x of act.horas) L.push([fmtHora(x.h), x.muestras, x.llenos].join(","));
+  L.push("");
+  L.push("Actividad por dia de la semana");
+  L.push(["Dia", "Muestras", "Con bus lleno"].join(","));
+  for (const x of act.dias_semana) L.push([DOW[x.dow] ?? x.dow, x.muestras, x.llenos].join(","));
 
-  const blob = new Blob(["﻿" + lineas.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+  const blob = new Blob(["﻿" + L.join("\r\n")], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = `resumen-transpadilla-${hoyISO()}.csv`;
-  a.click();
+  a.href = url; a.download = `resumen-transpadilla-${hoyISO()}.csv`; a.click();
   URL.revokeObjectURL(url);
 }
 
-/** Genera un PDF con jspdf (import dinámico para no cargar el bundle público). */
-async function descargarPDF(resumen: Resumen, ocup: Ocupacion, kpis: Kpis, cobertura: Cobertura) {
+async function descargarPDF(dias: number, rutas: RutaInsight[], act: Actividad) {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
   const doc = new jsPDF();
+  const finalY = () => (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 30;
 
-  doc.setFontSize(18);
-  doc.setTextColor(27, 59, 111); // navy
+  doc.setFontSize(18); doc.setTextColor(27, 59, 111);
   doc.text("TransPadilla", 14, 18);
-  doc.setFontSize(10);
-  doc.setTextColor(107, 114, 128);
+  doc.setFontSize(10); doc.setTextColor(107, 114, 128);
   doc.text("Moviendo la Ciudad — Resumen ejecutivo", 14, 24);
-  doc.text(`Periodo: últimos ${resumen.dias} días   ·   Generado: ${hoyISO()}`, 14, 30);
+  doc.text(`Periodo: últimos ${dias} días   ·   Generado: ${hoyISO()}`, 14, 30);
 
-  // Bloque de cobertura y alcance (footprint del servicio + adopción comunitaria).
   autoTable(doc, {
     startY: 38,
-    head: [["Cobertura y alcance del servicio", "Valor"]],
-    body: [
-      ["Rutas registradas", String(cobertura.totalRutas)],
-      ["Paradas registradas", String(cobertura.totalParadas)],
-      ["Buses registrados", String(cobertura.totalBuses)],
-      ["Buses activos ahora", String(cobertura.busesActivosAhora)],
-      ["Rutas sin bus activo ahora", String(cobertura.rutasSinBusActivo)],
-      ["Conductores registrados", String(cobertura.totalConductores)],
-      ["Pasajeros registrados", String(cobertura.totalPasajeros)],
-      ["Suscripciones a notificaciones", String(cobertura.suscripcionesPush)],
-    ],
-    headStyles: { fillColor: [27, 59, 111] },
-    styles: { fontSize: 9 },
+    head: [["Ruta", "Seguidores", "% Lleno", "Km", "Buses", "Operó"]],
+    body: rutas.map((r) => [r.nombre, String(r.seguidores), `${pctLleno(r)}%`, String(r.km), String(r.buses), r.opero ? "Sí" : "No"]),
+    headStyles: { fillColor: [27, 59, 111] }, styles: { fontSize: 9 },
   });
 
-  // Bloque de KPIs (lo que se muestra a una empresa de un vistazo).
-  let y = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 46;
+  const pico = [...act.horas].sort((a, b) => b.muestras - a.muestras)[0];
+  const diaTop = [...act.dias_semana].sort((a, b) => b.muestras - a.muestras)[0];
   autoTable(doc, {
-    startY: y + 8,
-    head: [["Indicador", "Valor"]],
+    startY: finalY() + 8,
+    head: [["Indicador de actividad", "Valor"]],
     body: [
-      ["Buses con GPS activo", `${kpis.pctGps}% (${kpis.activos}/${kpis.totalBuses})`],
-      ["Espera estimada", kpis.esperaTxt],
-      ["Km recorridos", `${resumen.km_total} km`],
-      ["Buses con actividad", String(resumen.buses_activos)],
+      ["Hora pico", pico && pico.muestras > 0 ? fmtHora(pico.h) : "—"],
+      ["Día más movido", diaTop && diaTop.muestras > 0 ? (DOW[diaTop.dow] ?? "—") : "—"],
     ],
-    headStyles: { fillColor: [27, 59, 111] },
-    styles: { fontSize: 9 },
-  });
-
-  y = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 46;
-  autoTable(doc, {
-    startY: y + 8,
-    head: [["Ruta", "Km", "Muestras", "Buses"]],
-    body: resumen.rutas.map((r) => [r.nombre, String(r.km), String(r.muestras), String(r.buses)]),
-    foot: [["TOTAL", String(resumen.km_total), "", String(resumen.buses_activos)]],
-    headStyles: { fillColor: [27, 59, 111] },
-    footStyles: { fillColor: [37, 88, 165], textColor: 255 },
-    styles: { fontSize: 9 },
-  });
-
-  y = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 46;
-  autoTable(doc, {
-    startY: y + 8,
-    head: [["Ocupación", "Muestras"]],
-    body: [
-      ["Vacío", String(ocup.vacio)],
-      ["Medio", String(ocup.medio)],
-      ["Lleno", String(ocup.lleno)],
-    ],
-    headStyles: { fillColor: [27, 59, 111] },
-    styles: { fontSize: 9 },
+    headStyles: { fillColor: [27, 59, 111] }, styles: { fontSize: 9 },
   });
 
   doc.save(`resumen-transpadilla-${hoyISO()}.pdf`);
 }
 
-/** Tarjeta grande de KPI, estilo "panel ejecutivo". */
-function KpiCard({ icon, label, valor, nota, color }: {
-  icon: React.ReactNode; label: string; valor: string; nota?: string; color: string;
-}) {
+/** Encabezado de sección con barra dorada. */
+function SecTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl p-5 flex flex-col gap-2 shadow-sm" style={{ background: "#fff", border: "1px solid #e5e7eb" }}>
-      <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: "var(--color-gray-text, #6B7280)" }}>
-        <span className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `${color}1a`, color }}>{icon}</span>
-        {label}
-      </div>
-      <p className="text-4xl font-black leading-none" style={{ color: "var(--color-navy, #1B3B6F)" }}>{valor}</p>
-      {nota && <p className="text-[11px]" style={{ color: "var(--color-gray-text, #6B7280)" }}>{nota}</p>}
-    </div>
+    <h3 className="font-display text-[13px] font-extrabold uppercase tracking-wide mb-2.5 flex items-center gap-2.5" style={{ color: "var(--color-navy, #1B3B6F)" }}>
+      <span aria-hidden className="inline-block w-1 h-4 rounded-full" style={{ background: "var(--color-gold, #F5B731)" }} />
+      <span className="inline-flex items-center gap-1.5">{icon}{children}</span>
+    </h3>
   );
 }
 
-/** Estadística compacta para la fila de cobertura (más densa que KpiCard). */
-function MiniStat({ icon, label, valor, tint, alerta }: {
-  icon: React.ReactNode; label: string; valor: string | number; tint: string; alerta?: boolean;
-}) {
-  return (
-    <div
-      className="rounded-xl p-3.5 flex flex-col gap-1.5"
-      style={alerta
-        ? { background: "rgba(229,62,62,0.06)", border: "1px solid rgba(229,62,62,0.3)" }
-        : { background: "#fff", border: "1px solid #e5e7eb" }}
-    >
-      <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${tint}1f`, color: tint }}>
-        {icon}
-      </div>
-      <p className="text-xl font-black leading-none" style={{ color: alerta ? "var(--color-danger, #E53E3E)" : "var(--color-navy, #1B3B6F)" }}>{valor}</p>
-      <span className="text-[10px] font-medium leading-tight" style={{ color: "var(--color-gray-text, #6B7280)" }}>{label}</span>
-    </div>
-  );
+function Card({ children }: { children: React.ReactNode }) {
+  return <div className="rounded-2xl p-5 shadow-sm" style={{ background: "#fff", border: "1px solid #e5e7eb" }}>{children}</div>;
 }
+
+type OrdenKey = "seguidores" | "lleno" | "km" | "buses";
 
 /**
- * Tab "Resumen ejecutivo": el reporte de cómo van las cosas, presentable a una
- * empresa. Combina cobertura y alcance del servicio, KPIs de operación, km
- * recorridos por ruta, ocupación y la descarga en PDF/CSV.
+ * Tab "Resumen ejecutivo": insights de negocio para la empresa.
+ *  - Ruta más solicitada (por favoritos), hora pico, día más movido,
+ *    ocupación por ruta y ranking comparativo. Exporta a PDF/CSV.
  */
 export default function ResumenEjecutivoTab() {
   const [dias, setDias] = useState<number>(7);
+  const [orden, setOrden] = useState<{ key: OrdenKey; dir: 1 | -1 }>({ key: "seguidores", dir: -1 });
 
-  const stats = useQuery({ queryKey: ["stats-exec"], queryFn: () => getJson<Stats>("/api/stats") });
-  const cobertura = useQuery({ queryKey: ["cobertura-exec"], queryFn: () => getJson<Cobertura>("/api/reportes/cobertura") });
-  const resumen = useQuery({ queryKey: ["resumen-exec", dias], queryFn: () => getJson<Resumen>(`/api/reportes/resumen?dias=${dias}`) });
-  const ocup = useQuery({ queryKey: ["ocup-exec", dias], queryFn: () => getJson<Ocupacion>(`/api/reportes/ocupacion?dias=${dias}`) });
-  const frec = useQuery({ queryKey: ["frec-exec", dias], queryFn: () => getJson<Frecuencia>(`/api/reportes/frecuencia?dias=${dias}`) });
+  const rutasQ = useQuery({ queryKey: ["insights-rutas", dias], queryFn: () => getJson<RutasInsights>(`/api/reportes/rutas?dias=${dias}`) });
+  const actQ = useQuery({ queryKey: ["insights-actividad", dias], queryFn: () => getJson<Actividad>(`/api/reportes/actividad?dias=${dias}`) });
 
-  const cargando = stats.isLoading || cobertura.isLoading || resumen.isLoading || ocup.isLoading || frec.isLoading;
+  const cargando = rutasQ.isLoading || actQ.isLoading;
+  const rutas = rutasQ.data?.rutas ?? [];
+  const act = actQ.data;
 
-  const totalBuses = stats.data?.totalBuses ?? 0;
-  const activos = stats.data?.busesActivos ?? 0;
-  const pctGps = totalBuses > 0 ? Math.round((activos / totalBuses) * 100) : 0;
+  const topSolicitadas = [...rutas].filter((r) => r.seguidores > 0).sort((a, b) => b.seguidores - a.seguidores).slice(0, 3);
+  const hayActividad = !!act && act.horas.some((h) => h.muestras > 0);
+  const rutasConOcup = rutas.filter((r) => r.vacio + r.medio + r.lleno > 0);
 
-  const espera = frec.data?.espera_estimada_min;
-  const esperaTxt = espera != null ? `${espera} min` : "—";
+  const valorOrden = (r: RutaInsight, k: OrdenKey) => k === "lleno" ? pctLleno(r) : r[k];
+  const rutasOrdenadas = [...rutas].sort((a, b) => (valorOrden(a, orden.key) - valorOrden(b, orden.key)) * orden.dir);
+  const cambiarOrden = (key: OrdenKey) => setOrden((o) => o.key === key ? { key, dir: (o.dir === 1 ? -1 : 1) } : { key, dir: -1 });
 
-  const rutas = resumen.data?.rutas ?? [];
-  const sinHistorial = !cargando && rutas.length === 0;
+  const horaPico = act ? [...act.horas].sort((a, b) => b.muestras - a.muestras)[0] : undefined;
+  const diaTop = act ? [...act.dias_semana].sort((a, b) => b.muestras - a.muestras)[0] : undefined;
 
-  const kpis: Kpis = { pctGps, activos, totalBuses, esperaTxt };
-
-  const datosOcup = ocup.data
-    ? [
-        { nivel: "Vacío", valor: ocup.data.vacio, color: "#38A169" },
-        { nivel: "Medio", valor: ocup.data.medio, color: "#F5B731" },
-        { nivel: "Lleno", valor: ocup.data.lleno, color: "#E53E3E" },
-      ].filter((d) => d.valor > 0)
-    : [];
-
-  const puedeExportar = !cargando && resumen.data != null && ocup.data != null && cobertura.data != null && !sinHistorial;
+  const puedeExportar = !cargando && !!act && rutas.length > 0;
+  const sinNada = !cargando && rutas.length === 0;
 
   return (
     <div className="space-y-5">
@@ -272,20 +174,10 @@ export default function ResumenEjecutivoTab() {
         ))}
         {puedeExportar && (
           <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={() => descargarCSV(resumen.data!, ocup.data!, kpis, cobertura.data!)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
-              style={{ background: "var(--color-secondary, #eef2f7)", color: "var(--color-navy, #1B3B6F)" }}
-              aria-label="Exportar resumen a CSV"
-            >
+            <button onClick={() => descargarCSV(dias, rutasOrdenadas, act)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors" style={{ background: "var(--color-secondary, #eef2f7)", color: "var(--color-navy, #1B3B6F)" }} aria-label="Exportar a CSV">
               <FileDown className="w-3.5 h-3.5" /> CSV
             </button>
-            <button
-              onClick={() => { void descargarPDF(resumen.data!, ocup.data!, kpis, cobertura.data!); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-colors"
-              style={{ background: "var(--color-blue, #2558A5)" }}
-              aria-label="Exportar resumen a PDF"
-            >
+            <button onClick={() => { void descargarPDF(dias, rutasOrdenadas, act); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-colors" style={{ background: "var(--color-blue, #2558A5)" }} aria-label="Exportar a PDF">
               <FileText className="w-3.5 h-3.5" /> PDF
             </button>
           </div>
@@ -294,120 +186,162 @@ export default function ResumenEjecutivoTab() {
 
       {cargando ? (
         <div className="flex items-center justify-center py-20 text-muted-foreground">
-          <Loader2 className="w-6 h-6 animate-spin mr-2" /> Cargando resumen…
+          <Loader2 className="w-6 h-6 animate-spin mr-2" /> Cargando insights…
+        </div>
+      ) : sinNada ? (
+        <div className="bg-card border border-border rounded-xl p-8 text-center">
+          <BarChart3 className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+          <p className="text-sm font-bold text-foreground">Aún no hay rutas para analizar</p>
+          <p className="text-xs text-muted-foreground mt-1">Crea rutas y deja que los buses circulen; aquí verás qué rutas se piden más, las horas pico y el ranking.</p>
         </div>
       ) : (
         <>
-          {/* Cobertura y alcance del servicio: qué tan grande es el sistema, si
-              está operando de verdad ahora, y cuánta gente lo usa/confía en él. */}
-          {cobertura.data && (
-            <div>
-              <h3 className="font-display text-[13px] font-extrabold uppercase tracking-wide mb-2.5 flex items-center gap-2.5" style={{ color: "var(--color-navy, #1B3B6F)" }}>
-                <span aria-hidden className="inline-block w-1 h-4 rounded-full" style={{ background: "var(--color-gold, #F5B731)" }} />
-                Cobertura y alcance del servicio
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5">
-                <MiniStat icon={<RouteIcon className="w-3.5 h-3.5" />} label="Rutas registradas" valor={cobertura.data.totalRutas} tint="#a78bfa" />
-                <MiniStat icon={<MapPin className="w-3.5 h-3.5" />} label="Paradas registradas" valor={cobertura.data.totalParadas} tint="#38bdf8" />
-                <MiniStat icon={<Bus className="w-3.5 h-3.5" />} label="Buses activos ahora" valor={`${cobertura.data.busesActivosAhora} / ${cobertura.data.totalBuses}`} tint="#38A169" />
-                <MiniStat
-                  icon={<AlertTriangle className="w-3.5 h-3.5" />}
-                  label="Rutas sin bus activo ahora"
-                  valor={cobertura.data.rutasSinBusActivo}
-                  tint={cobertura.data.rutasSinBusActivo > 0 ? "#E53E3E" : "#38A169"}
-                  alerta={cobertura.data.rutasSinBusActivo > 0}
-                />
-                <MiniStat icon={<UserCheck className="w-3.5 h-3.5" />} label="Conductores registrados" valor={cobertura.data.totalConductores} tint="#2558A5" />
-                <MiniStat icon={<Users className="w-3.5 h-3.5" />} label="Pasajeros registrados" valor={cobertura.data.totalPasajeros} tint="#F5B731" />
-                <MiniStat icon={<BellRing className="w-3.5 h-3.5" />} label="Suscripciones a notificaciones" valor={cobertura.data.suscripcionesPush} tint="#7BB8D5" />
-              </div>
-            </div>
-          )}
-
-          {/* KPIs de operación del periodo */}
+          {/* 1) Ruta más solicitada (podio por favoritos) */}
           <div>
-            <h3 className="font-display text-[13px] font-extrabold uppercase tracking-wide mb-2.5 flex items-center gap-2.5" style={{ color: "var(--color-navy, #1B3B6F)" }}>
-              <span aria-hidden className="inline-block w-1 h-4 rounded-full" style={{ background: "var(--color-gold, #F5B731)" }} />
-              Operación del periodo
-            </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <KpiCard
-              icon={<Radio className="w-4 h-4" />}
-              label="Buses con GPS activo"
-              valor={`${pctGps}%`}
-              nota={`${activos} de ${totalBuses} buses transmitiendo ahora`}
-              color="#38A169"
-            />
-            <KpiCard
-              icon={<Timer className="w-4 h-4" />}
-              label="Espera estimada"
-              valor={esperaTxt}
-              nota={espera != null ? "estimado (intervalo entre buses ÷ 2)" : "No disponible aún — requiere más historial de recorridos"}
-              color="#2558A5"
-            />
-            <KpiCard
-              icon={<Gauge className="w-4 h-4" />}
-              label="Km recorridos"
-              valor={`${resumen.data?.km_total ?? 0} km`}
-              nota={`en los últimos ${dias} días`}
-              color="#F5B731"
-            />
-          </div>
-          </div>
-
-          {sinHistorial ? (
-            <div className="bg-card border border-border rounded-xl p-8 text-center">
-              <BarChart3 className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
-              <p className="text-sm font-bold text-foreground">Aún no hay datos de historial</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Los reportes se llenan a medida que los buses circulan y transmiten su posición.
-                Vuelve cuando haya recorridos registrados.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-5 lg:grid lg:grid-cols-2 lg:gap-5 lg:space-y-0">
-              {/* Km recorridos por ruta */}
-              <div className="rounded-2xl p-5 shadow-sm" style={{ background: "#fff", border: "1px solid #e5e7eb" }}>
-                <h3 className="text-sm font-bold mb-3 flex items-center gap-2" style={{ color: "var(--color-navy, #1B3B6F)" }}>
-                  <RouteIcon className="w-4 h-4" style={{ color: "var(--color-blue, #2558A5)" }} /> Kilómetros recorridos por ruta ({dias} días)
-                </h3>
-                <ResponsiveContainer width="100%" height={Math.max(160, rutas.length * 42)}>
-                  <BarChart data={rutas} layout="vertical" margin={{ left: 8, right: 16 }}>
-                    <CartesianGrid horizontal={false} stroke="#eef2f7" />
-                    <XAxis type="number" tick={{ fontSize: 11, fill: "#6B7280" }} />
-                    <YAxis type="category" dataKey="nombre" width={120} tick={{ fontSize: 11, fill: "#1B3B6F" }} />
-                    <Tooltip formatter={(v: number) => [`${v} km`, "Distancia"]} cursor={{ fill: "rgba(37,88,165,0.06)" }} />
-                    <Bar dataKey="km" radius={[0, 6, 6, 0]}>
-                      {rutas.map((r) => <Cell key={r.ruta_id} fill={r.color || "#2558A5"} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+            <SecTitle icon={<Star className="w-4 h-4" />}>Ruta más solicitada</SecTitle>
+            {topSolicitadas.length === 0 ? (
+              <Card>
+                <p className="text-sm font-bold" style={{ color: "var(--color-navy, #1B3B6F)" }}>Aún nadie ha marcado rutas favoritas</p>
+                <p className="text-xs mt-1" style={{ color: "var(--color-gray-text, #6B7280)" }}>Cuando los pasajeros marquen rutas con la estrella en el mapa, aquí verás las más populares.</p>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {topSolicitadas.map((r, i) => (
+                  <div key={r.ruta_id} className="rounded-2xl p-4 shadow-sm relative overflow-hidden" style={{ background: "#fff", border: "1px solid #e5e7eb" }}>
+                    <span className="absolute left-0 top-0 bottom-0 w-1.5" style={{ background: r.color }} />
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-8 h-8 rounded-full flex items-center justify-center font-black text-white shadow-sm" style={{ background: MEDALLA[i] ?? "#9ca3af" }}>{i + 1}</span>
+                      {i === 0 && <Trophy className="w-4 h-4" style={{ color: MEDALLA[0] }} />}
+                      <span className="font-display font-bold text-sm truncate" style={{ color: "var(--color-navy, #1B3B6F)" }}>{r.nombre}</span>
+                    </div>
+                    <p className="text-3xl font-black leading-none" style={{ color: "var(--color-navy, #1B3B6F)" }}>
+                      {r.seguidores} <span className="text-sm font-bold" style={{ color: "var(--color-gray-text, #6B7280)" }}>{r.seguidores === 1 ? "seguidor" : "seguidores"}</span>
+                    </p>
+                    {r.vacio + r.medio + r.lleno > 0 && (
+                      <p className="text-[11px] mt-1.5" style={{ color: "var(--color-gray-text, #6B7280)" }}>Va llena el <b>{pctLleno(r)}%</b> del tiempo</p>
+                    )}
+                  </div>
+                ))}
               </div>
+            )}
+          </div>
 
-              {/* Distribución de ocupación (torta) */}
-              <div className="rounded-2xl p-5 shadow-sm" style={{ background: "#fff", border: "1px solid #e5e7eb" }}>
-                <h3 className="text-sm font-bold mb-2" style={{ color: "var(--color-navy, #1B3B6F)" }}>
-                  Distribución de ocupación reportada ({dias} días)
-                </h3>
-                {datosOcup.length === 0 ? (
-                  <p className="text-xs text-muted-foreground py-8 text-center">Sin reportes de ocupación en el periodo.</p>
-                ) : (
-                  <ResponsiveContainer width="100%" height={240}>
-                    <PieChart>
-                      <Pie data={datosOcup} dataKey="valor" nameKey="nivel" cx="50%" cy="50%" outerRadius={90} label>
-                        {datosOcup.map((d) => <Cell key={d.nivel} fill={d.color} />)}
-                      </Pie>
-                      <Tooltip formatter={(v: number) => [v, "Muestras"]} />
-                      <Legend />
-                    </PieChart>
+          {/* 2) Hora pico + 3) Día más movido */}
+          <div className="lg:grid lg:grid-cols-2 lg:gap-5 space-y-5 lg:space-y-0">
+            <Card>
+              <SecTitle icon={<Clock className="w-4 h-4" />}>Hora pico del servicio</SecTitle>
+              {!hayActividad ? (
+                <p className="text-xs text-muted-foreground py-8 text-center">Sin actividad registrada en el periodo.</p>
+              ) : (
+                <>
+                  <p className="text-xs mb-2" style={{ color: "var(--color-gray-text, #6B7280)" }}>
+                    Mayor circulación de buses: <b style={{ color: "var(--color-navy, #1B3B6F)" }}>{horaPico ? fmtHora(horaPico.h) : "—"}</b>
+                  </p>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={act!.horas} margin={{ left: -18, right: 8 }}>
+                      <CartesianGrid vertical={false} stroke="#eef2f7" />
+                      <XAxis dataKey="h" tick={{ fontSize: 9, fill: "#6B7280" }} interval={1} tickFormatter={(h: number) => String(h)} />
+                      <YAxis tick={{ fontSize: 10, fill: "#6B7280" }} allowDecimals={false} />
+                      <Tooltip labelFormatter={(h: number) => fmtHora(h)} formatter={(v: number) => [v, "Muestras"]} cursor={{ fill: "rgba(37,88,165,0.06)" }} />
+                      <Bar dataKey="muestras" radius={[4, 4, 0, 0]}>
+                        {act!.horas.map((x) => <Cell key={x.h} fill={horaPico && x.h === horaPico.h ? "#F5B731" : "#2558A5"} />)}
+                      </Bar>
+                    </BarChart>
                   </ResponsiveContainer>
-                )}
-              </div>
+                </>
+              )}
+            </Card>
+
+            <Card>
+              <SecTitle icon={<CalendarDays className="w-4 h-4" />}>Día más movido</SecTitle>
+              {!hayActividad ? (
+                <p className="text-xs text-muted-foreground py-8 text-center">Sin actividad registrada en el periodo.</p>
+              ) : (
+                <>
+                  <p className="text-xs mb-2" style={{ color: "var(--color-gray-text, #6B7280)" }}>
+                    Día con más circulación: <b style={{ color: "var(--color-navy, #1B3B6F)" }}>{diaTop && diaTop.muestras > 0 ? DOW[diaTop.dow] : "—"}</b>
+                  </p>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={act!.dias_semana} margin={{ left: -18, right: 8 }}>
+                      <CartesianGrid vertical={false} stroke="#eef2f7" />
+                      <XAxis dataKey="dow" tick={{ fontSize: 11, fill: "#6B7280" }} tickFormatter={(d: number) => DOW[d] ?? String(d)} />
+                      <YAxis tick={{ fontSize: 10, fill: "#6B7280" }} allowDecimals={false} />
+                      <Tooltip labelFormatter={(d: number) => DOW[d] ?? String(d)} formatter={(v: number) => [v, "Muestras"]} cursor={{ fill: "rgba(37,88,165,0.06)" }} />
+                      <Bar dataKey="muestras" radius={[4, 4, 0, 0]}>
+                        {act!.dias_semana.map((x) => <Cell key={x.dow} fill={diaTop && x.dow === diaTop.dow ? "#F5B731" : "#2558A5"} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </>
+              )}
+            </Card>
+          </div>
+
+          {/* 4) Ocupación por ruta */}
+          <Card>
+            <SecTitle icon={<Users2 className="w-4 h-4" />}>Ocupación por ruta</SecTitle>
+            {rutasConOcup.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-8 text-center">Sin reportes de ocupación en el periodo. Los conductores la reportan (vacío/medio/lleno) durante el recorrido.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={Math.max(160, rutasConOcup.length * 46)}>
+                <BarChart data={rutasConOcup} layout="vertical" margin={{ left: 8, right: 16 }} stackOffset="expand">
+                  <CartesianGrid horizontal={false} stroke="#eef2f7" />
+                  <XAxis type="number" tickFormatter={(v: number) => `${Math.round(v * 100)}%`} tick={{ fontSize: 10, fill: "#6B7280" }} />
+                  <YAxis type="category" dataKey="nombre" width={120} tick={{ fontSize: 11, fill: "#1B3B6F" }} />
+                  <Tooltip formatter={(v: number, n: string) => [v, n]} cursor={{ fill: "rgba(37,88,165,0.06)" }} />
+                  <Bar dataKey="vacio" stackId="o" fill="#38A169" name="Vacío" radius={[6, 0, 0, 6]} />
+                  <Bar dataKey="medio" stackId="o" fill="#F5B731" name="Medio" />
+                  <Bar dataKey="lleno" stackId="o" fill="#E53E3E" name="Lleno" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </Card>
+
+          {/* 5) Ranking de rutas */}
+          <Card>
+            <SecTitle icon={<RouteIcon className="w-4 h-4" />}>Ranking de rutas ({dias} días)</SecTitle>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left" style={{ color: "var(--color-gray-text, #6B7280)" }}>
+                    <th className="py-2 pr-2 font-semibold text-xs">Ruta</th>
+                    {([["seguidores", "Seguidores"], ["lleno", "% Lleno"], ["km", "Km"], ["buses", "Buses"]] as const).map(([k, label]) => (
+                      <th key={k} className="py-2 px-2 font-semibold text-xs">
+                        <button onClick={() => cambiarOrden(k)} className="inline-flex items-center gap-1 hover:text-foreground" style={orden.key === k ? { color: "var(--color-blue, #2558A5)" } : undefined}>
+                          {label} <ArrowUpDown className="w-3 h-3" />
+                        </button>
+                      </th>
+                    ))}
+                    <th className="py-2 px-2 font-semibold text-xs">Operó</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rutasOrdenadas.map((r) => (
+                    <tr key={r.ruta_id} className="border-t" style={{ borderColor: "#f1f4f8" }}>
+                      <td className="py-2.5 pr-2">
+                        <span className="flex items-center gap-2 min-w-0">
+                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: r.color }} />
+                          <span className="font-semibold truncate" style={{ color: "var(--color-navy, #1B3B6F)" }}>{r.nombre}</span>
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-2 font-bold tabular-nums" style={{ color: "var(--color-navy, #1B3B6F)" }}>{r.seguidores}</td>
+                      <td className="py-2.5 px-2 tabular-nums">{pctLleno(r)}%</td>
+                      <td className="py-2.5 px-2 tabular-nums">{r.km}</td>
+                      <td className="py-2.5 px-2 tabular-nums">{r.buses}</td>
+                      <td className="py-2.5 px-2">
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={r.opero ? { background: "rgba(56,161,105,0.14)", color: "#38A169" } : { background: "rgba(107,114,128,0.12)", color: "#6B7280" }}>
+                          {r.opero ? "Sí" : "No"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
+          </Card>
 
           <p className="text-[11px] text-center" style={{ color: "var(--color-gray-text, #6B7280)" }}>
-            La "espera estimada" es un proxy calculado desde el intervalo entre buses; no es una medición directa del tiempo de espera.
+            "Seguidores" = pasajeros que marcaron la ruta como favorita. La actividad y ocupación se toman del historial de recorridos del periodo.
           </p>
         </>
       )}

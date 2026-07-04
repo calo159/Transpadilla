@@ -166,6 +166,153 @@ router.get("/reportes/ocupacion", authMiddleware, requireRol("admin"), async (re
   res.json(await ocupacionCache(diasParam(req.query["dias"])).obtener());
 });
 
+// ── Insights por ruta (ranking): km, buses, ocupación y seguidores ────────────
+// Alimenta el "Resumen ejecutivo": ruta más solicitada (seguidores = favoritos),
+// ocupación por ruta y la tabla comparativa. Un solo endpoint para no repetir el
+// escaneo del historial en el frontend.
+interface RutaInsight {
+  ruta_id: number; nombre: string; color: string;
+  km: number; buses: number; muestras: number;
+  vacio: number; medio: number; lleno: number;
+  seguidores: number; opero: boolean;
+}
+interface RutasInsights { dias: number; rutas: RutaInsight[] }
+
+const rutasInsightCaches = new Map<number, CacheTtl<RutasInsights>>();
+function rutasInsightCache(dias: number): CacheTtl<RutasInsights> {
+  let c = rutasInsightCaches.get(dias);
+  if (!c) {
+    c = crearCacheTtl(REPORTE_TTL_MS, async () => {
+      const { rows } = await pool.query(
+        `WITH p AS (
+           SELECT bus_id, ruta_id, lat, lng, ocupacion,
+                  lag(lat) OVER w AS plat,
+                  lag(lng) OVER w AS plng
+           FROM posiciones_historial
+           WHERE capturado >= now() - ($1 || ' days')::interval
+           WINDOW w AS (PARTITION BY bus_id ORDER BY capturado)
+         ),
+         km AS (
+           SELECT ruta_id,
+             COALESCE(SUM(
+               6371 * 2 * asin(sqrt(
+                 power(sin(radians(lat - plat) / 2), 2) +
+                 cos(radians(plat)) * cos(radians(lat)) *
+                 power(sin(radians(lng - plng) / 2), 2)
+               ))
+             ) FILTER (WHERE plat IS NOT NULL AND
+               6371 * 2 * asin(sqrt(
+                 power(sin(radians(lat - plat) / 2), 2) +
+                 cos(radians(plat)) * cos(radians(lat)) *
+                 power(sin(radians(lng - plng) / 2), 2)
+               )) < $2), 0) AS km,
+             COUNT(*)                 AS muestras,
+             COUNT(DISTINCT bus_id)   AS buses,
+             COUNT(*) FILTER (WHERE ocupacion = 'vacio') AS vacio,
+             COUNT(*) FILTER (WHERE ocupacion = 'medio') AS medio,
+             COUNT(*) FILTER (WHERE ocupacion = 'lleno') AS lleno
+           FROM p
+           WHERE ruta_id IS NOT NULL
+           GROUP BY ruta_id
+         ),
+         fav AS (
+           SELECT ruta_id, COUNT(DISTINCT cliente_id) AS seguidores
+           FROM favoritos GROUP BY ruta_id
+         )
+         SELECT r.id AS ruta_id, r.nombre, r.color,
+                COALESCE(km.km, 0)        AS km,
+                COALESCE(km.buses, 0)     AS buses,
+                COALESCE(km.muestras, 0)  AS muestras,
+                COALESCE(km.vacio, 0)     AS vacio,
+                COALESCE(km.medio, 0)     AS medio,
+                COALESCE(km.lleno, 0)     AS lleno,
+                COALESCE(fav.seguidores, 0) AS seguidores
+         FROM rutas r
+         LEFT JOIN km  ON km.ruta_id  = r.id
+         LEFT JOIN fav ON fav.ruta_id = r.id
+         ORDER BY seguidores DESC, km DESC`,
+        [String(dias), MAX_SEG_KM],
+      );
+      return {
+        dias,
+        rutas: rows.map((r) => ({
+          ruta_id: r.ruta_id as number,
+          nombre: r.nombre as string,
+          color: r.color as string,
+          km: Math.round(Number(r.km) * 10) / 10,
+          buses: Number(r.buses),
+          muestras: Number(r.muestras),
+          vacio: Number(r.vacio),
+          medio: Number(r.medio),
+          lleno: Number(r.lleno),
+          seguidores: Number(r.seguidores),
+          opero: Number(r.muestras) > 0,
+        })),
+      };
+    });
+    rutasInsightCaches.set(dias, c);
+  }
+  return c;
+}
+
+router.get("/reportes/rutas", authMiddleware, requireRol("admin"), async (req, res) => {
+  res.json(await rutasInsightCache(diasParam(req.query["dias"])).obtener());
+});
+
+// ── Actividad por hora del día y por día de la semana ─────────────────────────
+// "Hora pico" y "día más movido": cuántas muestras (buses circulando) y cuántas
+// con el bus lleno hubo en cada franja. dow: 0=domingo … 6=sábado (EXTRACT DOW).
+interface Actividad {
+  dias: number;
+  horas: { h: number; muestras: number; llenos: number }[];
+  dias_semana: { dow: number; muestras: number; llenos: number }[];
+}
+
+const actividadCaches = new Map<number, CacheTtl<Actividad>>();
+function actividadCache(dias: number): CacheTtl<Actividad> {
+  let c = actividadCaches.get(dias);
+  if (!c) {
+    c = crearCacheTtl(REPORTE_TTL_MS, async () => {
+      const hq = await pool.query(
+        `SELECT EXTRACT(HOUR FROM capturado)::int AS h,
+                COUNT(*)::int AS muestras,
+                COUNT(*) FILTER (WHERE ocupacion = 'lleno')::int AS llenos
+           FROM posiciones_historial
+           WHERE capturado >= now() - ($1 || ' days')::interval
+           GROUP BY h`,
+        [String(dias)],
+      );
+      const dq = await pool.query(
+        `SELECT EXTRACT(DOW FROM capturado)::int AS dow,
+                COUNT(*)::int AS muestras,
+                COUNT(*) FILTER (WHERE ocupacion = 'lleno')::int AS llenos
+           FROM posiciones_historial
+           WHERE capturado >= now() - ($1 || ' days')::interval
+           GROUP BY dow`,
+        [String(dias)],
+      );
+      // Rellena las 24 horas y 7 días aunque no tengan datos (para la gráfica).
+      const horasMap = new Map<number, { muestras: number; llenos: number }>(
+        hq.rows.map((r) => [Number(r.h), { muestras: Number(r.muestras), llenos: Number(r.llenos) }]),
+      );
+      const diasMap = new Map<number, { muestras: number; llenos: number }>(
+        dq.rows.map((r) => [Number(r.dow), { muestras: Number(r.muestras), llenos: Number(r.llenos) }]),
+      );
+      return {
+        dias,
+        horas: Array.from({ length: 24 }, (_, h) => ({ h, ...(horasMap.get(h) ?? { muestras: 0, llenos: 0 }) })),
+        dias_semana: Array.from({ length: 7 }, (_, dow) => ({ dow, ...(diasMap.get(dow) ?? { muestras: 0, llenos: 0 }) })),
+      };
+    });
+    actividadCaches.set(dias, c);
+  }
+  return c;
+}
+
+router.get("/reportes/actividad", authMiddleware, requireRol("admin"), async (req, res) => {
+  res.json(await actividadCache(diasParam(req.query["dias"])).obtener());
+});
+
 // Cobertura y alcance del servicio: no es de periodo, son conteos actuales
 // (footprint del servicio + adopción por la comunidad). Para el resumen
 // ejecutivo — qué tan grande es el sistema y si realmente está operando.

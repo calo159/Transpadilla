@@ -264,4 +264,34 @@ suite("API (integración)", () => {
     expect(res.body).toHaveProperty("buses_activos");
     expect(Array.isArray(res.body.paradas)).toBe(true);
   });
+
+  it("favoritos (público) alimentan 'seguidores' en /reportes/rutas", async () => {
+    const rutas = await request(app).get("/api/rutas");
+    const rutaId = rutas.body[0]?.id as number | undefined;
+    if (!rutaId) return;
+    const login = await request(app).post("/api/auth/login").send({ correo: "admin@transpadilla.co", password: "admin123" });
+    if (login.status !== 200) return; // sin admin demo, nada que comprobar
+    const token = login.body.token as string;
+    const clienteId = `test_${Date.now()}`;
+
+    // Marca la ruta como favorita para un cliente anónimo único.
+    const add = await request(app).post("/api/favoritos").send({ cliente_id: clienteId, rutas: [rutaId] });
+    expect(add.status).toBe(200);
+
+    // Se lee con una clave de periodo fresca (evita el caché de 60 s de otros tests).
+    const r1 = await request(app).get("/api/reportes/rutas?dias=11").set("Authorization", `Bearer ${token}`);
+    expect(r1.status).toBe(200);
+    const antes = (r1.body.rutas as { ruta_id: number; seguidores: number }[]).find((r) => r.ruta_id === rutaId);
+    expect(antes?.seguidores ?? 0).toBeGreaterThanOrEqual(1);
+
+    // Al quitarla (reemplazo por conjunto vacío), su aporte desaparece.
+    const del = await request(app).post("/api/favoritos").send({ cliente_id: clienteId, rutas: [] });
+    expect(del.status).toBe(200);
+    const r2 = await request(app).get("/api/reportes/rutas?dias=13").set("Authorization", `Bearer ${token}`);
+    const despues = (r2.body.rutas as { ruta_id: number; seguidores: number }[]).find((r) => r.ruta_id === rutaId);
+    expect(despues?.seguidores ?? 0).toBe((antes?.seguidores ?? 0) - 1);
+
+    // Validación: cliente_id demasiado corto → 400.
+    expect((await request(app).post("/api/favoritos").send({ cliente_id: "x", rutas: [rutaId] })).status).toBe(400);
+  });
 });

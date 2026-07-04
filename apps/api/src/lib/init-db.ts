@@ -105,6 +105,17 @@ CREATE TABLE IF NOT EXISTS suscripciones_push (
   creado_en timestamp NOT NULL DEFAULT now()
 );
 
+-- Favoritos del pasajero (por dispositivo, sin cuenta). cliente_id = id anónimo del
+-- navegador. Base del reporte "ruta más solicitada".
+CREATE TABLE IF NOT EXISTS favoritos (
+  id serial PRIMARY KEY,
+  cliente_id varchar(64) NOT NULL,
+  ruta_id integer NOT NULL REFERENCES rutas(id) ON DELETE CASCADE,
+  creado_en timestamp NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_favoritos_cliente_ruta ON favoritos(cliente_id, ruta_id);
+CREATE INDEX IF NOT EXISTS idx_favoritos_ruta ON favoritos(ruta_id);
+
 -- Tokens JWT revocados (cierre de sesión). Se guarda el hash, no el token.
 CREATE TABLE IF NOT EXISTS tokens_revocados (
   id serial PRIMARY KEY,

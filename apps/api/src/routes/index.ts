@@ -10,6 +10,7 @@ import statsRouter from "./stats";
 import reportesRouter from "./reportes";
 import auditoriaRouter from "./auditoria";
 import pushRouter from "./push";
+import favoritosRouter from "./favoritos";
 import metricsRouter from "./metrics";
 import seedRouter from "./seed";
 
@@ -26,6 +27,7 @@ router.use(statsRouter);
 router.use(reportesRouter);
 router.use(auditoriaRouter);
 router.use(pushRouter);
+router.use(favoritosRouter);
 router.use(metricsRouter);
 router.use(seedRouter);
 
