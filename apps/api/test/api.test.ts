@@ -171,6 +171,41 @@ suite("API (integración)", () => {
     expect(despues.status).toBe(401);
   });
 
+  it("al cerrar sesión, el conductor apaga su bus (no queda 'fantasma' activo)", async () => {
+    // Usa el conductor demo (seed): correo conductor@transpadilla.co con GUA-001 asignado.
+    const login = await request(app)
+      .post("/api/auth/login")
+      .send({ correo: "conductor@transpadilla.co", password: "conductor123" });
+    if (login.status !== 200) return; // sin conductor demo, nada que comprobar
+    const token = login.body.token as string;
+
+    // Enciende el recorrido: una posición GPS deja el bus en estado "activo".
+    const gps = await request(app)
+      .post("/api/buses/gps")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ lat: 11.5444, lng: -72.9072, velocidad: 20 });
+    expect(gps.status).toBe(200);
+
+    // GET /buses tiene caché de 2 s; hacemos polling hasta ver el estado esperado.
+    const esperarEstado = async (esperado: string): Promise<string | undefined> => {
+      let estado: string | undefined;
+      for (let i = 0; i < 15; i++) {
+        const lista = (await request(app).get("/api/buses")).body as Array<{ placa: string; estado: string }>;
+        estado = lista.find((b) => b.placa === "GUA-001")?.estado;
+        if (estado === esperado) break;
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      return estado;
+    };
+    expect(await esperarEstado("activo")).toBe("activo");
+
+    // Cierra sesión → el backend debe apagar SU bus.
+    const salir = await request(app).post("/api/auth/cerrar-sesion").set("Authorization", `Bearer ${token}`);
+    expect(salir.status).toBe(200);
+
+    expect(await esperarEstado("inactivo")).toBe("inactivo");
+  });
+
   it("mutaciones admin sobre recursos inexistentes → 404 (no éxito falso)", async () => {
     const login = await request(app)
       .post("/api/auth/login")

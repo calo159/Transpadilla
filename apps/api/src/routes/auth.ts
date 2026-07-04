@@ -2,7 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { db } from "@workspace/db";
-import { usuarios } from "@workspace/db";
+import { usuarios, buses } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { pool } from "@workspace/db";
 import { JWT_SECRET, authMiddleware, hashToken } from "../middleware/auth";
@@ -144,6 +144,28 @@ router.post("/auth/cerrar-sesion", authMiddleware, async (req, res) => {
      ON CONFLICT (token_hash) DO NOTHING`,
     [hashToken(token), expira],
   );
+
+  // Si es conductor, apagar SU bus al cerrar sesión (mismo efecto que finalizar el
+  // recorrido). Así el bus deja de aparecerles activo a los pasajeros aunque el
+  // cliente no lo haya finalizado — p. ej. tras recargar la página, donde el flag
+  // local `activo` vuelve a false y `salir()` ya no llama a /buses/finalizar, y el
+  // bus quedaría "fantasma" (activo con su última posición congelada). Idempotente
+  // y acotado a su propio bus (admin/pasajero no tienen bus con ese conductor_id).
+  if (req.usuario!.rol === "conductor") {
+    await db
+      .update(buses)
+      .set({
+        estado: "inactivo",
+        lat: null,
+        lng: null,
+        velocidad: null,
+        novedad: null,
+        ocupacion: null,
+        actualizado: new Date(),
+      })
+      .where(eq(buses.conductor_id, req.usuario!.id));
+  }
+
   res.json({ mensaje: "Sesión cerrada" });
 });
 
