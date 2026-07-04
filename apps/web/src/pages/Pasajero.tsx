@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LogoTP } from "@/components/LogoTP";
 import { NotificacionesToggle } from "@/components/NotificacionesToggle";
+import { RutaCard } from "@/components/pasajero/RutaCard";
+import { ParaderoCard } from "@/components/pasajero/ParaderoCard";
 import { io, type Socket } from "socket.io-client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -984,54 +986,20 @@ export default function Pasajero() {
           const isSelected = selectedRutaId === ruta.id;
           const dimmed = selectedRutaId !== null && !isSelected;
           const rutaBuses = buses.filter((b) => b.ruta_id === ruta.id && b.estado !== "inactivo");
+          const conDemora = buses.some((b) => b.ruta_id === ruta.id && b.estado === "demora");
           return (
-            <div
-              key={ruta.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => handleSelectRuta(ruta.id)}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelectRuta(ruta.id); } }}
-              className={`mx-3 mb-2 rounded-xl border text-left transition-all cursor-pointer ${isSelected ? "ring-1" : "hover:shadow-sm"}`}
-              style={isSelected
-                ? { borderColor: "var(--color-blue)", background: "#eff6ff", boxShadow: `0 0 0 1px var(--color-blue)`, opacity: dimmed ? 0.45 : 1 }
-                : { borderColor: "#e5e7eb", background: "#fff", opacity: dimmed ? 0.45 : 1 }}
-            >
-              <div className="flex items-center gap-3 p-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center"
-                  style={{ background: ruta.color + "22" }}
-                >
-                  <Bus style={{ color: ruta.color, width: 20, height: 20 }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-semibold truncate block" style={{ color: "var(--color-navy)" }}>{ruta.nombre}</span>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[11px]" style={{ color: "var(--color-gray-text)" }}>{ruta.paradas.length} paradas</span>
-                    {rutaBuses.length > 0 ? (
-                      <span className="flex items-center gap-1 text-[11px] font-semibold text-green-600">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />{rutaBuses.length} en vivo
-                      </span>
-                    ) : (
-                      <span className="text-[11px]" style={{ color: "#c0c9d9" }}>sin buses ahora</span>
-                    )}
-                  </div>
-                </div>
-                <div className="ml-auto flex items-center flex-shrink-0">
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); toggleFavorito(ruta.id); }}
-                    className="p-2 -m-1"
-                    aria-label={favoritos.includes(ruta.id) ? "Quitar de favoritas" : "Marcar como favorita"}
-                  >
-                    <Star
-                      className="w-4 h-4"
-                      style={favoritos.includes(ruta.id)
-                        ? { color: "var(--tp-yellow)", fill: "var(--tp-yellow)" }
-                        : { color: "#d1d5db" }}
-                    />
-                  </button>
-                </div>
-              </div>
+            <div key={ruta.id} className="mx-3 mb-2.5">
+              <RutaCard
+                ruta={ruta}
+                vivos={rutaBuses.length}
+                demora={conDemora}
+                favorito={favoritos.includes(ruta.id)}
+                onSelect={() => handleSelectRuta(ruta.id)}
+                onToggleFavorito={() => toggleFavorito(ruta.id)}
+                selected={isSelected}
+                dimmed={dimmed}
+                compact
+              />
             </div>
           );
         })}
@@ -2006,53 +1974,17 @@ export default function Pasajero() {
                 </div>
               );
 
-              // Pill de estado: cuántos buses en vivo, o "sin buses".
-              const EstadoPill = (n: number) => {
-                const vivos = n > 0;
-                return (
-                  <span
-                    className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full"
-                    style={vivos
-                      ? { background: "rgba(56,161,105,0.14)", color: "var(--color-success)" }
-                      : { background: "rgba(107,114,128,0.12)", color: "var(--color-gray-text)" }}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${vivos ? "animate-pulse" : ""}`} style={{ background: vivos ? "var(--color-success)" : "var(--color-gray-text)" }} />
-                    {vivos ? `${n} en vivo` : "Sin buses"}
-                  </span>
-                );
-              };
-
-              // Tarjeta de ruta amplia y táctil (estilo apps de movilidad).
+              // Tarjeta de ruta estilo "transit" (compartida con el sidebar de escritorio).
               const RouteCard = (r: typeof rutas[number]) => (
-                <div
+                <RutaCard
                   key={r.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleSelectRuta(r.id)}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelectRuta(r.id); } }}
-                  className="relative w-full flex items-center gap-4 rounded-2xl p-4 pl-5 min-h-[78px] overflow-hidden active:scale-[0.98] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
-                  style={{ background: `linear-gradient(100deg, ${r.color}14 0%, #ffffff 60%)`, boxShadow: "0 6px 16px rgba(27,59,111,0.10)" }}
-                >
-                  <span className="absolute left-0 top-0 bottom-0 w-1.5" style={{ background: r.color }} />
-                  <span className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md" style={{ background: r.color }}>
-                    <Bus className="w-6 h-6 text-white" />
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <span className="font-display block text-[17px] font-bold truncate" style={{ color: "var(--color-navy)" }}>{r.nombre}</span>
-                    <span className="mt-1 flex items-center gap-2 flex-wrap">
-                      {EstadoPill(rutaBusesVivos(r.id))}
-                      {r.paradas.length > 0 && <span className="text-xs" style={{ color: "var(--color-gray-text)" }}>{r.paradas.length} paradas</span>}
-                    </span>
-                  </span>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleFavorito(r.id); }}
-                    className="p-2.5 -mr-1 flex-shrink-0 rounded-full active:scale-90 transition-transform"
-                    aria-label={favoritos.includes(r.id) ? "Quitar de favoritas" : "Marcar favorita"}
-                  >
-                    <Star className="w-6 h-6" style={favoritos.includes(r.id) ? { color: "var(--color-gold)", fill: "var(--color-gold)" } : { color: "#cbd5e1" }} />
-                  </button>
-                  <ChevronRight className="w-5 h-5 flex-shrink-0 -ml-1" style={{ color: "#cbd5e1" }} />
-                </div>
+                  ruta={r}
+                  vivos={rutaBusesVivos(r.id)}
+                  demora={buses.some((b) => b.ruta_id === r.id && b.estado === "demora")}
+                  favorito={favoritos.includes(r.id)}
+                  onSelect={() => handleSelectRuta(r.id)}
+                  onToggleFavorito={() => toggleFavorito(r.id)}
+                />
               );
 
               // Subencabezado compacto (ícono + título) para secciones dentro de una vista.
@@ -2145,30 +2077,13 @@ export default function Pasajero() {
                 );
               }
               return <>{Header("Paraderos cercanos", "Ordenados por distancia a ti", paraderos.length)}{paraderos.slice(0, 30).map((x) => (
-                <div
+                <ParaderoCard
                   key={x.parada.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => { if (x.rutas[0]) handleSelectRuta(x.rutas[0].id); }}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (x.rutas[0]) handleSelectRuta(x.rutas[0].id); } }}
-                  className="relative w-full flex items-center gap-4 rounded-2xl p-4 pl-5 min-h-[78px] overflow-hidden active:scale-[0.98] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
-                  style={{ background: "var(--color-white)", boxShadow: "0 6px 16px rgba(27,59,111,0.10)" }}
-                >
-                  <span className="absolute left-0 top-0 bottom-0 w-1.5" style={{ background: x.rutas[0]?.color ?? "var(--color-sky)" }} />
-                  <span className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm" style={{ background: (x.rutas[0]?.color ?? "var(--color-sky)") + "22" }}>
-                    <MapPin className="w-6 h-6" style={{ color: x.rutas[0]?.color ?? "var(--color-navy)" }} />
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-base font-bold truncate" style={{ color: "var(--color-navy)" }}>{x.parada.nombre}</span>
-                    <span className="text-xs truncate block mt-0.5" style={{ color: "var(--color-gray-text)" }}>{x.rutas.length} {x.rutas.length === 1 ? "ruta" : "rutas"} · {x.rutas.map((r) => r.nombre).join(" · ")}</span>
-                  </span>
-                  {x.dist != null && (
-                    <span className="text-xs font-bold flex-shrink-0 px-2.5 py-1 rounded-full" style={{ background: "rgba(245,183,49,0.18)", color: "#9a6a00" }}>
-                      {x.dist < 1 ? `${Math.round(x.dist * 1000)} m` : `${x.dist.toFixed(1)} km`}
-                    </span>
-                  )}
-                  <ChevronRight className="w-5 h-5 flex-shrink-0" style={{ color: "#cbd5e1" }} />
-                </div>
+                  parada={x.parada}
+                  rutas={x.rutas}
+                  dist={x.dist}
+                  onSelect={() => { if (x.rutas[0]) handleSelectRuta(x.rutas[0].id); }}
+                />
               ))}</>;
             })()}
           </div>
