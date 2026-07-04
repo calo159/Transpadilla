@@ -35,16 +35,16 @@ export function ConfirmDialog({
   return (
     <AlertDialog open={!!opts} onOpenChange={(o) => { if (!o) onClose(); }}>
       <AlertDialogContent
-        className="tp-light max-w-sm gap-0 border-0 rounded-2xl p-0 overflow-hidden tp-shadow-float"
+        className="tp-dialog tp-light max-w-sm gap-0 border-0 rounded-2xl p-0 overflow-hidden tp-shadow-float"
         style={{ background: "#fff" }}
       >
         {/* Franja de acento superior según el tipo */}
         <div style={{ height: 4, background: acento }} />
         <div className="p-6">
-          <AlertDialogHeader className="items-center sm:items-center text-center sm:text-center">
+          <AlertDialogHeader className="tp-rise items-center sm:items-center text-center sm:text-center" style={{ animationDelay: ".08s" }}>
             <span
               className="tp-dialog-pop w-14 h-14 rounded-full flex items-center justify-center mb-1"
-              style={{ background: `color-mix(in srgb, ${acento} 12%, #fff)`, color: acento }}
+              style={{ background: `color-mix(in srgb, ${acento} 12%, #fff)`, color: acento, animationDelay: ".05s" }}
             >
               <Icono className="w-7 h-7" />
             </span>
@@ -55,7 +55,7 @@ export function ConfirmDialog({
               {opts?.descripcion}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="mt-6 gap-2 sm:gap-2">
+          <AlertDialogFooter className="tp-rise mt-6 gap-2 sm:gap-2" style={{ animationDelay: ".16s" }}>
             <AlertDialogCancel
               className="rounded-xl border-0 mt-0 active:scale-95 transition-transform"
               style={{ background: "#fff", color: "var(--color-navy)", boxShadow: "inset 0 0 0 1px #e2e8f0" }}

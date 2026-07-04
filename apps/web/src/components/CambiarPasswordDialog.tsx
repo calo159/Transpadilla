@@ -59,21 +59,21 @@ export function CambiarPasswordDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) cerrar(); }}>
       <DialogContent
-        className="tp-light max-w-sm gap-0 border-0 rounded-2xl p-0 overflow-hidden tp-shadow-float"
+        className="tp-dialog tp-light max-w-sm gap-0 border-0 rounded-2xl p-0 overflow-hidden tp-shadow-float"
         style={{ background: "#fff" }}
       >
         <div style={{ height: 4, background: "var(--color-navy)" }} />
         <div className="p-6">
-        <DialogHeader className="items-center sm:items-center text-center sm:text-center">
+        <DialogHeader className="tp-rise items-center sm:items-center text-center sm:text-center" style={{ animationDelay: ".08s" }}>
           <span
             className="tp-dialog-pop w-14 h-14 rounded-full flex items-center justify-center mb-1"
-            style={{ background: "color-mix(in srgb, var(--color-navy) 12%, #fff)", color: "var(--color-navy)" }}
+            style={{ background: "color-mix(in srgb, var(--color-navy) 12%, #fff)", color: "var(--color-navy)", animationDelay: ".05s" }}
           >
             <KeyRound className="w-6 h-6" />
           </span>
           <DialogTitle className="font-display text-lg" style={{ color: "var(--color-navy)" }}>Cambiar contraseña</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 mt-4">
+        <div className="tp-rise space-y-3 mt-4" style={{ animationDelay: ".14s" }}>
           <div>
             <Label className="text-xs mb-1.5">Contraseña actual</Label>
             <div className="relative">
@@ -117,7 +117,7 @@ export function CambiarPasswordDialog({
             />
           </div>
         </div>
-        <DialogFooter className="mt-5 gap-2 sm:gap-2">
+        <DialogFooter className="tp-rise mt-5 gap-2 sm:gap-2" style={{ animationDelay: ".2s" }}>
           <Button
             variant="outline"
             onClick={cerrar}

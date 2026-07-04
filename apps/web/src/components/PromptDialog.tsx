@@ -38,15 +38,15 @@ export function PromptDialog({
   return (
     <Dialog open={!!opts} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent
-        className="tp-light max-w-sm gap-0 border-0 rounded-2xl p-0 overflow-hidden tp-shadow-float"
+        className="tp-dialog tp-light max-w-sm gap-0 border-0 rounded-2xl p-0 overflow-hidden tp-shadow-float"
         style={{ background: "#fff" }}
       >
         <div style={{ height: 4, background: "var(--color-blue)" }} />
         <div className="p-6">
-          <DialogHeader className="items-center sm:items-center text-center sm:text-center">
+          <DialogHeader className="tp-rise items-center sm:items-center text-center sm:text-center" style={{ animationDelay: ".08s" }}>
             <span
               className="tp-dialog-pop w-14 h-14 rounded-full flex items-center justify-center mb-1"
-              style={{ background: "color-mix(in srgb, var(--color-blue) 12%, #fff)", color: "var(--color-blue)" }}
+              style={{ background: "color-mix(in srgb, var(--color-blue) 12%, #fff)", color: "var(--color-blue)", animationDelay: ".05s" }}
             >
               <Pencil className="w-6 h-6" />
             </span>
@@ -60,9 +60,10 @@ export function PromptDialog({
             onChange={(e) => setValor(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") guardar(); }}
             autoFocus
-            className="h-11 rounded-xl mt-2"
+            className="tp-rise h-11 rounded-xl mt-2"
+            style={{ animationDelay: ".14s" }}
           />
-          <DialogFooter className="mt-5 gap-2 sm:gap-2">
+          <DialogFooter className="tp-rise mt-5 gap-2 sm:gap-2" style={{ animationDelay: ".2s" }}>
             <Button
               variant="outline"
               onClick={onClose}
