@@ -34,9 +34,8 @@ services:
     #  panel de Render → Settings → Instance Type.)
     plan: free
     region: oregon
-    # --prod=false fuerza instalar tambien las devDependencies (vite, esbuild…),
-    # que NODE_ENV=production omitiria; se necesitan para construir frontend+API.
-    buildCommand: pnpm install --no-frozen-lockfile --prod=false && pnpm run build:prod
+    # pnpm 11 instala devDependencies por defecto (sin --prod).
+    buildCommand: pnpm install --no-frozen-lockfile && pnpm run build:prod
     startCommand: pnpm --filter @workspace/api start
     healthCheckPath: /api/healthz
     envVars:
