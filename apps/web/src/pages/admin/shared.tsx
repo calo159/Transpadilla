@@ -8,8 +8,9 @@ export const inputCls =
 /** Mismo estilo para los <SelectTrigger> del panel. */
 export const selectTriggerCls = inputCls;
 
-/** Tarjeta estándar de los tabs — estilo stitch: fondo blanco, borde sutil, sombra suave */
-export const cardCls = "bg-white border border-outline-variant/30 rounded-xl p-4 md:rounded-xl md:p-5 shadow-sm";
+/** Tarjeta estándar de los tabs: borde nítido + sombra deliberada (no la sombra
+ *  difusa "flotante" típica de dashboard autogenerado). */
+export const cardCls = "bg-card border border-border rounded-xl p-4 md:rounded-2xl md:p-5 tp-shadow-card";
 
 /**
  * Deja el formulario "pegado" (sticky) bajo la topbar mientras la lista de al

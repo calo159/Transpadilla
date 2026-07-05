@@ -155,29 +155,6 @@ export default function DashboardTab({
         )}
       </div>
 
-      {/* Stats cards — stitch-style gold accent row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[
-          { titulo: "Buses Activos", valor: stats?.busesActivos ?? 0, total: stats?.totalBuses ?? 0, subtitulo: `de ${stats?.totalBuses ?? 0} totales`, icono: BusIcon, color: "var(--color-gold)" },
-          { titulo: "Rutas en Operación", valor: stats?.totalRutas ?? 0, subtitulo: "Activas hoy", icono: Route, color: "var(--color-gold)" },
-          { titulo: "Alertas", valor: buses.filter((b) => b.novedad).length, subtitulo: "Requieren atención", icono: AlertTriangle, color: "var(--color-danger)", alerta: true },
-        ].map((c) => (
-          <div key={c.titulo} className="bg-white rounded-xl shadow-sm border border-outline-variant/30 flex items-center p-5 relative overflow-hidden">
-            <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: c.color }} />
-            <div className="pl-3">
-              <h3 className="text-xs font-semibold mb-1" style={{ color: "var(--color-navy)" }}>{c.titulo}</h3>
-              <div className="flex items-end gap-2">
-                <span className="font-display text-3xl font-extrabold leading-none" style={{ color: "var(--color-gold)" }}>{c.valor}</span>
-                <span className="text-[11px] pb-0.5" style={{ color: "var(--color-gray-text)" }}>{c.subtitulo}</span>
-              </div>
-            </div>
-            <div className="ml-auto p-3 rounded-full" style={c.alerta ? { background: "rgba(229,62,62,0.1)" } : { background: "#eef2f7" }}>
-              <c.icono className="w-6 h-6" style={{ color: c.color }} />
-            </div>
-          </div>
-        ))}
-      </div>
-
       {/* Mapa en vivo (solo escritorio) */}
       {!rutasLoading && rutas.length > 0 && <DashboardMiniMap rutas={rutas} buses={buses} />}
 

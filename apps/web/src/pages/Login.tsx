@@ -58,19 +58,25 @@ export default function Login() {
   return (
     <div
       className="min-h-screen flex flex-col md:flex-row"
-      style={{ background: "linear-gradient(180deg, #f2f4f6 0%, #f7f9fb 55%)" }}
+      style={{ background: "linear-gradient(180deg,#eaf1fb 0%, #f6f9fc 55%)" }}
     >
-      {/* ── Panel de marca — stitch-style glassmorphism glow ── */}
+      {/* ── Panel de marca (hero navy) — como el TopBar de la app ──
+          En escritorio es la columna izquierda de alto completo; en móvil es una
+          franja superior compacta. */}
       <div
         className="relative overflow-hidden shrink-0 flex flex-col items-center justify-center text-center px-6 py-8 md:w-[42%] md:max-w-[520px] md:px-10 md:py-0 md:gap-7"
-        style={{ background: "linear-gradient(135deg, #1B3B6F 0%, #142d55 50%, #0f2240 100%)" }}
+        style={{ background: "linear-gradient(135deg, #24487e 0%, #1B3B6F 55%, #16335f 100%)" }}
       >
+        {/* Decoración de marca */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-32 -left-28 w-80 h-80 rounded-full opacity-20" style={{ background: "radial-gradient(circle, var(--color-sky) 0%, transparent 70%)" }} />
-          <div className="absolute -bottom-32 -right-28 w-80 h-80 rounded-full opacity-15" style={{ background: "radial-gradient(circle, var(--color-gold) 0%, transparent 70%)" }} />
-          <div className="absolute top-1/3 right-0 w-40 h-40 rounded-full opacity-[0.08]" style={{ background: "radial-gradient(circle, #fff 0%, transparent 70%)" }} />
+          <div className="absolute -top-32 -left-28 w-80 h-80 rounded-full opacity-15" style={{ background: "radial-gradient(circle, var(--color-sky) 0%, transparent 70%)" }} />
+          <div className="absolute -bottom-32 -right-28 w-80 h-80 rounded-full opacity-10" style={{ background: "radial-gradient(circle, var(--color-gold) 0%, transparent 70%)" }} />
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="absolute w-full h-px opacity-[0.06]" style={{ top: `${15 + i * 14}%`, background: "linear-gradient(90deg, transparent, white, transparent)" }} />
+          ))}
         </div>
 
+        {/* Volver al mapa */}
         <button
           onClick={() => setLocation("/")}
           className="absolute top-4 left-4 flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors group z-10"
@@ -80,11 +86,9 @@ export default function Login() {
         </button>
 
         <div className="relative z-10 flex flex-col items-center gap-4 md:gap-6 animate-in fade-in slide-in-from-top-3 md:slide-in-from-left-4 duration-700">
-          <div className="backdrop-blur-sm bg-white/5 rounded-2xl p-6">
-            <LogoTP size={84} />
-          </div>
+          <LogoTP size={84} />
           <div>
-            <h1 className="font-display text-3xl md:text-5xl font-black tracking-widest text-white mb-1">
+            <h1 className="text-3xl md:text-5xl font-black tracking-widest text-white mb-1">
               Trans<span style={{ color: "var(--color-gold)" }}>Padilla</span>
             </h1>
             <div className="flex items-center justify-center gap-2 mb-2">
@@ -95,6 +99,7 @@ export default function Login() {
             <p className="text-white/55 text-xs md:text-sm px-4">Rastreo de buses en tiempo real para Riohacha</p>
           </div>
 
+          {/* Señales de confianza — solo escritorio */}
           <div className="hidden md:flex flex-col gap-3 mt-1 w-full max-w-[280px]">
             {[
               { icon: <Radio className="w-4 h-4" />, t: "Posición de los buses en tiempo real" },
@@ -110,16 +115,16 @@ export default function Login() {
         </div>
       </div>
 
-      {/* ── Área del formulario ── */}
+      {/* ── Área del formulario (clara) ── */}
       <div className="flex-1 flex items-center justify-center p-4 md:p-8">
         <div className="tp-light w-full max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
           <form
             onSubmit={handleLogin}
-            className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgba(27,59,111,0.08)] space-y-5"
+            className="bg-white rounded-2xl p-6 tp-shadow-float space-y-4"
             style={{ border: "1px solid #eef2f7" }}
           >
-            <div>
-              <h2 className="font-display text-xl font-bold" style={{ color: "var(--color-navy)" }}>Iniciar sesión</h2>
+            <div className="mb-1">
+              <h2 className="font-display text-xl font-extrabold" style={{ color: "var(--color-navy)" }}>Iniciar sesión</h2>
               <p className="text-xs mt-0.5" style={{ color: "var(--color-gray-text)" }}>Acceso para conductores y administradores</p>
             </div>
 
@@ -133,7 +138,7 @@ export default function Login() {
                 value={correo}
                 onChange={(e) => setCorreo(e.target.value)}
                 placeholder="correo@ejemplo.com"
-                className="mt-1.5 h-12 text-base rounded-xl border-outline-variant/30 focus:border-blue-300 transition-colors"
+                className="mt-1.5 h-12 text-base rounded-xl"
                 autoComplete="email"
                 inputMode="email"
                 data-testid="input-correo"
@@ -152,7 +157,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="h-12 text-base rounded-xl pr-12 border-outline-variant/30 focus:border-blue-300 transition-colors"
+                  className="h-12 text-base rounded-xl pr-12"
                   autoComplete="current-password"
                   data-testid="input-password"
                   required
@@ -178,10 +183,11 @@ export default function Login() {
 
             <Button
               type="submit"
-              className="w-full font-bold text-base tracking-wide rounded-xl text-white shadow-lg border-0 active:scale-[0.98] transition-transform h-[52px]"
+              className="w-full font-bold text-base tracking-wide rounded-xl text-white shadow-lg border-0 active:scale-[0.98] transition-transform"
               style={{
-                background: "linear-gradient(135deg, var(--color-gold) 0%, #e0a620 100%)",
-                boxShadow: "0 6px 20px rgba(245,183,49,0.4)",
+                height: "52px",
+                background: "linear-gradient(135deg, var(--color-blue) 0%, var(--color-sky) 100%)",
+                boxShadow: "0 6px 20px rgba(37,88,165,0.35)",
               }}
               disabled={loading}
               data-testid="button-login"
@@ -194,12 +200,13 @@ export default function Login() {
               ¿Olvidaste tu contraseña? Pídele al administrador que te la restablezca.
             </p>
 
+            {/* Atención al cliente */}
             <div className="flex gap-2 pt-1">
               <a
                 href={WHATSAPP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl text-xs font-semibold transition-colors active:scale-95"
+                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl text-xs font-semibold transition-colors"
                 style={{ background: "rgba(37,211,102,0.10)", color: "#16a34a", border: "1px solid rgba(37,211,102,0.25)" }}
               >
                 <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
@@ -208,7 +215,7 @@ export default function Login() {
                 href={INSTAGRAM_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl text-xs font-semibold transition-colors active:scale-95"
+                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl text-xs font-semibold transition-colors"
                 style={{ background: "#fff", color: "var(--color-navy)", border: "1px solid #e5e7eb" }}
               >
                 <Instagram className="w-3.5 h-3.5" /> Instagram

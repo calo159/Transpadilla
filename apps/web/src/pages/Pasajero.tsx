@@ -902,10 +902,10 @@ export default function Pasajero() {
   const DesktopSidebar = () => (
     <div
       className={`hidden md:flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${sidebarOpen ? "tp-rail" : ""}`}
-      style={{ width: sidebarOpen ? 340 : 0, minWidth: sidebarOpen ? 340 : 0, borderRight: "1px solid rgba(0,0,0,0.06)", background: "#fff" }}
+      style={{ width: sidebarOpen ? 340 : 0, minWidth: sidebarOpen ? 340 : 0, borderRight: "1px solid #e5e7eb", background: "#E8EDF4" }}
     >
       {/* Stats en vivo */}
-      <div className="flex items-center gap-3 px-4 py-3 text-xs shrink-0" style={{ borderBottom: "1px solid #f1f5f9" }}>
+      <div className="flex items-center gap-3 px-4 py-2.5 text-xs shrink-0" style={{ borderBottom: "1px solid #f1f5f9" }}>
         <div className="flex items-center gap-1.5">
           <div className={`w-2 h-2 rounded-full ${activeBuses.length > 0 ? "bg-green-500 animate-pulse" : "bg-gray-300"}`} />
           <span className="font-medium" style={{ color: "var(--color-navy)" }}>
@@ -992,7 +992,7 @@ export default function Pasajero() {
             </div>
           );
         })()}
-        <p className="text-[10px] font-bold uppercase tracking-widest px-4 pb-1 pt-2" style={{ color: "var(--color-gray-text)" }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest px-4 py-2" style={{ color: "var(--color-gray-text)" }}>
           Rutas disponibles {rutasFiltradas.length !== rutas.length && `(${rutasFiltradas.length})`}
         </p>
         {rutasError ? errorCarga
@@ -1471,25 +1471,27 @@ export default function Pasajero() {
   return (
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: "#fff" }}>
 
-      {/* ── TopBar desktop: glassmorphism flotante estilo Stitch ── */}
+      {/* ── TopBar desktop: mismo degradado navy que el header móvil ── */}
       <div
-        className="hidden md:flex fixed top-4 left-4 right-4 z-[1002] items-center justify-between px-5 h-14 rounded-xl shadow-md backdrop-blur-md"
+        className="hidden md:flex items-center justify-between px-4 h-14 shrink-0 z-[1002]"
         style={{
-          background: "rgba(27,59,111,0.88)",
-          width: "calc(100% - 32px)",
+          background: "linear-gradient(135deg, #24487e 0%, #1B3B6F 60%, #16335f 100%)",
+          boxShadow: "0 2px 12px rgba(15,30,60,0.28)",
         }}
       >
+        {/* Izquierda: hamburguesa + nombre + tagline */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSidebarOpen((o) => !o)}
-            className="p-2 rounded-xl text-white/80 hover:bg-white/10 transition-colors active:scale-90"
+            className="p-2 rounded-xl text-white/80 hover:bg-white/10 transition-colors"
             aria-label={sidebarOpen ? "Ocultar panel" : "Mostrar panel"}
           >
             <Menu className="w-5 h-5" />
           </button>
-          <span className="font-display font-extrabold text-lg tracking-wide text-white">TRANSPADILLA</span>
-          <span className="text-xs text-white/60 hidden lg:block">Moviendo la Ciudad</span>
+          <span className="font-display font-extrabold text-xl tracking-wide text-white">TRANSPADILLA</span>
+          <span className="text-sm text-white/60 hidden lg:block">Moviendo la Ciudad</span>
         </div>
+        {/* Derecha: badge EN VIVO + usuario */}
         <div className="flex items-center gap-3">
           <span
             role="status"
@@ -1508,7 +1510,7 @@ export default function Pasajero() {
           </span>
           <button
             onClick={() => setLocation(user ? (user.rol === "admin" ? "/admin" : "/conductor") : "/login")}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-semibold text-white hover:bg-white/10 transition-colors active:scale-95"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-semibold text-white hover:bg-white/10 transition-colors"
             aria-label={user ? "Mi panel" : "Iniciar sesión"}
           >
             <User className="w-4 h-4" />
@@ -1575,15 +1577,15 @@ export default function Pasajero() {
           <div className="md:hidden fixed inset-0 z-[1000]" onClick={() => setMenuAbierto(false)} aria-hidden="true" />
         )}
 
-        {/* ── Header móvil (estilo Stitch): glassmorphism flotante + búsqueda + menú ── */}
+        {/* ── Header móvil (estilo Stitch): tarjeta navy flotante + búsqueda + menú ── */}
         <div className="md:hidden fixed top-0 left-0 right-0 z-[1001] px-3 pt-3 flex flex-col gap-2">
-          {/* Tarjeta glassmorphism navy */}
-          <div className="rounded-2xl px-3 py-2.5 shadow-md backdrop-blur-md" style={{ background: "rgba(27,59,111,0.90)" }}>
+          {/* Tarjeta navy */}
+          <div className="rounded-2xl px-3 py-2.5" style={{ background: "linear-gradient(135deg, #24487e 0%, #1B3B6F 60%, #16335f 100%)", boxShadow: "0 8px 24px rgba(15,30,60,0.35)" }}>
             <div className="flex items-center justify-between">
               <button onClick={() => setMenuAbierto((o) => !o)} className="p-1 rounded-full text-white active:scale-90 transition-transform" aria-label="Menú">
                 {menuAbierto ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
-              <span className="font-display font-extrabold text-lg tracking-wide text-white">TRANSPADILLA</span>
+              <span className="font-display font-extrabold text-xl tracking-wide text-white">TRANSPADILLA</span>
               <button onClick={() => setLocation(user ? (user.rol === "admin" ? "/admin" : "/conductor") : "/login")} className="p-1 rounded-full text-white active:scale-90 transition-transform" aria-label={user ? "Mi panel" : "Cuenta"}>
                 <User className="w-6 h-6" />
               </button>
@@ -1596,7 +1598,7 @@ export default function Pasajero() {
               </span>
             </div>
           </div>
-          {/* Búsqueda (glassmorphism blanca) */}
+          {/* Búsqueda (tarjeta blanca) */}
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: "var(--color-blue)" }} />
             <input
@@ -1605,8 +1607,8 @@ export default function Pasajero() {
               onFocus={() => setVista("rutas")}
               placeholder="Buscar ruta…"
               aria-label="Buscar ruta"
-              className="w-full h-12 pl-12 pr-10 text-sm rounded-2xl outline-none border-0 shadow-md backdrop-blur-sm"
-              style={{ background: "rgba(255,255,255,0.92)", color: "var(--color-navy)" }}
+              className="w-full h-12 pl-12 pr-10 text-sm rounded-2xl outline-none border-0 shadow-md"
+              style={{ background: "#fff", color: "var(--color-navy)" }}
             />
             {busqueda && (
               <button onClick={() => setBusqueda("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5" style={{ color: "var(--color-gray-text)" }} aria-label="Limpiar búsqueda">
@@ -1699,8 +1701,8 @@ export default function Pasajero() {
           </div>
         )}
 
-        {/* ── Bottom nav (estilo Stitch): Inicio / Rutas / Favoritos / Paraderos ── */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[1002] flex justify-around items-center px-2 pt-2 pb-3 backdrop-blur-md" style={{ background: "rgba(255,255,255,0.95)", boxShadow: "0 -4px 20px rgba(15,30,60,0.08)" }} aria-label="Navegación principal">
+        {/* ── Bottom nav (estilo Stitch): Inicio / Rutas / Favoritos / Perfil ── */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[1002] flex justify-around items-center px-2 pt-2 pb-3 bg-white" style={{ boxShadow: "0 -4px 16px rgba(15,30,60,0.10)" }} aria-label="Navegación principal">
           {([
             { id: "mapa", label: "Inicio", icon: <MapIcon className="w-5 h-5" /> },
             { id: "rutas", label: "Rutas", icon: <RouteIcon className="w-5 h-5" /> },
@@ -1710,11 +1712,11 @@ export default function Pasajero() {
             const activo = vista === t.id;
             const badge = t.id === "favoritos" && favoritos.length > 0 ? favoritos.length : null;
             return (
-              <button key={t.id} onClick={() => setVista(t.id)} aria-current={activo ? "page" : undefined} aria-label={badge !== null ? `${t.label} (${badge})` : t.label} className="relative flex flex-col items-center gap-0.5 rounded-2xl px-4 py-2 active:scale-90 transition-all" style={activo ? { background: "var(--color-gold)", color: "var(--color-navy)", boxShadow: "0 4px 14px rgba(245,183,49,0.4)" } : { color: "var(--color-blue)", opacity: 0.65 }}>
+              <button key={t.id} onClick={() => setVista(t.id)} aria-current={activo ? "page" : undefined} aria-label={badge !== null ? `${t.label} (${badge})` : t.label} className="relative flex flex-col items-center gap-1 rounded-2xl px-4 py-2 active:scale-90 transition-all" style={activo ? { background: "var(--color-gold)", color: "var(--color-navy)", boxShadow: "0 4px 12px rgba(245,183,49,0.4)" } : { color: "var(--color-blue)" }}>
                 <span className="relative">
                   {t.icon}
                   {badge !== null && (
-                    <span className="absolute -top-1.5 -right-2 min-w-[15px] h-[15px] px-1 rounded-full flex items-center justify-center text-[9px] font-black text-white" style={{ background: "var(--color-danger)", border: "1.5px solid rgba(255,255,255,0.9)" }}>
+                    <span className="absolute -top-1.5 -right-2 min-w-[15px] h-[15px] px-1 rounded-full flex items-center justify-center text-[9px] font-black text-white" style={{ background: "var(--color-danger)", border: "1.5px solid #fff" }}>
                       {badge}
                     </span>
                   )}
