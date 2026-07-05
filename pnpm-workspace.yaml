@@ -33,6 +33,3 @@ allowBuilds:
   esbuild: true
   sharp: true
   core-js: true
-  '@playwright/browser-chromium': true
-  protobufjs: true
-  unix-dgram: true

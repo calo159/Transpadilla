@@ -11,12 +11,11 @@
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm --filter @workspace/web --filter @workspace/api run typecheck",
     "test": "pnpm -r --if-present run test",
-    "load-test": "artillery run tests/load/load-test.yml",
-    "load-test:report": "artillery run tests/load/load-test.yml --output tests/load/reports/load-test-report.json && artillery report tests/load/reports/load-test-report.json"
+    "load-test": "pnpm dlx artillery@2.0.33 run tests/load/load-test.yml",
+    "load-test:report": "pnpm dlx artillery@2.0.33 run tests/load/load-test.yml --output tests/load/reports/load-test-report.json && pnpm dlx artillery@2.0.33 report tests/load/reports/load-test-report.json"
   },
   "private": true,
   "devDependencies": {
-    "artillery": "^2.0.33",
     "prettier": "^3.8.3",
     "typescript": "~5.9.3"
   },
