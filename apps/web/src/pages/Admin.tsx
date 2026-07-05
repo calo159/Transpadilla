@@ -10,6 +10,7 @@ import {
   Bus, LogOut, Map, MapPin, BarChart3,
   RefreshCw, Users, Route,
   UserCheck, KeyRound, TrendingUp,
+  Search, Bell, HelpCircle,
 } from "lucide-react";
 import DashboardTab from "./admin/DashboardTab";
 import RutasTab from "./admin/RutasTab";
@@ -88,14 +89,14 @@ export default function Admin() {
   return (
     <div className="tp-light tp-admin-bg flex h-screen overflow-hidden">
 
-      {/* ─── DESKTOP SIDEBAR (navy, estilo Stitch) ───────────────────────── */}
-      <div className="hidden md:flex flex-col w-60 min-w-60 text-white" style={{ background: "linear-gradient(180deg, #1B3B6F, #16305c)" }}>
-        <div className="flex items-center gap-2.5 px-5 py-5">
-          <LogoTP size={34} />
-          <div>
-            <p className="font-display text-lg font-extrabold tracking-wide text-white">TRANSPADILLA</p>
-            <p className="text-[10px] font-semibold text-white/60">Administración · Riohacha</p>
+      {/* ─── DESKTOP SIDEBAR — stitch-style 280px ──────────────────────── */}
+      <div className="hidden md:flex flex-col w-[280px] min-w-[280px] text-white" style={{ background: "linear-gradient(180deg, #1B3B6F, #142d55)" }}>
+        <div className="flex flex-col items-center px-6 py-8">
+          <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center mb-4">
+            <Users className="w-8 h-8 text-white/80" />
           </div>
+          <h1 className="font-display text-lg font-extrabold tracking-wide text-white">TRANSPADILLA</h1>
+          <p className="text-[11px] font-medium text-white/60">Administración · Riohacha</p>
         </div>
 
         <nav className="flex-1 px-3 space-y-1">
@@ -106,34 +107,33 @@ export default function Admin() {
                 key={item.id}
                 onClick={() => setTab(item.id)}
                 data-testid={`nav-${item.id}`}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors active:scale-[0.98]"
-                style={a ? { background: "var(--color-gold)", color: "var(--color-navy)" } : { color: "rgba(255,255,255,0.8)" }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
+                style={a ? { background: "var(--color-gold)", color: "var(--color-navy)" } : { color: "rgba(255,255,255,0.75)" }}
               >
-                {item.icon}
+                <span className={a ? "" : "opacity-60"}>{item.icon}</span>
                 {item.label}
               </button>
             );
           })}
           <button
             onClick={() => setLocation("/")}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors text-white/80 hover:text-white"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors text-white/60 hover:text-white"
           >
-            <Map className="w-4 h-4" />
+            <Map className="w-4 h-4 opacity-60" />
             Ir al mapa
           </button>
         </nav>
 
-        <div className="p-3">
-          <button onClick={() => setTab("rutas")} className="w-full flex items-center justify-center gap-2 h-11 rounded-xl font-bold mb-3 active:scale-[0.98]" style={{ background: "var(--color-blue)", color: "#fff" }}>
+        <div className="p-4">
+          <button onClick={() => setTab("rutas")} className="w-full flex items-center justify-center gap-2 h-11 rounded-xl font-bold mb-3 active:scale-[0.98] shadow-sm" style={{ background: "var(--color-gold)", color: "var(--color-navy)" }}>
             <Route className="w-4 h-4" /> Nueva ruta
           </button>
-          {/* Tarjeta de usuario (estilo mockup): avatar dorado + nombre + acciones */}
-          <div className="flex items-center gap-2.5 rounded-xl p-2.5" style={{ background: "rgba(255,255,255,0.06)" }}>
-            <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "var(--color-gold)" }}>
+          <div className="flex items-center gap-2.5 rounded-xl p-3" style={{ background: "rgba(255,255,255,0.06)" }}>
+            <span className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "var(--color-gold)" }}>
               <Users className="w-4 h-4" style={{ color: "var(--color-navy)" }} />
             </span>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-white truncate">{user?.nombre ?? "Admin"}</p>
+              <p className="text-sm font-bold text-white truncate">{user?.nombre ?? "Admin"}</p>
               <button onClick={() => setCambiarPass(true)} className="text-[10px] text-white/60 hover:text-white">Cambiar contraseña</button>
             </div>
             <button onClick={() => { void cerrarSesion().finally(() => setLocation("/")); }} data-testid="button-salir" className="p-1.5 text-white/60 hover:text-white flex-shrink-0" aria-label="Cerrar sesión" title="Cerrar sesión"><LogOut className="w-4 h-4" /></button>
@@ -173,16 +173,33 @@ export default function Admin() {
           })}
         </div>
 
-        {/* ── DESKTOP TOPBAR (claro) ── */}
-        <div className="hidden md:flex items-center justify-between px-6 py-3 shrink-0 bg-white border-b md:sticky md:top-0 md:z-10" style={{ borderColor: "#e8edf4" }}>
-          <div className="flex items-center gap-3">
-            <span aria-hidden className="w-1 h-9 rounded-full" style={{ background: "var(--color-gold)" }} />
-            <div>
-              <h1 className="font-display text-xl font-extrabold" style={{ color: "var(--color-navy)" }}>{tabTitle[tab]}</h1>
-              <p className="text-xs" style={{ color: "var(--color-gray-text)" }}>Riohacha, La Guajira · TransPadilla</p>
+        {/* ── DESKTOP TOPBAR — stitch-style ── */}
+        <div className="hidden md:flex items-center justify-between px-8 py-3 shrink-0 bg-white border-b sticky top-0 z-10" style={{ borderColor: "#e8edf4", height: 64 }}>
+          <div className="flex items-center gap-4">
+            <h1 className="font-display text-xl font-extrabold" style={{ color: "var(--color-navy)" }}>{tabTitle[tab]}</h1>
+            <span className="h-6 w-px" style={{ background: "#e8edf4" }} />
+            <div className="flex items-center text-xs" style={{ color: "var(--color-gray-text)" }}>
+              <span>Riohacha · {new Date().toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })}
+              </span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--color-gray-text)" }} />
+              <input
+                type="text"
+                placeholder="Buscar..."
+                className="w-56 h-9 rounded-lg text-sm border pl-9 pr-3 bg-transparent focus:outline-none focus:ring-2 transition-all"
+                style={{ borderColor: "#e8edf4", color: "var(--color-navy)" }}
+              />
+            </div>
+            <button className="p-2 rounded-full relative hover:bg-gray-50 transition-colors" style={{ color: "var(--color-gray-text)" }} aria-label="Notificaciones">
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full border-2 border-white" style={{ background: "var(--color-danger)" }} />
+            </button>
+            <button className="p-2 rounded-full hover:bg-gray-50 transition-colors" style={{ color: "var(--color-gray-text)" }} aria-label="Ayuda">
+              <HelpCircle className="w-4 h-4" />
+            </button>
             <div role="status" aria-live="polite" className="flex items-center gap-2 text-xs font-bold rounded-full px-3 py-1.5" style={{ background: "rgba(56,161,105,0.12)", color: "var(--color-success)" }}>
               <span className="tp-livedot" style={{ width: 6, height: 6, background: "var(--color-success)" }} aria-hidden="true" /><span>EN VIVO</span>
             </div>

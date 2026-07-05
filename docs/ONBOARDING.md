@@ -38,7 +38,7 @@ pnpm --filter @workspace/api run dev      # API en :8080
 pnpm --filter @workspace/web run dev      # frontend en :5173
 # Datos demo (con el API arriba):  curl -X POST http://localhost:8080/api/seed
 ```
-En Windows: `./iniciar.ps1` arranca ambos. Cuentas demo en el README.
+En Windows: `./scripts/iniciar.ps1` arranca ambos. Cuentas demo en el README.
 
 ---
 

@@ -320,45 +320,46 @@ export default function Conductor() {
   if (!user || user.rol !== "conductor") return null;
 
   return (
-    <div className="tp-light tp-conductor-bg min-h-screen">
-      <div className="tp-conductor-panel max-w-md md:max-w-2xl mx-auto flex flex-col min-h-screen">
-        {/* Header navy (estilo Stitch) */}
-        <header className="flex items-center justify-between px-3 shrink-0" style={{ background: "var(--color-navy)", height: 56 }}>
-          <button onClick={() => setLocation("/")} className="text-white p-2.5 -ml-1 active:scale-90 transition-transform" aria-label="Volver al mapa" title="Volver al mapa">
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <span className="font-display font-extrabold text-xl tracking-wide text-white">TRANSPADILLA</span>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setCambiarPass(true)} className="text-white p-2.5 active:scale-90 transition-transform" aria-label="Cambiar contraseña" title="Cambiar contraseña"><KeyRound className="w-5 h-5" /></button>
-            <button
-              onClick={() => {
-                if (activo) {
-                  setConfirmar({
-                    titulo: "Cerrar sesión",
-                    descripcion: "Tienes un recorrido activo. Se finalizará y dejarás de transmitir tu ubicación antes de cerrar sesión. ¿Continuar?",
-                    textoConfirmar: "Cerrar sesión",
-                    destructivo: true,
-                    accion: salir,
-                  });
-                } else {
-                  void salir();
-                }
-              }}
-              className="text-white p-2.5 -mr-1 active:scale-90 transition-transform"
-              data-testid="button-salir"
-              aria-label="Cerrar sesión"
-              title="Cerrar sesión"
-            ><LogOut className="w-5 h-5" /></button>
-          </div>
-        </header>
+    <div className="bg-[#f7f9fb] min-h-screen">
+      {/* Fixed Top Bar — glassmorphism stitch-style */}
+      <header className="fixed top-4 left-4 right-4 z-50 backdrop-blur-md bg-primary/85 rounded-xl shadow-md flex items-center justify-between px-4 h-14 w-[calc(100%-32px)] mx-auto">
+        <button onClick={() => setLocation("/")} className="text-white p-2 -ml-1.5 active:scale-90 transition-transform" aria-label="Volver al mapa" title="Volver al mapa">
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <span className="font-display font-extrabold text-lg tracking-wide text-white">TRANSPADILLA</span>
+        <div className="flex items-center gap-0.5">
+          <button onClick={() => setCambiarPass(true)} className="text-white/80 hover:text-white p-2 active:scale-90 transition-transform" aria-label="Cambiar contraseña" title="Cambiar contraseña"><KeyRound className="w-4 h-4" /></button>
+          <button
+            onClick={() => {
+              if (activo) {
+                setConfirmar({
+                  titulo: "Cerrar sesión",
+                  descripcion: "Tienes un recorrido activo. Se finalizará y dejarás de transmitir tu ubicación antes de cerrar sesión. ¿Continuar?",
+                  textoConfirmar: "Cerrar sesión",
+                  destructivo: true,
+                  accion: salir,
+                });
+              } else {
+                void salir();
+              }
+            }}
+            className="text-white/80 hover:text-white p-2 active:scale-90 transition-transform"
+            data-testid="button-salir"
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
+          ><LogOut className="w-4 h-4" /></button>
+        </div>
+      </header>
 
-        {/* Content */}
-        <div className="tp-stagger flex-1 flex flex-col gap-4 p-4 overflow-y-auto">
-          {/* Asignación actual (card navy + GPS) */}
-          <section className="rounded-2xl p-4 flex items-center justify-between shadow-lg" style={{ background: "var(--color-navy)" }}>
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shrink-0">
-                <Bus className="w-7 h-7" style={{ color: "var(--color-navy)" }} />
+      <div className="max-w-md md:max-w-2xl mx-auto flex flex-col min-h-screen pt-20 px-4 pb-6">
+        <div className="flex flex-col gap-4">
+          {/* Asignación actual — stitch-style card with glow */}
+          <section className="relative overflow-hidden rounded-2xl p-4 flex items-center justify-between shadow-lg" style={{ background: "var(--color-navy)" }}>
+            <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-40 blur-2xl" style={{ background: "var(--color-sky)" }} />
+            <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full opacity-30 blur-2xl" style={{ background: "var(--color-gold)" }} />
+            <div className="flex items-center gap-3 min-w-0 relative z-10">
+              <div className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
+                <Bus className="w-7 h-7 text-white" />
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-white/60">Asignación actual</p>
@@ -368,9 +369,9 @@ export default function Conductor() {
                 {selectedBus && <p className="text-xs text-white/70 mt-0.5">Bus <span className="font-mono font-bold">{selectedBus.placa}</span> · {user?.nombre}</p>}
               </div>
             </div>
-            <div className="flex flex-col items-center gap-1 shrink-0 ml-2">
+            <div className="flex flex-col items-center gap-1 shrink-0 ml-2 relative z-10">
               {(() => {
-                const sinRed = activo && !gpsError && gpsFallos >= 2; // 2+ fallos seguidos = red caída
+                const sinRed = activo && !gpsError && gpsFallos >= 2;
                 const ok = activo && !gpsError && !sinRed;
                 const dot = ok ? "var(--color-gold)" : sinRed || gpsError ? "#f87171" : "rgba(255,255,255,0.4)";
                 const txt = !activo ? (iniciando ? "ACTIVANDO" : "GPS OFF") : gpsError ? "SIN GPS" : sinRed ? "SIN RED" : "GPS OK";
@@ -408,36 +409,36 @@ export default function Conductor() {
             </div>
           )}
 
-          {/* Cargando la asignación (evita el falso "sin bus" mientras llega el dato) */}
+          {/* Cargando la asignación */}
           {!busId && busesLoading && (
-            <div className="bg-white rounded-2xl px-6 py-8 text-center shadow-sm flex flex-col items-center">
+            <div className="bg-white rounded-2xl px-6 py-10 text-center shadow-sm flex flex-col items-center">
               <Loader2 className="w-8 h-8 mb-3 animate-spin" style={{ color: "var(--color-sky)" }} />
               <p className="text-sm font-semibold" style={{ color: "var(--color-gray-text)" }}>Cargando tu asignación…</p>
             </div>
           )}
 
-          {/* Sin bus asignado (solo una vez confirmado que no hay) */}
+          {/* Sin bus asignado */}
           {!busId && !busesLoading && (
-            <div className="bg-white rounded-2xl px-6 py-8 text-center shadow-sm">
+            <div className="bg-white rounded-2xl px-6 py-10 text-center shadow-sm">
               <Bus className="w-10 h-10 mx-auto mb-3" style={{ color: "var(--color-sky)" }} />
               <p className="text-sm font-bold" style={{ color: "var(--color-navy)" }}>Sin bus asignado</p>
               <p className="text-xs mt-1" style={{ color: "var(--color-gray-text)" }}>El administrador debe asignarte un bus para iniciar tu recorrido.</p>
             </div>
           )}
 
-          {/* Botón GRAN turno (Iniciar / Finalizar) — oculto mientras carga la asignación */}
+          {/* Botón GRAN turno — stitch-style toggle */}
           {!busId && busesLoading ? null : !activo ? (
-            <button onClick={iniciar} disabled={!busId || iniciando} data-testid="button-iniciar" className="w-full rounded-2xl py-10 flex flex-col items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50 text-white" style={{ background: "var(--color-navy)" }}>
+            <button onClick={iniciar} disabled={!busId || iniciando} data-testid="button-iniciar" className="w-full rounded-2xl py-12 flex flex-col items-center justify-center gap-4 shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50 text-white border-2 border-transparent" style={{ background: "var(--color-navy)" }}>
               {iniciando ? (
                 <>
                   <Loader2 className="w-16 h-16 animate-spin" />
-                  <span className="text-2xl font-extrabold uppercase tracking-wide">Activando GPS…</span>
+                  <span className="text-xl font-extrabold uppercase tracking-wide">Activando GPS…</span>
                   <span className="text-sm text-white/70">Permite la ubicación para iniciar</span>
                 </>
               ) : (
                 <>
                   <Play className="w-16 h-16 fill-white" />
-                  <span className="text-2xl font-extrabold uppercase tracking-wide">Iniciar Turno</span>
+                  <span className="text-xl font-extrabold uppercase tracking-wide">Iniciar Turno</span>
                   <span className="text-sm text-white/70">Toque para registrar su inicio de recorrido</span>
                 </>
               )}
@@ -447,11 +448,11 @@ export default function Conductor() {
               onClick={() => setConfirmar({ titulo: "Finalizar recorrido", descripcion: "¿Seguro que quieres finalizar el recorrido? Dejarás de transmitir tu ubicación.", textoConfirmar: "Finalizar", destructivo: true, accion: async () => { await finalizar(); } })}
               disabled={finalizarRecorrido.isPending}
               data-testid="button-finalizar"
-              className="w-full rounded-2xl py-10 flex flex-col items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-transform text-white disabled:opacity-60"
+              className="w-full rounded-2xl py-12 flex flex-col items-center justify-center gap-4 shadow-lg active:scale-[0.98] transition-transform text-white disabled:opacity-60 border-2 border-transparent"
               style={{ background: "var(--color-danger)" }}
             >
               <Square className="w-16 h-16 fill-white" />
-              <span className="text-2xl font-extrabold uppercase tracking-wide">Finalizar Turno</span>
+              <span className="text-xl font-extrabold uppercase tracking-wide">Finalizar Turno</span>
               <span className="text-sm text-white/80">Recorrido en progreso · {elapsed}</span>
             </button>
           )}
@@ -460,7 +461,7 @@ export default function Conductor() {
               columnas para aprovechar el ancho; en celular quedan apiladas. */}
           {activo && (
             <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-4 md:items-start">
-              {/* Ocupación del vehículo (cards grandes) */}
+              {/* Ocupación del vehículo — stitch-style grid */}
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-wider px-1 mb-2" style={{ color: "var(--color-gray-text)" }}>Ocupación del vehículo</h3>
                 <div className="grid grid-cols-3 gap-3">
@@ -471,11 +472,11 @@ export default function Conductor() {
                   ] as const).map((o) => {
                     const activa = ocupacion === o.val;
                     return (
-                      <button key={o.val} onClick={() => enviarOcupacion(o.val)} aria-pressed={activa} aria-label={`Marcar ocupación: ${o.label}`} className="rounded-2xl py-5 flex flex-col items-center gap-2.5 shadow-sm active:scale-95 transition-all" style={activa ? { background: o.color, color: "#fff" } : { background: "#fff", color: "var(--color-navy)" }}>
-                        <span className="w-12 h-12 rounded-full flex items-center justify-center" style={activa ? { background: "rgba(255,255,255,0.25)" } : { background: "var(--color-gray-light)" }}>
-                          <o.Icon className="w-6 h-6" />
+                      <button key={o.val} onClick={() => enviarOcupacion(o.val)} aria-pressed={activa} aria-label={`Marcar ocupación: ${o.label}`} className="rounded-2xl py-6 flex flex-col items-center gap-3 shadow-sm active:scale-95 transition-all border" style={activa ? { background: o.color, color: "#fff", borderColor: o.color } : { background: "#fff", color: "var(--color-navy)", borderColor: "#eef2f7" }}>
+                        <span className="w-14 h-14 rounded-full flex items-center justify-center" style={activa ? { background: "rgba(255,255,255,0.25)" } : { background: "#eef2f7" }}>
+                          <o.Icon className="w-7 h-7" />
                         </span>
-                        <span className="font-bold">{o.label}</span>
+                        <span className="font-bold text-sm">{o.label}</span>
                       </button>
                     );
                   })}
@@ -498,9 +499,9 @@ export default function Conductor() {
                   </button>
                 </div>
               ) : !showCustom ? (
-                <button onClick={() => setShowCustom(true)} className="w-full rounded-2xl py-5 flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-transform text-white" style={{ background: "var(--color-danger)" }}>
+                <button onClick={() => setShowCustom(true)} className="w-full rounded-2xl py-6 flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-transform text-white border-2 border-transparent" style={{ background: "var(--color-danger)" }}>
                   <AlertTriangle className="w-7 h-7 fill-white" />
-                  <span className="font-extrabold uppercase tracking-wider">Reportar incidente</span>
+                  <span className="font-extrabold uppercase tracking-wider text-sm">Reportar incidente</span>
                 </button>
               ) : (
                 <div className="bg-white rounded-2xl p-4 shadow-sm">
@@ -525,11 +526,11 @@ export default function Conductor() {
           )}
 
           {/* Estado de transmisión + mapa opcional */}
-          <div className="flex items-center justify-center gap-2 text-xs py-1">
+          <div className="flex items-center justify-center gap-2 text-xs py-2">
             <Radio className="w-3.5 h-3.5" style={{ color: activo ? "var(--color-success)" : "var(--color-gray-text)" }} />
             <span style={{ color: "var(--color-gray-text)" }}>{activo ? "Transmitiendo GPS en vivo" : "GPS inactivo"}</span>
           </div>
-          <button onClick={() => setShowMapa((v) => !v)} className="w-full flex items-center justify-center gap-2 text-xs py-2.5 rounded-xl bg-white shadow-sm" style={{ color: "var(--color-navy)" }}>
+          <button onClick={() => setShowMapa((v) => !v)} className="w-full flex items-center justify-center gap-2 text-xs py-3 rounded-xl bg-white shadow-sm active:scale-[0.98] transition-transform" style={{ color: "var(--color-navy)" }}>
             <MapPin className="w-3.5 h-3.5" /> {showMapa ? "Ocultar mapa" : "Ver mi ubicación en el mapa"}
           </button>
           <div style={{ display: showMapa ? "block" : "none" }}>
