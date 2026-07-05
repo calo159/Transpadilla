@@ -23,15 +23,15 @@ ALTER TABLE paradas       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ruta_paradas  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE buses         ENABLE ROW LEVEL SECURITY;
 
--- FORCE: aplica RLS también al dueño de la tabla (defensa máxima). El backend
--- usa la cadena de servicio que sigue bypaseando vía rol `service_role` de
--- Supabase, no por ser owner. Si en tu plan el backend conecta como owner y
--- necesitas que siga viendo todo, comenta estas 5 líneas.
-ALTER TABLE usuarios      FORCE ROW LEVEL SECURITY;
-ALTER TABLE rutas         FORCE ROW LEVEL SECURITY;
-ALTER TABLE paradas       FORCE ROW LEVEL SECURITY;
-ALTER TABLE ruta_paradas  FORCE ROW LEVEL SECURITY;
-ALTER TABLE buses         FORCE ROW LEVEL SECURITY;
+-- FORCE RLS está comentado porque el backend se conecta como `postgres` (owner).
+-- Con FORCE activo, el owner también queda sujeto a RLS y no hay policies para
+-- `postgres`, lo que bloquea todas las queries del backend. Sin FORCE, el owner
+-- bypasea RLS y las policies para `service_role`/`anon` siguen vigentes.
+-- ALTER TABLE usuarios      FORCE ROW LEVEL SECURITY;
+-- ALTER TABLE rutas         FORCE ROW LEVEL SECURITY;
+-- ALTER TABLE paradas       FORCE ROW LEVEL SECURITY;
+-- ALTER TABLE ruta_paradas  FORCE ROW LEVEL SECURITY;
+-- ALTER TABLE buses         FORCE ROW LEVEL SECURITY;
 
 -- 2) Permitir explícitamente al rol de servicio de Supabase -------------------
 -- `service_role` es la clave secreta del backend; debe poder todo.
@@ -71,7 +71,7 @@ CREATE POLICY anon_read_buses        ON buses         FOR SELECT TO anon USING (
 -- solicitada"). La escritura pública pasa por el endpoint rate-limited de Express;
 -- a nivel BD la blindamos: RLS forzado y solo `service_role` accede (nada de anon).
 ALTER TABLE favoritos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE favoritos FORCE  ROW LEVEL SECURITY;
+-- ALTER TABLE favoritos FORCE  ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS service_all_favoritos ON favoritos;
 CREATE POLICY service_all_favoritos ON favoritos FOR ALL TO service_role USING (true) WITH CHECK (true);
 
