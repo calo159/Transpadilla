@@ -353,7 +353,7 @@ export default function Conductor() {
         </header>
 
         {/* Content */}
-        <div className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto">
+        <div className="tp-stagger flex-1 flex flex-col gap-4 p-4 overflow-y-auto">
           {/* Asignación actual (card navy + GPS) */}
           <section className="rounded-2xl p-4 flex items-center justify-between shadow-lg" style={{ background: "var(--color-navy)" }}>
             <div className="flex items-center gap-3 min-w-0">

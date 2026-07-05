@@ -200,7 +200,7 @@ export default function Admin() {
         {/* En pantallas anchas el contenido se centra y limita para leerse como un
             panel real (no estirado de borde a borde); en móvil sigue full-width. */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
-         <div className="mx-auto w-full md:max-w-6xl">
+         <div key={tab} className="tp-enter mx-auto w-full md:max-w-6xl">
 
           {/* DASHBOARD */}
           {tab === "dashboard" && (

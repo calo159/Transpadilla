@@ -158,7 +158,7 @@ export default function DashboardTab({
       {/* Mapa en vivo (solo escritorio) */}
       {!rutasLoading && rutas.length > 0 && <DashboardMiniMap rutas={rutas} buses={buses} />}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="tp-stagger grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Estado de la flota */}
         <div className={cardCls}>
           <SectionHeader icon={<BusIcon className="w-4 h-4 text-primary" />} title="Estado de la flota" />

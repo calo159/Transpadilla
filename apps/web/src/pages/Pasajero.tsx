@@ -1978,7 +1978,7 @@ export default function Pasajero() {
           className="tp-light md:hidden fixed left-0 right-0 bottom-0 z-[1000] overflow-y-auto animate-in fade-in slide-in-from-bottom-3 duration-300 ease-out"
           style={{ top: 140, bottom: 72, background: "linear-gradient(180deg,#eaf1fb 0%, #f6f9fc 55%)", touchAction: "pan-y", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}
         >
-          <div className="px-4 pt-4 pb-6 space-y-4">
+          <div className="tp-stagger px-4 pt-4 pb-6 space-y-4">
             {(() => {
               // Encabezado de sección reutilizable (título grande + contador + subtítulo).
               const Header = (titulo: string, subtitulo: string, n?: number) => (

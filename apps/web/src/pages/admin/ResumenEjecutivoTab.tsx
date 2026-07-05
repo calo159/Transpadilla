@@ -164,7 +164,7 @@ export default function ResumenEjecutivoTab() {
           <button
             key={r.dias}
             onClick={() => setDias(r.dias)}
-            className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+            className="tp-press px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
             style={dias === r.dias
               ? { background: "var(--color-blue, #2558A5)", color: "#fff" }
               : { background: "var(--color-secondary, #eef2f7)", color: "var(--color-navy, #1B3B6F)" }}
@@ -205,9 +205,9 @@ export default function ResumenEjecutivoTab() {
                 <p className="text-xs mt-1" style={{ color: "var(--color-gray-text, #6B7280)" }}>Cuando los pasajeros marquen rutas con la estrella en el mapa, aquí verás las más populares.</p>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="tp-stagger grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {topSolicitadas.map((r, i) => (
-                  <div key={r.ruta_id} className="rounded-2xl p-4 shadow-sm relative overflow-hidden" style={{ background: "#fff", border: "1px solid #e5e7eb" }}>
+                  <div key={r.ruta_id} className="tp-interactive rounded-2xl p-4 shadow-sm relative overflow-hidden" style={{ background: "#fff", border: "1px solid #e5e7eb" }}>
                     <span className="absolute left-0 top-0 bottom-0 w-1.5" style={{ background: r.color }} />
                     <div className="flex items-center gap-2 mb-2">
                       <span className="w-8 h-8 rounded-full flex items-center justify-center font-black text-white shadow-sm" style={{ background: MEDALLA[i] ?? "#9ca3af" }}>{i + 1}</span>

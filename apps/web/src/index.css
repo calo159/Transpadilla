@@ -471,6 +471,40 @@
   .tp-dialog, .tp-dialog-overlay, .tp-rise { animation: none; }
 }
 
+/* ── Capa de movimiento unificada (toda la app) ───────────────────────────────
+   Utilidades compartidas para que todo entre, reaccione y cargue igual. El easing
+   "caro" (easeOutExpo) es el mismo de los diálogos. El bloque global de
+   prefers-reduced-motion (más abajo) ya anula estas animaciones/transiciones. */
+:root { --tp-ease: cubic-bezier(.16, 1, .3, 1); }
+
+/* Entrada estándar de secciones/tarjetas/tabs (fade + subir). */
+@keyframes tp-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.tp-enter { animation: tp-enter .42s var(--tp-ease) both; }
+
+/* Entrada escalonada de los hijos directos (listas, grids, filas de KPIs). */
+.tp-stagger > * { animation: tp-enter .42s var(--tp-ease) both; }
+.tp-stagger > *:nth-child(1) { animation-delay: .02s; }
+.tp-stagger > *:nth-child(2) { animation-delay: .06s; }
+.tp-stagger > *:nth-child(3) { animation-delay: .10s; }
+.tp-stagger > *:nth-child(4) { animation-delay: .14s; }
+.tp-stagger > *:nth-child(5) { animation-delay: .18s; }
+.tp-stagger > *:nth-child(6) { animation-delay: .22s; }
+.tp-stagger > *:nth-child(7) { animation-delay: .26s; }
+.tp-stagger > *:nth-child(n+8) { animation-delay: .30s; }
+
+/* Micro-interacción: elevar en hover, hundir levemente al presionar. */
+.tp-interactive { transition: transform .18s var(--tp-ease), box-shadow .18s var(--tp-ease); will-change: transform; }
+.tp-interactive:hover { transform: translateY(-2px); }
+.tp-interactive:active { transform: translateY(0) scale(.985); }
+
+/* Solo "press" (botones y elementos táctiles que no deben levitar). */
+.tp-press { transition: transform .12s var(--tp-ease); }
+.tp-press:active { transform: scale(.95); }
+
+/* Shimmer para skeletons de carga (barrido de luz). */
+@keyframes tp-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.tp-shimmer { background: linear-gradient(90deg, #eef2f7 25%, #f7fafc 37%, #eef2f7 63%); background-size: 200% 100%; animation: tp-shimmer 1.4s linear infinite; }
+
 /* Gradiente de marca TransPadilla */
 .tp-gradient { background: linear-gradient(135deg, var(--tp-navy) 0%, var(--tp-blue) 100%); }
 .tp-gradient-sky { background: linear-gradient(135deg, var(--tp-blue) 0%, var(--tp-sky) 100%); }
