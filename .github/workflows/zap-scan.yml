@@ -1,0 +1,42 @@
+# ──────────────────────────────────────────────────────────
+# ZAP Scan — TransPadilla
+# Requisito: Docker instalado
+# ──────────────────────────────────────────────────────────
+# Escaneo completo (pasivo + activo):
+#   docker compose -f zap-scan.yml up
+#
+# Solo escaneo pasivo (rápido, sin modificaciones):
+#   docker compose -f zap-scan.yml run --rm zap-pasive
+#
+# Ver reporte: abrir zap-report.html
+# ──────────────────────────────────────────────────────────
+
+services:
+  zap:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: zap-transpadilla
+    command: >
+      zap-full-scan.py
+      -t https://transpadilla-web.onrender.com
+      -r zap-report.html
+      --hook=/zap/scripts/transpadilla.py
+      -d
+    volumes:
+      - ./zap-report.html:/zap/wrk/zap-report.html
+      - ./zap-scripts:/zap/scripts:ro
+    environment:
+      - ZAP_API_KEY=changeme
+    network_mode: "bridge"
+
+  zap-pasive:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: zap-transpadilla-pasive
+    command: >
+      zap-api-scan.py
+      -t https://transpadilla-web.onrender.com/api/openapi.json
+      -f openapi
+      -r zap-report-pasive.html
+      -z "-config api.key=changeme"
+    volumes:
+      - ./zap-report-pasive.html:/zap/wrk/zap-report-pasive.html
+    network_mode: "bridge"

@@ -10,17 +10,19 @@ Node** (API + WebSockets + ETA + frontend); sin microservicios externos.
 ## Estructura del monorepo
 
 ```
-apps/
+apps/                          ← Desplegables (ejecutables)
   web/          Frontend React (Vite + Tailwind + Leaflet + TanStack Query + Wouter)
   api/          Backend Express + Socket.IO (serve API + sirve el frontend en prod)
-packages/
+packages/                      ← Librerías internas reutilizables
   db/           Esquema Drizzle ORM + pool PostgreSQL
   api-client/   Hooks React generados con orval (useGetBuses, useUpdateGps…)
   api-types/    Tipos Zod generados con orval
   api-spec/     OpenAPI spec + orval.config.ts (fuente de verdad del API)
-scripts/        post-merge.sh (hook git) + @workspace/scripts (placeholder)
-docs/           Guías de despliegue, seguridad, Capacitor Android, mapa
-.github/        Workflow de CI (typecheck, build, test, audit)
+scripts/                       ← Scripts de utilidad (arranque, auditoría, hooks git)
+docs/                          ← Guías de despliegue, seguridad, Capacitor, mapa, etc.
+tests/                         ← Pruebas de carga y rendimiento
+  load/           Escenarios Artillery + reportes
+.github/workflows/             ← CI + ZAP security scan
 ```
 
 El ETA del próximo bus se calcula en el backend Node (`apps/api/src/routes/eta.ts`
@@ -39,7 +41,7 @@ El ETA del próximo bus se calcula en el backend Node (`apps/api/src/routes/eta.
 
 ```powershell
 # Arrancar todo de una vez
-./iniciar.ps1
+./scripts/iniciar.ps1
 
 # O manualmente:
 pnpm --filter @workspace/api run dev     # API en :8080
@@ -68,6 +70,13 @@ pnpm run build:prod
 
 # Pruebas (unitarias siempre; integración si hay DATABASE_URL)
 pnpm --filter @workspace/api run test
+
+# Load test (Artillery)
+pnpm run load-test                        # 5000 requests
+pnpm run load-test:report                 # con reporte HTML
+
+# Auditoría de seguridad remota
+node scripts/security-audit.js            # contra Render
 ```
 
 ---
@@ -101,6 +110,60 @@ pnpm --filter @workspace/api run test
 - PWA con auto-update + Wake Lock en el conductor para GPS continuo sin pantalla apagada.
 - Pruebas: Vitest + Supertest en `apps/api/test/` (unitarias + integración con DB);
   CI en `.github/workflows/ci.yml`.
+
+---
+
+## Reglas de organización del proyecto
+
+### ¿Qué va en cada carpeta?
+- **`apps/`** — Solo entregables desplegables (tienen `package.json` con scripts `start`/`dev`/`build`).
+  - `apps/api/` — Backend Express. Organizado en: `routes/` (endpoints REST), `middleware/` (auth, rate-limit, validación), `lib/` (lógica de negocio), `test/` (tests Vitest).
+  - `apps/web/` — Frontend React. Organizado en: `pages/` (vistas completas), `components/` (componentes reutilizables), `hooks/` (custom hooks), `lib/` (utilidades).
+    - `components/ui/` — Componentes base (shadcn/ui). NO tocar generación de orval.
+    - `components/pasajero/` — Componentes específicos de la vista pasajero.
+    - `pages/admin/` — Cada tab del dashboard admin en un archivo separado.
+- **`packages/`** — Librerías internas. NO tienen `start`, solo `build`.
+  - `packages/db/` — Único punto de acceso a la BD (pool + schema Drizzle + migraciones + RLS).
+  - `packages/api-client/` — **Generado por orval.** NO editar a mano.
+  - `packages/api-types/` — **Generado por orval.** NO editar a mano.
+  - `packages/api-spec/` — Fuente de verdad del API: `openapi.yaml` + `orval.config.ts`.
+- **`scripts/`** — Scripts auxiliares (arranque local `.ps1`, auditoría de seguridad, hooks git).
+- **`tests/`** — Pruebas de carga y rendimiento (Artillery).
+- **`docs/`** — Documentación técnica. Leer `docs/UI-SKILL.md` antes de tocar la vista Pasajero.
+- **`.github/workflows/`** — CI (typecheck + build + test + audit) + ZAP security scan.
+
+### Convenciones de nombres
+| Tipo | Convención | Ejemplo |
+|------|-----------|---------|
+| Archivos TS/JS | `kebab-case` | `eta-calc.ts`, `rate-limit.ts` |
+| Componentes React | `PascalCase.tsx` | `ConfirmDialog.tsx` |
+| Hooks | `use-*` en kebab | `use-elapsed-time.ts` |
+| Tests | `*.test.ts` / `*.test.tsx` | `geo.test.ts` |
+| Carpetas | `kebab-case` | `api-client/`, `load/` |
+
+### Lo que NO debes modificar
+- ❌ `packages/api-client/` — generado por orval desde `packages/api-spec/openapi.yaml`
+- ❌ `packages/api-types/` — generado por orval
+- ❌ `packages/db/drizzle/` — migraciones generadas
+- ❌ `apps/web/src/components/ui/` — componentes shadcn/base (salvo que se necesite un estilo nuevo deliberadamente)
+- ❌ `dist/`, `node_modules/`, `*.tsbuildinfo` — generados
+- ❌ `apps/web/android/` — generado por Capacitor
+
+### Flujo de generación de código
+```
+packages/api-spec/openapi.yaml
+  → orval (npm run gen en api-spec/)
+    → packages/api-client/ (hooks React con TanStack Query)
+    → packages/api-types/ (tipos Zod)
+```
+Para regenerar: `pnpm --filter @workspace/api-spec run gen`
+
+### Estilo de código
+- Sin comentarios en código de producción (salvo que expliquen un "por qué", no un "qué")
+- Imports con alias `@/` en apps/web (ej: `import { Button } from "@/components/ui/button"`)
+- Imports relativos en apps/api (ej: `import { auth } from "../middleware/auth"`)
+- Nombres de archivos en kebab-case
+- Componentes React tipados con TypeScript
 
 ---
 

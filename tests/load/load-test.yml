@@ -1,0 +1,25 @@
+config:
+  target: "https://transpadilla-web.onrender.com"
+  phases:
+    - duration: 200
+      arrivalRate: 25
+      name: "5000 requests (25 req/s, 200s)"
+  http:
+    pool: 50
+  defaults:
+    headers:
+      Accept: "application/json"
+
+scenarios:
+  - name: "GET /healthz"
+    flow:
+      - get:
+          url: "/healthz"
+  - name: "GET /buses"
+    flow:
+      - get:
+          url: "/buses"
+  - name: "GET /rutas"
+    flow:
+      - get:
+          url: "/rutas"
