@@ -2,14 +2,14 @@
   "name": "workspace",
   "version": "0.0.0",
   "license": "MIT",
-  "packageManager": "pnpm@9.15.0",
+  "packageManager": "pnpm@11.10.0",
   "scripts": {
     "preinstall": "node -e \"var a=process.env.npm_config_user_agent||'';if(!a.startsWith('pnpm')){process.stderr.write('Error: use pnpm, not npm/yarn\\n');process.exit(1)}\"",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "build:prod": "pnpm --filter @workspace/web run build && pnpm --filter @workspace/api run build",
     "start": "pnpm --filter @workspace/api run start",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./apps/**\" --filter \"./scripts\" --if-present run typecheck",
+    "typecheck": "pnpm run typecheck:libs && pnpm --filter @workspace/web --filter @workspace/api run typecheck",
     "test": "pnpm -r --if-present run test",
     "load-test": "artillery run tests/load/load-test.yml",
     "load-test:report": "artillery run tests/load/load-test.yml --output tests/load/reports/load-test-report.json && artillery report tests/load/reports/load-test-report.json"
@@ -20,12 +20,10 @@
     "prettier": "^3.8.3",
     "typescript": "~5.9.3"
   },
-  "pnpm": {
-    "overrides": {
-      "@capacitor/cli>tar": "^7.5.16",
-      "replace>minimatch": "^3.1.4",
-      "xcode>uuid": "^11.1.1",
-      "@esbuild-kit/core-utils>esbuild": "^0.25.0"
-    }
+  "resolutions": {
+    "@capacitor/cli>tar": "^7.5.16",
+    "replace>minimatch": "^3.1.4",
+    "xcode>uuid": "^11.1.1",
+    "@esbuild-kit/core-utils>esbuild": "^0.25.0"
   }
 }
