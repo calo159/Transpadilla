@@ -217,8 +217,4 @@ CLAUDE.md           Referencia profunda de arquitectura y decisiones
 
 ---
 
-## 📬 Contacto
 
-Para cotizaciones, demos o soporte institucional, escríbenos al
-[WhatsApp de TransPadilla](https://wa.me/573144167656) o por Instagram
-[@transpadilla.co](https://www.instagram.com/transpadilla.co).
