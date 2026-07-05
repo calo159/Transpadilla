@@ -75,9 +75,30 @@ ALTER TABLE favoritos ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS service_all_favoritos ON favoritos;
 CREATE POLICY service_all_favoritos ON favoritos FOR ALL TO service_role USING (true) WITH CHECK (true);
 
+-- 6) Tablas internas (nunca leídas/escritas por `anon`) -----------------------
+-- posiciones_historial (base de los reportes admin), auditoria (log de acciones
+-- admin), suscripciones_push (endpoints Web Push del backend) y tokens_revocados
+-- (lista negra de JWT). Ninguna se expone al público: solo `service_role` accede;
+-- sin política para `anon`, RLS activado ya las bloquea por completo.
+ALTER TABLE posiciones_historial ENABLE ROW LEVEL SECURITY;
+ALTER TABLE auditoria            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE suscripciones_push   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tokens_revocados     ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS service_all_posiciones_historial ON posiciones_historial;
+DROP POLICY IF EXISTS service_all_auditoria            ON auditoria;
+DROP POLICY IF EXISTS service_all_suscripciones_push   ON suscripciones_push;
+DROP POLICY IF EXISTS service_all_tokens_revocados     ON tokens_revocados;
+
+CREATE POLICY service_all_posiciones_historial ON posiciones_historial FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY service_all_auditoria            ON auditoria            FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY service_all_suscripciones_push   ON suscripciones_push   FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY service_all_tokens_revocados     ON tokens_revocados     FOR ALL TO service_role USING (true) WITH CHECK (true);
+
 -- ============================================================================
 -- Verificación rápida (opcional):
 --   SELECT relname, relrowsecurity, relforcerowsecurity
 --   FROM pg_class WHERE relname IN
---     ('usuarios','rutas','paradas','ruta_paradas','buses');
+--     ('usuarios','rutas','paradas','ruta_paradas','buses','favoritos',
+--      'posiciones_historial','auditoria','suscripciones_push','tokens_revocados');
 -- ============================================================================
