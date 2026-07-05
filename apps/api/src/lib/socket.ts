@@ -13,7 +13,7 @@ function corsOrigin(): string[] | boolean {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-  return [...lista, "https://localhost", "http://localhost", "capacitor://localhost"];
+  return [...lista, "https://localhost", "capacitor://localhost"];
 }
 
 export function initSocketIO(httpServer: HttpServer): Server {

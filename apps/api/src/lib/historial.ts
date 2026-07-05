@@ -16,6 +16,10 @@ import { logger } from "./logger";
  */
 const INTERVALO_MS = Number(process.env["HISTORIAL_INTERVALO_MS"] ?? 60_000);
 const RETENCION_DIAS = Number(process.env["HISTORIAL_RETENCION_DIAS"] ?? 30);
+// Retención de favoritos anónimos: el cliente re-sincroniza al abrir la app
+// (resetea creado_en), así que solo se purgan dispositivos inactivos hace mucho.
+// Acota el crecimiento de la tabla `favoritos`.
+const FAVORITOS_RETENCION_DIAS = Number(process.env["FAVORITOS_RETENCION_DIAS"] ?? 180);
 const PODA_CADA = 60; // podar una vez cada 60 snapshots (~1 h con 60 s)
 
 let snapTimer: NodeJS.Timeout | null = null;
@@ -37,6 +41,11 @@ async function podar(): Promise<void> {
   );
   // Aprovecha el ciclo para purgar tokens revocados que ya expiraron (no sirven).
   await pool.query(`DELETE FROM tokens_revocados WHERE expira_en < now()`).catch(() => {});
+  // Y para acotar la tabla de favoritos anónimos (dispositivos inactivos hace mucho).
+  await pool.query(
+    `DELETE FROM favoritos WHERE creado_en < now() - ($1 || ' days')::interval`,
+    [String(FAVORITOS_RETENCION_DIAS)],
+  ).catch(() => {});
 }
 
 /** Arranca el job de snapshot. Devuelve una función para detenerlo (apagado ordenado). */

@@ -45,7 +45,9 @@ export async function authMiddleware(
   const token = header.slice(7);
   let payload: AuthPayload;
   try {
-    payload = jwt.verify(token, JWT_SECRET) as AuthPayload;
+    // Fijar el algoritmo (HS256) evita ataques de "confusión de algoritmo":
+    // sin esto, jwt aceptaría cualquier alg del header del token.
+    payload = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] }) as AuthPayload;
   } catch {
     res.status(401).json({ error: "Token inválido o expirado" });
     return;

@@ -12,7 +12,7 @@ const router = Router();
 // (al montar y al cambiar sus favoritos).
 const favoritosLimiter = rateLimit({
   ventanaMs: 60_000,
-  max: 20,
+  max: 10, // los clientes legítimos llaman poco (al montar y al cambiar favoritos)
   mensaje: "Demasiados cambios de favoritos. Espera un minuto.",
 });
 

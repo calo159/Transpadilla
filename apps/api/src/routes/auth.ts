@@ -48,9 +48,13 @@ router.post(
   const token = jwt.sign(
     { id: usuario.id, correo: usuario.correo, rol: usuario.rol },
     JWT_SECRET,
-    // Duración de la sesión: configurable por JWT_EXPIRES_IN (ej. "3d", "12h").
-    // Más corta = menor ventana si roban un token. Por defecto 3 días.
-    { expiresIn: (process.env["JWT_EXPIRES_IN"] ?? "3d") as jwt.SignOptions["expiresIn"] },
+    {
+      // Firma HS256 explícita (era el default); el verify fija este mismo algoritmo.
+      algorithm: "HS256",
+      // Duración de la sesión: configurable por JWT_EXPIRES_IN (ej. "3d", "12h").
+      // Más corta = menor ventana si roban un token. Por defecto 3 días.
+      expiresIn: (process.env["JWT_EXPIRES_IN"] ?? "3d") as jwt.SignOptions["expiresIn"],
+    },
   );
   res.json({
     token,

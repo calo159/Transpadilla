@@ -105,7 +105,10 @@ const corsOrigins = (process.env["CORS_ORIGIN"] ?? "")
 // origen https://localhost (o capacitor://localhost): toda llamada a la API es
 // cross-origin y necesita CORS. La web servida desde el mismo dominio NO pasa por
 // CORS (same-origin), así que añadir estos orígenes no la afecta.
-const capacitorOrigins = ["https://localhost", "http://localhost", "capacitor://localhost"];
+// El WebView de Capacitor usa https://localhost (androidScheme por defecto) o
+// capacitor://localhost. No incluimos http://localhost: no lo usa ningún cliente
+// legítimo y ensancharía la allowlist de producción sin necesidad.
+const capacitorOrigins = ["https://localhost", "capacitor://localhost"];
 const allowedOrigins = [...corsOrigins, ...capacitorOrigins];
 app.use(
   cors(
