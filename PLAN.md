@@ -15,7 +15,7 @@ calidad.
 | 1 | Seguridad crítica | 🟡 En progreso | 2-3 semanas |
 | 2 | Infraestructura y disponibilidad | 🟡 En progreso | 2-3 semanas |
 | 3 | Cumplimiento legal | 🟡 En progreso | 2-3 semanas |
-| 4 | Monitoreo y observabilidad | 🟡 Media | 1-2 semanas |
+| 4 | Monitoreo y observabilidad | 🟡 En progreso | 1-2 semanas |
 | 5 | DevOps y CI-CD | 🟡 Media | 2-3 semanas |
 | 6 | Documentación operativa | 🟡 Media | 1-2 semanas |
 | 7 | Pruebas y calidad | 🟢 Baja | 2-4 semanas |
@@ -491,7 +491,13 @@ Los conductores tienen responsabilidades diferentes y deberían tener términos 
 
 ## Fase 4 — Monitoreo y observabilidad 🟡
 
-### 4.1 Logs centralizados a SIEM
+> **Estado (primer lote ejecutado):** 4.2 (endpoint Prometheus sin dependencias
+> nuevas) y 4.4 (niveles de alerta P1–P4) implementados en código; 4.1 (SIEM),
+> 4.3 (uptime) y la parte de Grafana documentadas en `docs/MONITOREO.md` (ver
+> commit `feat(observabilidad): Fase 4 — ...`). Falta que el usuario conecte los
+> servicios externos (SIEM, Grafana/Prometheus, monitor de uptime, PagerDuty).
+
+### 4.1 Logs centralizados a SIEM ✅ GUÍA LISTA (docs/MONITOREO.md; falta conectar el SIEM)
 
 Hoy los logs van a stdout del contenedor.
 
@@ -515,7 +521,7 @@ Hoy los logs van a stdout del contenedor.
 - App corriendo → logs aparecen en el SIEM
 - Buscar por `req.id` → traza completa de una request
 
-### 4.2 Dashboard de métricas (Prometheus + Grafana)
+### 4.2 Dashboard de métricas (Prometheus + Grafana) ✅ HECHO (endpoint; Grafana lo conecta el usuario)
 
 Hoy las métricas solo se ven vía `/api/metrics` sin histórico.
 
@@ -558,7 +564,7 @@ ws_connections_active 42
 - `GET /api/metrics/prometheus` → devuelve texto Prometheus válido
 - Grafana conectado → dashboards con datos
 
-### 4.3 Uptime monitoring
+### 4.3 Uptime monitoring ✅ GUÍA LISTA (docs/MONITOREO.md; falta crear el monitor)
 
 **Archivos a crear:**
 - `docs/MONITOREO.md` — Incluir sección de uptime
@@ -573,7 +579,7 @@ ws_connections_active 42
    - SMS/WhatsApp (servicios de pago)
    - Slack/Discord webhook
 
-### 4.4 Alertas con escalamiento
+### 4.4 Alertas con escalamiento ✅ HECHO (niveles P1–P4; escalamiento externo documentado)
 
 **Archivos a modificar:**
 - `apps/api/src/lib/alertas.ts` — Mejorar sistema de alertas

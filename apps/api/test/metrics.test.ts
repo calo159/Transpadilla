@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { registrarRespuesta, registrarError, snapshot } from "../src/lib/metrics";
+import { registrarRespuesta, registrarError, snapshot, metricasPrometheus } from "../src/lib/metrics";
 
 describe("metrics", () => {
   beforeEach(() => {
@@ -45,5 +45,25 @@ describe("metrics", () => {
     registrarError("string plano", "/y");
     const { ultimos_errores } = snapshot();
     expect(ultimos_errores[0]?.mensaje).toBe("string plano");
+  });
+
+  it("metricasPrometheus produce texto de exposición válido (Fase 4.2)", () => {
+    const txt = metricasPrometheus();
+    // Cabeceras HELP/TYPE + los contadores base.
+    expect(txt).toMatch(/# TYPE tp_requests_total counter/);
+    expect(txt).toMatch(/^tp_requests_total \d+$/m);
+    expect(txt).toMatch(/tp_responses_total\{class="2xx"\} \d+/);
+    expect(txt).toMatch(/tp_memory_bytes\{type="rss"\} \d+/);
+    // Sin `extra`, no aparecen las métricas opcionales.
+    expect(txt).not.toMatch(/tp_ws_connections/);
+    expect(txt).not.toMatch(/tp_db_pool/);
+  });
+
+  it("metricasPrometheus incluye ws y pool cuando se pasan (Fase 4.2)", () => {
+    const txt = metricasPrometheus({ wsConexiones: 42, dbPool: { total: 5, idle: 3, waiting: 0 } });
+    expect(txt).toMatch(/tp_ws_connections 42/);
+    expect(txt).toMatch(/tp_db_pool\{state="total"\} 5/);
+    expect(txt).toMatch(/tp_db_pool\{state="idle"\} 3/);
+    expect(txt).toMatch(/tp_db_pool\{state="waiting"\} 0/);
   });
 });

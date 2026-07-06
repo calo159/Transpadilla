@@ -233,7 +233,7 @@ app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   // La alerta externa (webhook a Slack/Discord/etc.) NO incluye err.message:
   // podría filtrar detalles internos (SQL, hosts, mensajes de librerías). El
   // detalle completo queda en los logs internos y en GET /api/metrics (admin).
-  notificarAlerta(`⚠️ TransPadilla — error 500 en ${req.method} ${req.originalUrl.split("?")[0]}`);
+  notificarAlerta(`TransPadilla — error 500 en ${req.method} ${req.originalUrl.split("?")[0]}`, "P1");
   res.status(500).json({ error: "Error interno del servidor" });
 });
 

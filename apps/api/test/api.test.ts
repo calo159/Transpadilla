@@ -375,4 +375,26 @@ suite("API (integración)", () => {
     const res = await request(app).post("/api/auth/aceptar-terminos").set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(403);
   });
+
+  it("GET /api/metrics/prometheus: sin token 401, con METRICS_TOKEN 200 texto (Fase 4.2)", async () => {
+    const prev = process.env["METRICS_TOKEN"];
+    process.env["METRICS_TOKEN"] = "token-scraper-de-prueba";
+    try {
+      // Sin credencial → 401 (cae al flujo admin sin token).
+      const anon = await request(app).get("/api/metrics/prometheus");
+      expect(anon.status).toBe(401);
+
+      // Con el token de máquina → 200, texto plano con métricas Prometheus.
+      const ok = await request(app)
+        .get("/api/metrics/prometheus")
+        .set("Authorization", "Bearer token-scraper-de-prueba");
+      expect(ok.status).toBe(200);
+      expect(ok.headers["content-type"]).toMatch(/text\/plain/);
+      expect(ok.text).toMatch(/tp_requests_total/);
+      expect(ok.text).toMatch(/tp_db_pool\{state="total"\}/);
+    } finally {
+      if (prev === undefined) delete process.env["METRICS_TOKEN"];
+      else process.env["METRICS_TOKEN"] = prev;
+    }
+  });
 });
