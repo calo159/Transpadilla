@@ -71,7 +71,12 @@ export default defineConfig({
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
     },
-    dedupe: ["react", "react-dom"],
+    // Fuerza UNA sola instancia de estas libs. Crítico para @tanstack/react-query:
+    // el QueryClient vive en un React Context; si pnpm instala dos copias (web y
+    // api-client resuelven variaciones de peers distintas), Vite empaqueta ambas y
+    // los hooks generados de api-client NO ven el <QueryClientProvider> del app
+    // → "No QueryClient set" y la página cae en el ErrorBoundary.
+    dedupe: ["react", "react-dom", "@tanstack/react-query"],
   },
   root: path.resolve(import.meta.dirname),
   build: {
