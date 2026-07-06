@@ -13,7 +13,7 @@ calidad.
 |------|------|-----------|-------------------|
 | 0 | Organización del proyecto | Hecho | — |
 | 1 | Seguridad crítica | 🟡 En progreso | 2-3 semanas |
-| 2 | Infraestructura y disponibilidad | 🔴 Alta | 2-3 semanas |
+| 2 | Infraestructura y disponibilidad | 🟡 En progreso | 2-3 semanas |
 | 3 | Cumplimiento legal | 🔴 Alta | 2-3 semanas |
 | 4 | Monitoreo y observabilidad | 🟡 Media | 1-2 semanas |
 | 5 | DevOps y CI-CD | 🟡 Media | 2-3 semanas |
@@ -204,7 +204,14 @@ Hoy el JWT dura 3 días. Si se filtra, el atacante lo usa 3 días.
 
 ## Fase 2 — Infraestructura y disponibilidad 🔴
 
-### 2.1 Backup automatizado de BD
+> **Estado (primer lote ejecutado):** 2.1, 2.2, 2.3 y 2.5 entregados como
+> scripts/documentación (ver commit `docs+scripts(infra): Fase 2 — ...`). 2.2 y
+> 2.3 requieren que el usuario ejecute los pasos en los dashboards de Render y
+> GitHub respectivamente (no hay vía por código). 2.4 (multi-instancia + Redis)
+> queda documentado en `docs/ESCALADO-MULTI-INSTANCIA.md`, diferido hasta que
+> se escale a plan de pago con 2+ instancias.
+
+### 2.1 Backup automatizado de BD ✅ HECHO
 
 Hoy solo hay un comando `pg_dump` documentado, no implementado.
 
@@ -229,7 +236,7 @@ Hoy solo hay un comando `pg_dump` documentado, no implementado.
 - Ejecutar backup → archivo .dump creado
 - Restaurar en base vacía → datos completos
 
-### 2.2 Entorno staging
+### 2.2 Entorno staging ✅ GUÍA LISTA (falta que el usuario cree el servicio)
 
 Hoy solo hay producción. No hay forma de probar cambios sin afectar el sitio en vivo.
 
@@ -253,7 +260,7 @@ Hoy solo hay producción. No hay forma de probar cambios sin afectar el sitio en
 - PR abierto → staging se actualiza automáticamente
 - Staging funcional y accesible
 
-### 2.3 Branch protection y code reviews
+### 2.3 Branch protection y code reviews ✅ GUÍA LISTA (falta que el usuario la aplique en GitHub)
 
 Cualquiera puede mergear a main sin revisión.
 
@@ -269,7 +276,7 @@ Cualquiera puede mergear a main sin revisión.
    - Include administrators
    - Lock branch (opcional)
 
-### 2.4 Multi-instancia + Redis para Socket.IO
+### 2.4 Multi-instancia + Redis para Socket.IO 🟡 DOCUMENTADO (diferido — ver docs/ESCALADO-MULTI-INSTANCIA.md)
 
 Hoy hay single point of failure: una sola instancia Node.
 
@@ -294,7 +301,7 @@ Hoy hay single point of failure: una sola instancia Node.
 - Rate-limit es global (no por instancia)
 - Matar una instancia → la otra sigue sirviendo
 
-### 2.5 Disaster Recovery Plan
+### 2.5 Disaster Recovery Plan ✅ HECHO
 
 **Archivos a crear:**
 - `docs/DRP.md` — Plan de recuperación ante desastres

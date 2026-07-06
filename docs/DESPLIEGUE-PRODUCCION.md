@@ -45,11 +45,18 @@ Todo en **un solo servidor** (DigitalOcean/Hetzner/AWS Lightsail, ~US$6–12/mes
 ## Operación 24/7 (independiente de la opción)
 
 - **HTTPS obligatorio**: el GPS del conductor solo funciona sobre HTTPS.
-- **Backups de la base**: programa un `pg_dump` diario (cron) y guárdalo fuera del
-  servidor. Ejemplo:
+- **Backups de la base**: usa [`scripts/backup-bd.sh`](../scripts/backup-bd.sh) (Linux/prod,
+  también hay [`scripts/backup-bd.ps1`](../scripts/backup-bd.ps1) para Windows/local). Hace
+  `pg_dump -Fc` (formato custom, restaurable con `pg_restore`), aplica retención (poda backups
+  locales > 90 días) y puede subir a storage externo (`BACKUP_REMOTE`) y avisar por webhook si
+  falla (`BACKUP_WEBHOOK`). Cron diario sugerido:
   ```bash
-  0 3 * * * docker exec <db> pg_dump -U postgres transpadilla | gzip > /backups/tp_$(date +\%F).sql.gz
+  0 3 * * * DATABASE_URL="postgresql://..." /ruta/al/repo/scripts/backup-bd.sh >> /var/log/tp-backup.log 2>&1
   ```
+  Para restaurar (recuperación real o el *restore test* trimestral, ver
+  [`docs/DRP.md`](DRP.md)): [`scripts/restore-bd.sh`](../scripts/restore-bd.sh)
+  `<archivo.dump> "<DATABASE_URL destino>"` — pide confirmar el host destino antes de
+  sobrescribir nada (usa `--clean`, dropea tablas existentes).
 - **Monitoreo de uptime**: configura UptimeRobot o Healthchecks (gratis) apuntando a
   `https://tu-dominio/api/healthz` (vivo) y `https://tu-dominio/api/readyz` (verifica
   también la base de datos). Activa alertas por correo/WhatsApp ante caídas.
