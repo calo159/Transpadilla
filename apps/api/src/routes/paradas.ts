@@ -32,7 +32,7 @@ router.post(
       longitud: number;
     };
     const [parada] = await db.insert(paradas).values({ nombre, latitud, longitud }).returning();
-    registrarAuditoria(req.usuario?.id, "crear_parada", "parada", parada?.id, { nombre });
+    registrarAuditoria(req, "crear_parada", "parada", parada?.id, { nombre });
     res.status(201).json(parada);
   },
 );
@@ -60,7 +60,7 @@ router.patch(
     if (pid === null) { res.status(400).json({ error: "Id de parada inválido" }); return; }
     const [actualizada] = await db.update(paradas).set(cambios).where(eq(paradas.id, pid)).returning({ id: paradas.id });
     if (!actualizada) { res.status(404).json({ error: "Parada no encontrada" }); return; }
-    registrarAuditoria(req.usuario?.id, "editar_parada", "parada", pid, cambios);
+    registrarAuditoria(req, "editar_parada", "parada", pid, cambios);
     res.json({ mensaje: "Parada actualizada" });
   },
 );
@@ -75,7 +75,7 @@ router.delete(
     await db.delete(ruta_paradas).where(eq(ruta_paradas.parada_id, id));
     const [borrada] = await db.delete(paradas).where(eq(paradas.id, id)).returning({ id: paradas.id });
     if (!borrada) { res.status(404).json({ error: "Parada no encontrada" }); return; }
-    registrarAuditoria(req.usuario?.id, "eliminar_parada", "parada", id);
+    registrarAuditoria(req, "eliminar_parada", "parada", id);
     res.json({ mensaje: "Parada eliminada" });
   },
 );
@@ -127,7 +127,7 @@ router.post(
       return;
     }
     await db.insert(ruta_paradas).values({ ruta_id: rutaId, parada_id: pid, orden: ordenNum });
-    registrarAuditoria(req.usuario?.id, "asignar_parada", "ruta", rutaId, { parada_id: pid, orden: ordenNum });
+    registrarAuditoria(req, "asignar_parada", "ruta", rutaId, { parada_id: pid, orden: ordenNum });
     res.status(201).json({ mensaje: "Parada asignada" });
   },
 );
@@ -146,7 +146,7 @@ router.delete(
       .where(and(eq(ruta_paradas.ruta_id, rutaId), eq(ruta_paradas.parada_id, paradaId)))
       .returning({ id: ruta_paradas.id });
     if (!quitada) { res.status(404).json({ error: "Esa parada no está asignada a esa ruta" }); return; }
-    registrarAuditoria(req.usuario?.id, "desasignar_parada", "ruta", rutaId, { parada_id: paradaId });
+    registrarAuditoria(req, "desasignar_parada", "ruta", rutaId, { parada_id: paradaId });
     res.json({ mensaje: "Parada quitada de la ruta" });
   },
 );

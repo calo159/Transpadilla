@@ -59,6 +59,9 @@ CREATE TABLE IF NOT EXISTS buses (
 -- tablas ya existían sin ellas.
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS identificacion varchar(30);
 ALTER TABLE buses ADD COLUMN IF NOT EXISTS ocupacion varchar(10);
+-- Bloqueo de cuenta por fuerza bruta (Fase 1.3).
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS intentos_fallidos integer NOT NULL DEFAULT 0;
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS bloqueado_hasta timestamp;
 
 -- Índices en las columnas usadas en JOIN/filtros (rendimiento a escala). Las
 -- claves foráneas no se indexan solas en PostgreSQL; estos aceleran GET /buses,
@@ -94,6 +97,9 @@ CREATE TABLE IF NOT EXISTS auditoria (
   creado_en timestamp NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_auditoria_creado ON auditoria(creado_en);
+-- Contexto de la petición (Fase 1.2): IP + user-agent de cada acción admin.
+ALTER TABLE auditoria ADD COLUMN IF NOT EXISTS ip varchar(64);
+ALTER TABLE auditoria ADD COLUMN IF NOT EXISTS user_agent text;
 
 -- Suscripciones Web Push del pasajero (por dispositivo, sin cuenta).
 CREATE TABLE IF NOT EXISTS suscripciones_push (

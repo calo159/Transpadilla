@@ -12,7 +12,7 @@ calidad.
 | Fase | Área | Prioridad | Esfuerzo estimado |
 |------|------|-----------|-------------------|
 | 0 | Organización del proyecto | Hecho | — |
-| 1 | Seguridad crítica | 🔴 Alta | 2-3 semanas |
+| 1 | Seguridad crítica | 🟡 En progreso | 2-3 semanas |
 | 2 | Infraestructura y disponibilidad | 🔴 Alta | 2-3 semanas |
 | 3 | Cumplimiento legal | 🔴 Alta | 2-3 semanas |
 | 4 | Monitoreo y observabilidad | 🟡 Media | 1-2 semanas |
@@ -60,7 +60,13 @@ Reorganización de archivos y creación de documentación base. Ya ejecutado.
 
 ## Fase 1 — Seguridad crítica 🔴
 
-### 1.1 Activar Cloudflare
+> **Estado (primer lote ejecutado):** 1.2, 1.3, 1.4 y 1.6 implementados en código
+> (ver commit `feat(seguridad): Fase 1 — ...`). 1.1 quedó documentada con
+> checklist de activación en `docs/CLOUDFLARE.md` — pendiente que el usuario la
+> active (requiere su dominio propio + dashboards de Cloudflare/Render). 1.5
+> (refresh tokens) queda como tarea dedicada aparte por su tamaño/riesgo.
+
+### 1.1 Activar Cloudflare 🟡 DOCUMENTADO (falta que el usuario lo active)
 
 Cloudflare está implementado en código pero desactivado. Hay que activarlo.
 
@@ -73,7 +79,7 @@ Cloudflare está implementado en código pero desactivado. Hay que activarlo.
 - Golpear la IP de Render directamente debe dar error
 - Cabecera `x-cf-origin-secret` debe estar presente
 
-### 1.2 Auditoría completa en todas las mutaciones admin
+### 1.2 Auditoría completa en todas las mutaciones admin ✅ HECHO
 
 Algunos endpoints admin no llaman `registrarAuditoria()`.
 
@@ -96,7 +102,7 @@ Algunos endpoints admin no llaman `registrarAuditoria()`.
 **Verificación:**
 - Hacer mutaciones admin y verificar que aparecen en `GET /auditoria`
 
-### 1.3 Bloqueo de cuenta por fuerza bruta
+### 1.3 Bloqueo de cuenta por fuerza bruta ✅ HECHO
 
 Hoy hay rate-limit por IP, pero un atacante con VPN rotante puede probar contraseñas indefinidamente.
 
@@ -123,7 +129,7 @@ Hoy hay rate-limit por IP, pero un atacante con VPN rotante puede probar contras
 - Login con credenciales correctas durante bloqueo → rechazado
 - Después de 15 min → login funciona de nuevo
 
-### 1.4 Política de contraseñas robusta
+### 1.4 Política de contraseñas robusta ✅ HECHO
 
 Hoy solo se exigen 8 caracteres.
 
@@ -175,7 +181,7 @@ Hoy el JWT dura 3 días. Si se filtra, el atacante lo usa 3 días.
 - Refresh token usado dos veces → ambos revocados (detecta robo)
 - Logout → refresh token revocado
 
-### 1.6 security.txt y política de divulgación
+### 1.6 security.txt y política de divulgación ✅ HECHO
 
 **Archivos a crear:**
 - `apps/web/public/.well-known/security.txt`

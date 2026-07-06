@@ -6,8 +6,9 @@ import { usuarios, buses } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { pool } from "@workspace/db";
 import { JWT_SECRET, authMiddleware, hashToken } from "../middleware/auth";
-import { validarBody, requerido, correoValido, texto } from "../middleware/validate";
+import { validarBody, requerido, correoValido, texto, passwordFuerte } from "../middleware/validate";
 import { rateLimit } from "../middleware/rate-limit";
+import { estaBloqueado, minutosRestantes, registrarFallo, limpiarIntentos } from "../lib/lockout";
 
 const router = Router();
 
@@ -40,11 +41,22 @@ router.post(
     res.status(401).json({ error: "Credenciales inválidas" });
     return;
   }
+  // Bloqueo de cuenta (Fase 1.3): se revisa ANTES de comparar el hash, para que
+  // un atacante no pueda seguir probando contraseñas contra esta cuenta aunque
+  // rote de IP (el rate-limit de arriba es por IP, esto es por cuenta).
+  if (estaBloqueado(usuario)) {
+    res.status(429).json({
+      error: `Cuenta bloqueada temporalmente por intentos fallidos. Espera ${minutosRestantes(usuario)} min e inténtalo de nuevo.`,
+    });
+    return;
+  }
   const valid = await bcrypt.compare(password, usuario.password);
   if (!valid) {
+    await registrarFallo(usuario.id);
     res.status(401).json({ error: "Credenciales inválidas" });
     return;
   }
+  await limpiarIntentos(usuario.id);
   const token = jwt.sign(
     { id: usuario.id, correo: usuario.correo, rol: usuario.rol },
     JWT_SECRET,
@@ -77,7 +89,7 @@ router.post(
   validarBody(
     requerido("nombre"), texto("nombre", 2, 100),
     requerido("correo"), correoValido("correo"),
-    requerido("password"), texto("password", 8, 200),
+    requerido("password"), passwordFuerte("password"),
   ),
   async (req, res) => {
   const { nombre, correo, password } = req.body as {
@@ -111,7 +123,7 @@ router.post(
   authMiddleware,
   validarBody(
     requerido("actual"),
-    requerido("nueva"), texto("nueva", 8, 200),
+    requerido("nueva"), passwordFuerte("nueva"),
   ),
   async (req, res) => {
     const { actual, nueva } = req.body as { actual: string; nueva: string };

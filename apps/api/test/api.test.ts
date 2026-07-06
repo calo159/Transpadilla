@@ -43,7 +43,7 @@ suite("API (integración)", () => {
     const correo = `test_${Date.now()}@ejemplo.com`;
     const res = await request(app)
       .post("/api/auth/register")
-      .send({ nombre: "Test", correo, password: "secreto123", rol: "admin" });
+      .send({ nombre: "Test", correo, password: "Secreto123!Fuerte", rol: "admin" });
     expect(res.status).toBe(201);
     expect(res.body.rol).toBe("pasajero");
   });
@@ -57,8 +57,8 @@ suite("API (integración)", () => {
 
   it("un pasajero no puede crear rutas (403)", async () => {
     const correo = `pas_${Date.now()}@ejemplo.com`;
-    await request(app).post("/api/auth/register").send({ nombre: "Pas", correo, password: "secreto123" });
-    const login = await request(app).post("/api/auth/login").send({ correo, password: "secreto123" });
+    await request(app).post("/api/auth/register").send({ nombre: "Pas", correo, password: "Secreto123!Fuerte" });
+    const login = await request(app).post("/api/auth/login").send({ correo, password: "Secreto123!Fuerte" });
     const token = login.body.token as string;
     const res = await request(app)
       .post("/api/rutas")
@@ -69,25 +69,25 @@ suite("API (integración)", () => {
 
   it("cambio de contraseña: verifica la actual y aplica la nueva", async () => {
     const correo = `cp_${Date.now()}@ejemplo.com`;
-    await request(app).post("/api/auth/register").send({ nombre: "CP", correo, password: "viejo123" });
-    const login = await request(app).post("/api/auth/login").send({ correo, password: "viejo123" });
+    await request(app).post("/api/auth/register").send({ nombre: "CP", correo, password: "ViejoClave2024!" });
+    const login = await request(app).post("/api/auth/login").send({ correo, password: "ViejoClave2024!" });
     const token = login.body.token as string;
 
     // Clave actual incorrecta → 401
     const malo = await request(app)
       .post("/api/auth/cambiar-password")
       .set("Authorization", `Bearer ${token}`)
-      .send({ actual: "incorrecta", nueva: "nuevo123" });
+      .send({ actual: "incorrecta", nueva: "NuevaClave2024!" });
     expect(malo.status).toBe(401);
 
     // Correcta → 200 y luego se puede iniciar sesión con la nueva
     const ok = await request(app)
       .post("/api/auth/cambiar-password")
       .set("Authorization", `Bearer ${token}`)
-      .send({ actual: "viejo123", nueva: "nuevo123" });
+      .send({ actual: "ViejoClave2024!", nueva: "NuevaClave2024!" });
     expect(ok.status).toBe(200);
 
-    const reLogin = await request(app).post("/api/auth/login").send({ correo, password: "nuevo123" });
+    const reLogin = await request(app).post("/api/auth/login").send({ correo, password: "NuevaClave2024!" });
     expect(reLogin.status).toBe(200);
   });
 
@@ -148,15 +148,15 @@ suite("API (integración)", () => {
 
   it("cerrar sesión revoca el token (queda inválido)", async () => {
     const correo = `logout_${Date.now()}@ejemplo.com`;
-    await request(app).post("/api/auth/register").send({ nombre: "LO", correo, password: "secreto123" });
-    const login = await request(app).post("/api/auth/login").send({ correo, password: "secreto123" });
+    await request(app).post("/api/auth/register").send({ nombre: "LO", correo, password: "Secreto123!Fuerte" });
+    const login = await request(app).post("/api/auth/login").send({ correo, password: "Secreto123!Fuerte" });
     const token = login.body.token as string;
 
     // Con el token vigente, cambiar contraseña funciona (401 solo por clave incorrecta, no por token)
     const antes = await request(app)
       .post("/api/auth/cambiar-password")
       .set("Authorization", `Bearer ${token}`)
-      .send({ actual: "secreto123", nueva: "secreto456" });
+      .send({ actual: "Secreto123!Fuerte", nueva: "Secreto456!Fuerte" });
     expect(antes.status).toBe(200);
 
     // Cierra sesión → revoca el token
@@ -167,7 +167,7 @@ suite("API (integración)", () => {
     const despues = await request(app)
       .post("/api/auth/cambiar-password")
       .set("Authorization", `Bearer ${token}`)
-      .send({ actual: "secreto456", nueva: "secreto789" });
+      .send({ actual: "Secreto456!Fuerte", nueva: "Secreto789!Fuerte" });
     expect(despues.status).toBe(401);
   });
 
@@ -293,5 +293,57 @@ suite("API (integración)", () => {
 
     // Validación: cliente_id demasiado corto → 400.
     expect((await request(app).post("/api/favoritos").send({ cliente_id: "x", rutas: [rutaId] })).status).toBe(400);
+  });
+
+  it("registro: rechaza contraseñas débiles (Fase 1.4)", async () => {
+    const correo = `debil_${Date.now()}@ejemplo.com`;
+    expect((await request(app).post("/api/auth/register").send({ nombre: "Debil", correo, password: "abc12345" })).status).toBe(400);
+    expect((await request(app).post("/api/auth/register").send({ nombre: "Debil", correo, password: "SinSimbolo1234" })).status).toBe(400);
+    expect((await request(app).post("/api/auth/register").send({ nombre: "Debil", correo, password: "Cambiar2024!" })).status).toBe(400); // común
+  });
+
+  it("bloqueo de cuenta: 5 logins fallidos bloquean incluso con la clave correcta (Fase 1.3)", async () => {
+    const correo = `lockout_${Date.now()}@ejemplo.com`;
+    const passwordOk = "Bloqueo123!Test";
+    // IP propia (vía X-Forwarded-For, con trust proxy=1) para no compartir el
+    // contador del rate-limit por IP con el resto de la suite (que ya hace
+    // varios logins) ni disparar un 429 de rate-limit en vez del de bloqueo.
+    const ip = "203.0.113.50";
+    await request(app).post("/api/auth/register").send({ nombre: "LK", correo, password: passwordOk });
+
+    for (let i = 0; i < 5; i++) {
+      const res = await request(app).post("/api/auth/login").set("X-Forwarded-For", ip).send({ correo, password: "incorrecta" });
+      expect(res.status).toBe(401);
+    }
+    // Ya bloqueada: incluso la clave CORRECTA es rechazada (429, no 200).
+    const bloqueado = await request(app).post("/api/auth/login").set("X-Forwarded-For", ip).send({ correo, password: passwordOk });
+    expect(bloqueado.status).toBe(429);
+  });
+
+  it("auditoría registra ip y user-agent en mutaciones admin (Fase 1.2)", async () => {
+    const login = await request(app).post("/api/auth/login").send({ correo: "admin@transpadilla.co", password: "admin123" });
+    if (login.status !== 200) return; // sin admin demo, nada que comprobar
+    const token = login.body.token as string;
+    const nombre = `Ruta Auditoria ${Date.now()}`;
+    const crear = await request(app)
+      .post("/api/rutas")
+      .set("Authorization", `Bearer ${token}`)
+      .set("User-Agent", "vitest-suite/1.0")
+      .send({ nombre, color: "#123456" });
+    expect(crear.status).toBe(201);
+
+    const { pool } = await import("@workspace/db");
+    const { rows } = await pool.query(
+      `SELECT ip, user_agent FROM auditoria WHERE accion = 'crear_ruta' AND entidad_id = $1`,
+      [crear.body.id],
+    );
+    expect(rows[0]?.user_agent).toBe("vitest-suite/1.0");
+    expect(rows[0]?.ip).toBeTruthy();
+  });
+
+  it("GET /.well-known/security.txt responde texto plano (Fase 1.6)", async () => {
+    const res = await request(app).get("/.well-known/security.txt");
+    expect(res.status).toBe(200);
+    expect(res.text).toMatch(/Contact: mailto:/);
   });
 });

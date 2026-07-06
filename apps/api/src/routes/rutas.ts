@@ -45,7 +45,7 @@ router.post(
   async (req, res) => {
     const { nombre, color = "#3498db" } = req.body as { nombre: string; color?: string };
     const [ruta] = await db.insert(rutas).values({ nombre, color }).returning();
-    registrarAuditoria(req.usuario?.id, "crear_ruta", "ruta", ruta?.id, { nombre, color });
+    registrarAuditoria(req, "crear_ruta", "ruta", ruta?.id, { nombre, color });
     res.status(201).json({ ...ruta, paradas: [] });
   },
 );
@@ -59,7 +59,7 @@ router.delete(
     if (rid === null) { res.status(400).json({ error: "Id de ruta inválido" }); return; }
     const [borrada] = await db.delete(rutas).where(eq(rutas.id, rid)).returning({ id: rutas.id });
     if (!borrada) { res.status(404).json({ error: "Ruta no encontrada" }); return; }
-    registrarAuditoria(req.usuario?.id, "eliminar_ruta", "ruta", rid);
+    registrarAuditoria(req, "eliminar_ruta", "ruta", rid);
     res.json({ mensaje: "Ruta eliminada" });
   },
 );
@@ -75,7 +75,7 @@ router.patch(
     if (rid === null) { res.status(400).json({ error: "Id de ruta inválido" }); return; }
     const [actualizada] = await db.update(rutas).set({ activa }).where(eq(rutas.id, rid)).returning({ id: rutas.id });
     if (!actualizada) { res.status(404).json({ error: "Ruta no encontrada" }); return; }
-    registrarAuditoria(req.usuario?.id, "editar_ruta", "ruta", rid, { activa });
+    registrarAuditoria(req, "editar_ruta", "ruta", rid, { activa });
     res.json({ mensaje: "Ruta actualizada" });
   },
 );
@@ -99,7 +99,7 @@ router.patch(
     if (rid === null) { res.status(400).json({ error: "Id de ruta inválido" }); return; }
     const [actualizada] = await db.update(rutas).set(cambios).where(eq(rutas.id, rid)).returning({ id: rutas.id });
     if (!actualizada) { res.status(404).json({ error: "Ruta no encontrada" }); return; }
-    registrarAuditoria(req.usuario?.id, "editar_ruta", "ruta", rid, cambios);
+    registrarAuditoria(req, "editar_ruta", "ruta", rid, cambios);
     res.json({ mensaje: "Ruta actualizada" });
   },
 );

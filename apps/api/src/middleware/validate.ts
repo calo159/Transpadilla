@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { esPasswordComun } from "../lib/passwords-comunes";
 
 /**
  * Kit de validación de entradas sin dependencias externas. Cada "regla" recibe el
@@ -72,6 +73,24 @@ export const booleano = (campo: string): Regla => (b) => {
   const v = b[campo];
   if (v === undefined || v === null) return null; // usar junto a requerido() si es obligatorio
   if (typeof v !== "boolean") return `"${campo}" debe ser true o false.`;
+  return null;
+};
+
+/**
+ * Política de contraseñas robusta (Fase 1.4 de PLAN.md): mínimo 12 caracteres,
+ * al menos una mayúscula, una minúscula, un dígito y un símbolo, y que no esté
+ * en la lista local de contraseñas comunes.
+ */
+export const passwordFuerte = (campo: string): Regla => (b) => {
+  const v = b[campo];
+  if (typeof v !== "string") return `"${campo}" debe ser texto.`;
+  if (v.length < 12) return `"${campo}" debe tener al menos 12 caracteres.`;
+  if (v.length > 200) return `"${campo}" no puede superar 200 caracteres.`;
+  if (!/[A-Z]/.test(v)) return `"${campo}" debe incluir al menos una letra mayúscula.`;
+  if (!/[a-z]/.test(v)) return `"${campo}" debe incluir al menos una letra minúscula.`;
+  if (!/[0-9]/.test(v)) return `"${campo}" debe incluir al menos un número.`;
+  if (!/[^A-Za-z0-9]/.test(v)) return `"${campo}" debe incluir al menos un símbolo (ej. !@#$%).`;
+  if (esPasswordComun(v)) return `"${campo}" es demasiado común o predecible; elige una más segura.`;
   return null;
 };
 

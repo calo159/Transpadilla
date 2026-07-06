@@ -63,7 +63,7 @@ router.post(
       .insert(buses)
       .values({ placa: placa.toUpperCase(), ruta_id: ruta_id ?? null })
       .returning();
-    registrarAuditoria(req.usuario?.id, "crear_bus", "bus", bus?.id, { placa: placa.toUpperCase(), ruta_id: ruta_id ?? null });
+    registrarAuditoria(req, "crear_bus", "bus", bus?.id, { placa: placa.toUpperCase(), ruta_id: ruta_id ?? null });
     res.status(201).json({ ...bus, actualizado: null });
   },
 );
@@ -77,7 +77,7 @@ router.delete(
     if (bid === null) { res.status(400).json({ error: "Id de bus inválido" }); return; }
     const [borrado] = await db.delete(buses).where(eq(buses.id, bid)).returning({ id: buses.id });
     if (!borrado) { res.status(404).json({ error: "Bus no encontrado" }); return; }
-    registrarAuditoria(req.usuario?.id, "eliminar_bus", "bus", bid);
+    registrarAuditoria(req, "eliminar_bus", "bus", bid);
     res.json({ mensaje: "Bus eliminado" });
   },
 );
@@ -118,7 +118,7 @@ router.patch(
       .where(eq(buses.id, bid))
       .returning({ id: buses.id });
     if (!actualizado) { res.status(404).json({ error: "Bus no encontrado" }); return; }
-    registrarAuditoria(req.usuario?.id, "editar_bus", "bus", actualizado.id, cambios);
+    registrarAuditoria(req, "editar_bus", "bus", actualizado.id, cambios);
     res.json({ mensaje: "Bus actualizado" });
   },
 );

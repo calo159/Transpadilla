@@ -65,7 +65,7 @@ router.post(
         identificacion: identificacion.trim(),
       })
       .returning({ id: usuarios.id, nombre: usuarios.nombre, correo: usuarios.correo, rol: usuarios.rol });
-    registrarAuditoria(req.usuario?.id, "crear_conductor", "conductor", nuevo?.id, { nombre: nombre.trim(), correo: correoNorm });
+    registrarAuditoria(req, "crear_conductor", "conductor", nuevo?.id, { nombre: nombre.trim(), correo: correoNorm });
     res.status(201).json(nuevo);
   },
 );
@@ -81,7 +81,7 @@ router.delete("/conductores/:id", ...soloAdmin, async (req, res) => {
     .returning({ id: usuarios.id });
   if (!borrado) { res.status(404).json({ error: "Conductor no encontrado" }); return; }
   // Su bus queda libre solo: la FK buses.conductor_id es ON DELETE SET NULL.
-  registrarAuditoria(req.usuario?.id, "eliminar_conductor", "conductor", id);
+  registrarAuditoria(req, "eliminar_conductor", "conductor", id);
   res.json({ mensaje: "Conductor eliminado" });
 });
 
@@ -111,7 +111,7 @@ router.patch("/buses/:id/conductor", ...soloAdmin, async (req, res) => {
     .where(eq(buses.id, busId))
     .returning({ id: buses.id });
   if (!actualizado) { res.status(404).json({ error: "Bus no encontrado" }); return; }
-  registrarAuditoria(req.usuario?.id, "asignar_conductor", "bus", busId, { conductor_id: nuevoConductor });
+  registrarAuditoria(req, "asignar_conductor", "bus", busId, { conductor_id: nuevoConductor });
   res.json({ mensaje: "Conductor actualizado" });
 });
 

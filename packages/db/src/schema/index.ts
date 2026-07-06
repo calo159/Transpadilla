@@ -19,6 +19,11 @@ export const usuarios = pgTable("usuarios", {
   password: varchar("password", { length: 200 }).notNull(),
   rol: varchar("rol", { length: 20 }).notNull().default("pasajero"),
   identificacion: varchar("identificacion", { length: 30 }),
+  // Bloqueo de cuenta por fuerza bruta (Fase 1.3): se incrementa en cada login
+  // fallido; al llegar a 5 se fija bloqueado_hasta = now()+15min. Se resetea en
+  // login exitoso. Complementa (no reemplaza) el rate-limit por IP.
+  intentos_fallidos: integer("intentos_fallidos").notNull().default(0),
+  bloqueado_hasta: timestamp("bloqueado_hasta"),
 });
 
 export const rutas = pgTable("rutas", {
@@ -98,6 +103,10 @@ export const auditoria = pgTable(
     entidad_tipo: varchar("entidad_tipo", { length: 30 }),
     entidad_id: integer("entidad_id"),
     detalle: jsonb("detalle"),
+    // Contexto de la petición (Fase 1.2), para poder trazar de dónde vino cada
+    // acción administrativa. Igual que el resto de la tabla: solo INSERT.
+    ip: varchar("ip", { length: 64 }),
+    user_agent: text("user_agent"),
     creado_en: timestamp("creado_en").notNull().defaultNow(),
   },
   (t) => [index("idx_auditoria_creado").on(t.creado_en)],

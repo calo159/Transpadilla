@@ -167,6 +167,22 @@ app.use("/api", (_req, res) => {
   res.status(404).json({ error: "Recurso no encontrado" });
 });
 
+// security.txt (Fase 1.6 de PLAN.md, RFC 9116): política de divulgación
+// responsable para investigadores de seguridad. Ruta explícita (no un archivo
+// en apps/web/public) porque express.static ignora dotfiles como .well-known
+// por defecto. Se registra ANTES del fallback SPA para que no lo intercepte.
+const SECURITY_TXT = [
+  "Contact: mailto:seguridad@transpadilla.co",
+  "Expires: 2027-12-31T23:59:00.000Z",
+  "Preferred-Languages: es, en",
+  "Canonical: https://transpadilla-web.onrender.com/.well-known/security.txt",
+  "Policy: https://transpadilla-web.onrender.com/terminos",
+  "",
+].join("\n");
+app.get(["/.well-known/security.txt", "/security.txt"], (_req, res) => {
+  res.type("text/plain").send(SECURITY_TXT);
+});
+
 // ─── Frontend (producción) ──────────────────────────────────────────────────
 // En producción, el mismo servidor Express sirve la app de React ya construida,
 // de modo que todo el sistema vive en un solo servicio (un único dominio/HTTPS).

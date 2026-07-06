@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { requerido, texto, correoValido, numeroEnRango, enLista, booleano, colorHex, parseIdParam } from "../src/middleware/validate";
+import { requerido, texto, correoValido, numeroEnRango, enLista, booleano, colorHex, parseIdParam, passwordFuerte } from "../src/middleware/validate";
 
 describe("requerido", () => {
   it("falla si falta o está vacío", () => {
@@ -62,6 +62,21 @@ describe("colorHex", () => {
     expect(colorHex("color")({ color: "#12345" })).toMatch(/hex/);
     expect(colorHex("color")({ color: "2558A5" })).toMatch(/hex/);
     expect(colorHex("color")({ color: "#2558A5; drop table" })).toMatch(/hex/);
+  });
+});
+
+describe("passwordFuerte", () => {
+  it("rechaza contraseñas débiles/cortas/predecibles", () => {
+    expect(passwordFuerte("password")({ password: "abc123" })).toMatch(/al menos 12/);
+    expect(passwordFuerte("password")({ password: "Admin123!" })).toMatch(/al menos 12/); // 9 chars
+    expect(passwordFuerte("password")({ password: "todaminuscula1!" })).toMatch(/mayúscula/);
+    expect(passwordFuerte("password")({ password: "TODAMAYUSCULA1!" })).toMatch(/minúscula/);
+    expect(passwordFuerte("password")({ password: "SinNumerosAqui!" })).toMatch(/número/);
+    expect(passwordFuerte("password")({ password: "SinSimbolosAqui1" })).toMatch(/símbolo/);
+    expect(passwordFuerte("password")({ password: "Cambiar2024!" })).toMatch(/común/); // está en la lista
+  });
+  it("acepta una contraseña fuerte real", () => {
+    expect(passwordFuerte("password")({ password: "Rioh4cha#Buses26" })).toBeNull();
   });
 });
 
