@@ -48,6 +48,30 @@ respeta los headers, pero conviene excluir explícitamente esas rutas.
 
 ---
 
+## ✅ Checklist de activación (Fase 1.1 de PLAN.md — el orden importa)
+
+⚠️ **No definas `CLOUDFLARE_ORIGIN_SECRET` en Render antes del paso 3.** Si lo
+haces, la app empieza a exigir el secreto en cada request a `/api` mientras
+Cloudflare *todavía no lo está inyectando* → el sitio entero responde 403 hasta
+que completes el Transform Rule. Sigue este orden exacto:
+
+1. [ ] Pasos 1–6 de arriba: sitio agregado a Cloudflare, nameservers apuntando,
+   DNS con proxy activado, SSL en *Full (strict)*, WAF/Bot Fight Mode activos.
+2. [ ] En Render: define `BEHIND_CLOUDFLARE=true` **solo** (todavía sin el secreto).
+   Verifica que el sitio siga funcionando normal por tu dominio.
+3. [ ] En Cloudflare → **Rules → Transform Rules → Modify Request Header →
+   Add** → header `x-cf-origin-secret` con un valor largo y aleatorio que
+   generes ahora (guárdalo).
+4. [ ] Recién ahora, en Render: define `CLOUDFLARE_ORIGIN_SECRET` con **ese
+   mismo valor**. Guarda — dispara un redeploy.
+5. [ ] Verifica de inmediato (ver "Comprobar que quedó bien" abajo): tu dominio
+   debe seguir funcionando; `https://transpadilla-web.onrender.com/api/buses`
+   directo debe dar **403**. Si tu dominio también da 403, revisa que el
+   Transform Rule esté activo y bien escrito — revierte quitando
+   `CLOUDFLARE_ORIGIN_SECRET` de Render si necesitas restaurar el acceso ya.
+
+---
+
 ## Conectar con la app (ya implementado)
 
 Define estas variables en Render (servicio `transpadilla-web`):
