@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { setAuthTokenGetter } from "@workspace/api-client";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LogoTP } from "@/components/LogoTP";
+import { CookieBanner } from "@/components/CookieBanner";
 import Pasajero from "@/pages/Pasajero";
 
 // Pasajero (ruta "/") va eager por ser la landing más usada; el resto se carga
@@ -15,6 +16,7 @@ const Conductor = lazy(() => import("@/pages/Conductor"));
 const Admin = lazy(() => import("@/pages/Admin"));
 const Privacidad = lazy(() => import("@/pages/Privacidad"));
 const Terminos = lazy(() => import("@/pages/Terminos"));
+const TerminosConductor = lazy(() => import("@/pages/TerminosConductor"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 setAuthTokenGetter(() => localStorage.getItem("transpadilla_token"));
@@ -59,6 +61,7 @@ function Router() {
         <Route path="/admin" component={Admin} />
         <Route path="/privacidad" component={Privacidad} />
         <Route path="/terminos" component={Terminos} />
+        <Route path="/terminos-conductor" component={TerminosConductor} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -73,6 +76,7 @@ function App() {
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <Router />
           </WouterRouter>
+          <CookieBanner />
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>

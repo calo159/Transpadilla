@@ -2,13 +2,13 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useGetBuses, useUpdateGps, useReportarNovedad, useFinalizarRecorrido, getGetBusesQueryKey } from "@workspace/api-client";
 import { useQueryClient } from "@tanstack/react-query";
-import { getUser, cerrarSesion, homeForRol } from "@/lib/auth";
+import { getUser, cerrarSesion, homeForRol, setAuth, getToken } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import type { BackgroundGeolocationPlugin } from "@capacitor-community/background-geolocation";
 
 const BackgroundGeolocation = registerPlugin<BackgroundGeolocationPlugin>("BackgroundGeolocation");
-import { Bus, LogOut, Play, Square, AlertTriangle, Radio, Clock, ChevronLeft, Users, User, MapPin, X, KeyRound, Loader2 } from "lucide-react";
+import { Bus, LogOut, Play, Square, AlertTriangle, Radio, Clock, ChevronLeft, Users, User, MapPin, X, KeyRound, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { LogoTP } from "@/components/LogoTP";
@@ -49,6 +49,12 @@ export default function Conductor() {
   const [showMapa, setShowMapa] = useState(false);
   const [confirmar, setConfirmar] = useState<ConfirmOpts | null>(null);
   const [cambiarPass, setCambiarPass] = useState(false);
+  // Consentimiento de Términos de Conductor (Fase 3.4): bloquea el panel hasta
+  // aceptar en el primer ingreso (o cuando cambia la versión de los términos).
+  const [terminosPendientes, setTerminosPendientes] = useState(
+    user?.rol === "conductor" && !user?.terminos_aceptados,
+  );
+  const [aceptandoTerminos, setAceptandoTerminos] = useState(false);
   const [gpsError, setGpsError] = useState(false);
   // Cuántos envíos de ubicación fallaron seguidos (red caída). Si es > 0, el
   // conductor ve "SIN RED" para saber que su ubicación no está llegando.
@@ -269,6 +275,23 @@ export default function Conductor() {
     }
     await cerrarSesion();
     setLocation("/");
+  };
+
+  const aceptarTerminos = async () => {
+    setAceptandoTerminos(true);
+    try {
+      const res = await apiFetch("/api/auth/aceptar-terminos", { method: "POST" });
+      if (!res.ok) throw new Error();
+      // Refleja el consentimiento en el usuario local para no volver a pedirlo.
+      const tok = getToken();
+      if (user && tok) setAuth(tok, { ...user, terminos_aceptados: true });
+      setTerminosPendientes(false);
+      toast({ title: "Términos aceptados. ¡Bienvenido!" });
+    } catch {
+      toast({ title: "No se pudo registrar la aceptación. Revisa tu conexión.", variant: "destructive" });
+    } finally {
+      setAceptandoTerminos(false);
+    }
   };
 
   const enviarOcupacion = async (nivel: "vacio" | "medio" | "lleno") => {
@@ -540,6 +563,51 @@ export default function Conductor() {
 
       <ConfirmDialog opts={confirmar} onClose={() => setConfirmar(null)} />
       <CambiarPasswordDialog open={cambiarPass} onClose={() => setCambiarPass(false)} />
+
+      {/* Consentimiento de Términos de Conductor (Fase 3.4): overlay bloqueante en
+          el primer ingreso. No es dismissible — solo se puede aceptar (o cerrar
+          sesión desde el header no está disponible aquí; debe aceptar para operar). */}
+      {terminosPendientes && (
+        <div
+          className="tp-light fixed inset-0 z-[3000] flex items-center justify-center p-4"
+          style={{ background: "rgba(15,30,60,0.55)", backdropFilter: "blur(2px)" }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Aceptación de términos del conductor"
+        >
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 tp-shadow-float tp-dialog">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "rgba(37,88,165,0.1)", color: "var(--color-blue)" }}>
+                <ShieldCheck className="w-6 h-6" />
+              </span>
+              <h2 className="font-display text-lg font-extrabold" style={{ color: "var(--color-navy)" }}>Términos para conductores</h2>
+            </div>
+            <p className="text-sm leading-relaxed mb-2" style={{ color: "var(--color-gray-text)" }}>
+              Antes de operar, debes leer y aceptar los términos del Panel del Conductor: incluyen
+              el tratamiento de tu ubicación GPS durante el turno, el uso de la app y tus
+              obligaciones (Ley 1581 de 2012).
+            </p>
+            <a
+              href="/terminos-conductor"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block text-sm font-semibold mb-5"
+              style={{ color: "var(--color-blue)" }}
+            >
+              Leer los Términos para Conductores completos →
+            </a>
+            <button
+              onClick={aceptarTerminos}
+              disabled={aceptandoTerminos}
+              data-testid="button-aceptar-terminos"
+              className="w-full h-12 rounded-xl text-white font-bold active:scale-[0.98] transition-transform disabled:opacity-60"
+              style={{ background: "var(--color-navy)" }}
+            >
+              {aceptandoTerminos ? "Registrando..." : "He leído y acepto los términos"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

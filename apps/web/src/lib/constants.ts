@@ -7,6 +7,13 @@ export const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMERO}`;
 export const INSTAGRAM_URL = "https://www.instagram.com/transpadilla.co";
 export const TARIFA_COP = "$3.000";
 
+// Delegado de Protección de Datos (DPO) — Ley 1581 de 2012 (Habeas Data).
+// ⚠️ PLACEHOLDERS: completar con los datos reales del responsable designado
+// antes de salir a producción con tráfico real de una entidad pública.
+export const DPO_NOMBRE = "[Nombre del Delegado de Protección de Datos]";
+export const DPO_EMAIL = "proteccion.datos@transpadilla.co";
+export const DPO_TELEFONO = "[Teléfono de contacto]";
+
 // Opciones rápidas de novedad que el conductor puede reportar (panel Conductor).
 export const NOVEDAD_OPCIONES: { label: string; texto: string }[] = [
   { label: "Tráfico", texto: "Tráfico — demora estimada" },

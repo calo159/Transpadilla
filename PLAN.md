@@ -14,7 +14,7 @@ calidad.
 | 0 | Organización del proyecto | Hecho | — |
 | 1 | Seguridad crítica | 🟡 En progreso | 2-3 semanas |
 | 2 | Infraestructura y disponibilidad | 🟡 En progreso | 2-3 semanas |
-| 3 | Cumplimiento legal | 🔴 Alta | 2-3 semanas |
+| 3 | Cumplimiento legal | 🟡 En progreso | 2-3 semanas |
 | 4 | Monitoreo y observabilidad | 🟡 Media | 1-2 semanas |
 | 5 | DevOps y CI-CD | 🟡 Media | 2-3 semanas |
 | 6 | Documentación operativa | 🟡 Media | 1-2 semanas |
@@ -325,7 +325,15 @@ Hoy hay single point of failure: una sola instancia Node.
 
 ## Fase 3 — Cumplimiento legal 🔴
 
-### 3.1 Consentimiento de datos en registro
+> **Estado (primer lote ejecutado):** 3.3, 3.4, 3.5 y 3.6 implementados (ver
+> commit `feat(legal): Fase 3 — ...`). 3.1 (consentimiento) quedó **cubierto por
+> 3.4**: como no hay registro público (los pasajeros no tienen cuenta), el
+> consentimiento relevante es el del conductor al aceptar los términos en su
+> primer ingreso. 3.2 (ARCO) queda como tarea dedicada aparte. ⚠️ Todos los
+> textos legales son **borradores** que requieren revisión jurídica + datos
+> reales del DPO (placeholders en `apps/web/src/lib/constants.ts`).
+
+### 3.1 Consentimiento de datos en registro 🟡 CUBIERTO POR 3.4 (no hay registro público)
 
 Al registrar un conductor o admin, no se muestra aviso de privacidad ni se solicita consentimiento explícito.
 
@@ -361,7 +369,7 @@ create table consentimientos (
 - Registro sin aceptar → rechazado
 - Registro aceptando → consentimiento guardado en BD
 
-### 3.2 Endpoint de derechos ARCO
+### 3.2 Endpoint de derechos ARCO 🟡 DIFERIDO (tarea aparte)
 
 La política menciona derechos pero no hay mecanismo automatizado.
 
@@ -404,7 +412,7 @@ La política menciona derechos pero no hay mecanismo automatizado.
 - Solicitar derecho ARCO → recibe radicado
 - Consultar radicado → estado "recibida"
 
-### 3.3 DPO y datos de contacto
+### 3.3 DPO y datos de contacto ✅ HECHO (borrador — completar datos reales)
 
 **Archivos a modificar:**
 - `apps/web/src/pages/Privacidad.tsx` — Agregar datos del DPO
@@ -418,7 +426,7 @@ La política menciona derechos pero no hay mecanismo automatizado.
    Teléfono: [Teléfono]
    ```
 
-### 3.4 Términos para conductores
+### 3.4 Términos para conductores ✅ HECHO (borrador — revisión legal)
 
 Los conductores tienen responsabilidades diferentes y deberían tener términos específicos.
 
@@ -442,7 +450,7 @@ Los conductores tienen responsabilidades diferentes y deberían tener términos 
 - Conductor nuevo → ve términos antes de usar la app
 - No puede continuar sin aceptar
 
-### 3.5 SLA formal y ley aplicable
+### 3.5 SLA formal y ley aplicable ✅ HECHO (borrador — revisión legal)
 
 **Archivos a modificar:**
 - `apps/web/src/pages/Terminos.tsx` — Agregar cláusulas
@@ -460,7 +468,7 @@ Los conductores tienen responsabilidades diferentes y deberían tener términos 
    Ventana de mantenimiento programado: domingos 2:00 AM - 4:00 AM.
    ```
 
-### 3.6 Banner de cookies
+### 3.6 Banner de cookies ✅ HECHO
 
 **Archivos a crear:**
 - `apps/web/src/components/CookieBanner.tsx`

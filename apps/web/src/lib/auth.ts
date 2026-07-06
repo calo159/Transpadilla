@@ -3,6 +3,8 @@ export interface AuthUser {
   nombre: string;
   correo: string;
   rol: string;
+  /** Conductor: si ya aceptó la versión vigente de los Términos (Fase 3.4). */
+  terminos_aceptados?: boolean;
 }
 
 export function getUser(): AuthUser | null {

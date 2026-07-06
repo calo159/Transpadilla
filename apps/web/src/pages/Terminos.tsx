@@ -39,12 +39,31 @@ export default function Terminos() {
         no se responsabiliza por decisiones tomadas con base en estimaciones de llegada, ni por
         pérdidas derivadas de interrupciones del servicio o inexactitudes en los datos.</LegalP>
 
-      <LegalH2>6. Propiedad</LegalH2>
+      <LegalH2>6. Nivel de servicio (SLA)</LegalH2>
+      <LegalP>Para el uso institucional, TransPadilla se propone los siguientes objetivos de
+        servicio (indicativos, sujetos al acuerdo formal con la entidad contratante):</LegalP>
+      <LegalUl items={[
+        "Disponibilidad objetivo: 99.5% mensual del servicio.",
+        "Tiempo máximo de respuesta ante incidentes críticos (servicio caído): 1 hora.",
+        "Ventana de mantenimiento programado: domingos de 2:00 a 4:00 a.m.",
+        "Respaldos de la base de datos y plan de recuperación ante desastres documentados.",
+      ]} />
+
+      <LegalH2>7. Ley aplicable y jurisdicción</LegalH2>
+      <LegalP>Estos términos se rigen por las leyes de la República de Colombia, en particular la
+        Ley 1581 de 2012 y el Decreto 1377 de 2013 en materia de protección de datos. Cualquier
+        controversia derivada del uso de la plataforma se someterá a los juzgados competentes de
+        Riohacha, La Guajira, Colombia.</LegalP>
+
+      <LegalH2>8. Propiedad</LegalH2>
       <LegalP>La marca, el diseño y el software de TransPadilla son propiedad de sus titulares.
         No se permite su reproducción o uso no autorizado.</LegalP>
 
-      <LegalH2>7. Contacto</LegalH2>
+      <LegalH2>9. Contacto</LegalH2>
       <LegalP>Para dudas sobre estos términos, escríbenos por WhatsApp al {WHATSAPP_NUMERO}.</LegalP>
+
+      <LegalP><em>Nota: este documento es un borrador de referencia y debe ser revisado y validado
+        por el área jurídica de la entidad antes de su adopción formal.</em></LegalP>
     </LegalPage>
   );
 }

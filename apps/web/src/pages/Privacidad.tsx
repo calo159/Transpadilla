@@ -1,6 +1,6 @@
 import { LegalPage, LegalH2, LegalP, LegalUl } from "@/components/LegalPage";
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { WHATSAPP_NUMERO } from "@/lib/constants";
+import { WHATSAPP_NUMERO, DPO_NOMBRE, DPO_EMAIL, DPO_TELEFONO } from "@/lib/constants";
 
 export default function Privacidad() {
   useDocumentTitle("Política de Privacidad · TransPadilla");
@@ -47,14 +47,28 @@ export default function Privacidad() {
         (bcrypt), controles de acceso por rol y medidas contra abuso. Ningún sistema es
         infalible, pero trabajamos para proteger la información con estándares razonables.</LegalP>
 
-      <LegalH2>6. Tus derechos</LegalH2>
-      <LegalP>Como titular de datos puedes conocer, actualizar, rectificar y solicitar la
-        supresión de tus datos, así como revocar la autorización, conforme a la ley. Para
-        ejercerlos, escríbenos por WhatsApp al {WHATSAPP_NUMERO}.</LegalP>
+      <LegalH2>6. Tus derechos (ARCO)</LegalH2>
+      <LegalP>Como titular de datos puedes ejercer tus derechos de <strong>acceso, rectificación,
+        cancelación y oposición (ARCO)</strong>: conocer, actualizar y rectificar tus datos,
+        solicitar su supresión y revocar la autorización, conforme a la Ley 1581 de 2012. Para
+        ejercerlos, escríbenos por WhatsApp al {WHATSAPP_NUMERO} o contacta al Delegado de
+        Protección de Datos (ver sección 7). Responderemos en los términos y plazos que fija la ley.</LegalP>
 
-      <LegalH2>7. Cambios</LegalH2>
+      <LegalH2>7. Delegado de Protección de Datos (DPO)</LegalH2>
+      <LegalP>Para asuntos relacionados con el tratamiento de tus datos personales, puedes
+        dirigirte al responsable designado:</LegalP>
+      <LegalUl items={[
+        <span key="n"><strong>Nombre:</strong> {DPO_NOMBRE}</span>,
+        <span key="e"><strong>Correo:</strong> {DPO_EMAIL}</span>,
+        <span key="t"><strong>Teléfono:</strong> {DPO_TELEFONO}</span>,
+      ]} />
+
+      <LegalH2>8. Cambios</LegalH2>
       <LegalP>Podemos actualizar esta política; los cambios se publicarán en esta misma
         página con su nueva fecha de actualización.</LegalP>
+
+      <LegalP><em>Nota: este documento es un borrador de referencia y debe ser revisado y validado
+        por el área jurídica de la entidad antes de su adopción formal.</em></LegalP>
     </LegalPage>
   );
 }

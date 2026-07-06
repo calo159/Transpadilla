@@ -346,4 +346,33 @@ suite("API (integración)", () => {
     expect(res.status).toBe(200);
     expect(res.text).toMatch(/Contact: mailto:/);
   });
+
+  it("conductor: aceptar términos registra el consentimiento (Fase 3.4)", async () => {
+    // IP dedicada (X-Forwarded-For + trust proxy=1) para no compartir el contador
+    // del rate-limit por IP con el resto de la suite y que este test corra de verdad.
+    const ip = "203.0.113.60";
+    const login = await request(app).post("/api/auth/login").set("X-Forwarded-For", ip).send({ correo: "conductor@transpadilla.co", password: "conductor123" });
+    if (login.status !== 200) return; // sin conductor demo, nada que comprobar
+    const token = login.body.token as string;
+
+    // El login expone si ya aceptó la versión vigente de los términos.
+    expect(login.body.usuario).toHaveProperty("terminos_aceptados");
+
+    // Aceptar → 200; y un nuevo login debe reflejar terminos_aceptados = true.
+    const aceptar = await request(app).post("/api/auth/aceptar-terminos").set("Authorization", `Bearer ${token}`);
+    expect(aceptar.status).toBe(200);
+
+    const relogin = await request(app).post("/api/auth/login").set("X-Forwarded-For", ip).send({ correo: "conductor@transpadilla.co", password: "conductor123" });
+    expect(relogin.body.usuario.terminos_aceptados).toBe(true);
+  });
+
+  it("un pasajero NO puede aceptar términos de conductor (403)", async () => {
+    const ip = "203.0.113.61";
+    const correo = `pas_term_${Date.now()}@ejemplo.com`;
+    await request(app).post("/api/auth/register").send({ nombre: "PasT", correo, password: "Secreto123!Fuerte" });
+    const login = await request(app).post("/api/auth/login").set("X-Forwarded-For", ip).send({ correo, password: "Secreto123!Fuerte" });
+    const token = login.body.token as string;
+    const res = await request(app).post("/api/auth/aceptar-terminos").set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(403);
+  });
 });

@@ -62,6 +62,11 @@ ALTER TABLE buses ADD COLUMN IF NOT EXISTS ocupacion varchar(10);
 -- Bloqueo de cuenta por fuerza bruta (Fase 1.3).
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS intentos_fallidos integer NOT NULL DEFAULT 0;
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS bloqueado_hasta timestamp;
+-- Consentimiento de términos del conductor (Fase 3.4).
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS terminos_conductor_aceptados boolean NOT NULL DEFAULT false;
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS terminos_conductor_version varchar(20);
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS terminos_conductor_fecha timestamp;
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS terminos_conductor_ip varchar(64);
 
 -- Índices en las columnas usadas en JOIN/filtros (rendimiento a escala). Las
 -- claves foráneas no se indexan solas en PostgreSQL; estos aceleran GET /buses,

@@ -24,6 +24,13 @@ export const usuarios = pgTable("usuarios", {
   // login exitoso. Complementa (no reemplaza) el rate-limit por IP.
   intentos_fallidos: integer("intentos_fallidos").notNull().default(0),
   bloqueado_hasta: timestamp("bloqueado_hasta"),
+  // Consentimiento de términos del conductor (Fase 3.4/3.1): se registra al
+  // aceptar los Términos de Conductor en el primer ingreso. Guarda versión,
+  // fecha e IP como evidencia del consentimiento (Ley 1581 de 2012).
+  terminos_conductor_aceptados: boolean("terminos_conductor_aceptados").notNull().default(false),
+  terminos_conductor_version: varchar("terminos_conductor_version", { length: 20 }),
+  terminos_conductor_fecha: timestamp("terminos_conductor_fecha"),
+  terminos_conductor_ip: varchar("terminos_conductor_ip", { length: 64 }),
 });
 
 export const rutas = pgTable("rutas", {

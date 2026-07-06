@@ -9,8 +9,13 @@ import { JWT_SECRET, authMiddleware, hashToken } from "../middleware/auth";
 import { validarBody, requerido, correoValido, texto, passwordFuerte } from "../middleware/validate";
 import { rateLimit } from "../middleware/rate-limit";
 import { estaBloqueado, minutosRestantes, registrarFallo, limpiarIntentos } from "../lib/lockout";
+import { clienteIp } from "../lib/client-ip";
 
 const router = Router();
+
+// Versión vigente de los Términos de Conductor. Súbela cuando cambie el texto
+// para forzar a que los conductores vuelvan a aceptar (Fase 3.4).
+export const TERMINOS_CONDUCTOR_VERSION = "2026-07";
 
 // Hash bcrypt "señuelo" para comparar cuando el usuario no existe: así el login
 // tarda lo mismo exista o no la cuenta → evita enumeración de usuarios por timing.
@@ -75,6 +80,12 @@ router.post(
       nombre: usuario.nombre,
       correo: usuario.correo,
       rol: usuario.rol,
+      // El frontend del conductor usa esto para exigir aceptar los términos en el
+      // primer ingreso (Fase 3.4). Se considera "pendiente" también si la versión
+      // aceptada quedó vieja frente a la vigente.
+      terminos_aceptados:
+        usuario.terminos_conductor_aceptados &&
+        usuario.terminos_conductor_version === TERMINOS_CONDUCTOR_VERSION,
     },
   });
 });
@@ -183,6 +194,26 @@ router.post("/auth/cerrar-sesion", authMiddleware, async (req, res) => {
   }
 
   res.json({ mensaje: "Sesión cerrada" });
+});
+
+// Aceptación de los Términos de Conductor (Fase 3.4). Registra el consentimiento
+// (versión vigente, fecha e IP) para el conductor autenticado. El frontend lo
+// llama desde el modal bloqueante del primer ingreso.
+router.post("/auth/aceptar-terminos", authMiddleware, async (req, res) => {
+  if (req.usuario!.rol !== "conductor") {
+    res.status(403).json({ error: "Solo los conductores aceptan estos términos" });
+    return;
+  }
+  await db
+    .update(usuarios)
+    .set({
+      terminos_conductor_aceptados: true,
+      terminos_conductor_version: TERMINOS_CONDUCTOR_VERSION,
+      terminos_conductor_fecha: new Date(),
+      terminos_conductor_ip: clienteIp(req),
+    })
+    .where(eq(usuarios.id, req.usuario!.id));
+  res.json({ mensaje: "Términos aceptados", version: TERMINOS_CONDUCTOR_VERSION });
 });
 
 export default router;
