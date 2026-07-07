@@ -918,27 +918,29 @@ export default function Pasajero() {
   const DesktopSidebar = () => (
     <div
       className={`hidden md:flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${sidebarOpen ? "tp-rail" : ""}`}
-      style={{ width: sidebarOpen ? 300 : 0, minWidth: sidebarOpen ? 300 : 0, borderRight: "1px solid #e6ebf2", background: "#fff" }}
+      style={{ width: sidebarOpen ? 340 : 0, minWidth: sidebarOpen ? 340 : 0, borderRight: "1px solid #e5e7eb", background: "#fff" }}
     >
-      {/* Encabezado de marca: logo + nombre + badge EN VIVO (sin TopBar navy) */}
+      {/* Encabezado de marca: logo + nombre + EN VIVO */}
       <div className="flex items-center gap-2.5 px-4 py-3.5 shrink-0" style={{ borderBottom: "1px solid #f1f5f9" }}>
-        <LogoTP size={36} className="!rounded-[11px]" />
+        <LogoTP size={36} />
         <div className="flex-1 min-w-0 leading-tight">
-          <p className="font-display font-extrabold text-[15px] truncate" style={{ color: "var(--color-navy)" }}>TransPadilla</p>
-          <p className="text-[10px] font-medium truncate mt-0.5" style={{ color: "#8a97a8" }}>Riohacha</p>
+          <p className="font-display font-extrabold text-[15px]" style={{ color: "var(--color-navy)" }}>
+            Trans<span style={{ color: "var(--color-sky)" }}>Padilla</span>
+          </p>
+          <p className="text-[11px] font-medium" style={{ color: "var(--color-gray-text)" }}>Riohacha</p>
         </div>
         <span
           role="status"
           aria-live="polite"
-          className="notranslate flex items-center gap-1.5 text-[9px] font-bold px-2.5 py-1 rounded-full shrink-0"
+          className="notranslate flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0"
           style={conectado
-            ? { background: "rgba(56,161,105,0.12)", color: "#2f8a56" }
+            ? { background: "rgba(56,161,105,0.12)", color: "var(--color-success)" }
             : { background: "var(--color-gray-light)", color: "var(--color-gray-text)" }}
         >
           <span
             aria-hidden="true"
             className={`w-1.5 h-1.5 rounded-full ${conectado ? "animate-pulse" : ""}`}
-            style={{ background: conectado ? "#38A169" : "var(--color-gray-text)" }}
+            style={{ background: conectado ? "var(--color-success)" : "var(--color-gray-text)" }}
           />
           {conectado ? "EN VIVO" : "SIN CONEXIÓN"}
         </span>
@@ -947,13 +949,13 @@ export default function Pasajero() {
       {/* Buscador */}
       <div className="px-3 py-2.5 shrink-0" style={{ borderBottom: "1px solid #f1f5f9" }}>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#8a97a8" }} />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: "var(--color-blue)" }} />
           <Input
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar ruta o parada"
-            className="pl-9 h-10 text-xs rounded-xl border-transparent"
-            style={{ background: "#f4f7fb", color: "var(--color-navy)" }}
+            className="pl-8 h-9 text-xs rounded-lg border-gray-200"
+            style={{ background: "#fff", color: "var(--color-navy)" }}
           />
           {busqueda && (
             <button onClick={() => setBusqueda("")} aria-label="Limpiar búsqueda" className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground">
@@ -967,9 +969,18 @@ export default function Pasajero() {
 
       {/* Lista de rutas */}
       <div className="flex-1 overflow-y-auto py-2">
-        <p className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5" style={{ color: "#8a97a8" }}>
-          Rutas {rutasFiltradas.length !== rutas.length && `(${rutasFiltradas.length})`}
-        </p>
+        <div className="flex items-center justify-between px-3 py-1.5">
+          <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-gray-text)" }}>
+            Rutas {rutasFiltradas.length !== rutas.length && `(${rutasFiltradas.length})`}
+          </p>
+          <span
+            className="notranslate flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full"
+            style={activeBuses.length > 0 ? { background: "rgba(56,161,105,0.12)", color: "var(--color-success)" } : { background: "var(--color-gray-light)", color: "var(--color-gray-text)" }}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${activeBuses.length > 0 ? "animate-pulse" : ""}`} style={{ background: activeBuses.length > 0 ? "var(--color-success)" : "var(--color-gray-text)" }} />
+            {activeBuses.length > 0 ? "EN VIVO" : "SIN BUSES"}
+          </span>
+        </div>
         {rutasError ? errorCarga
           : rutasLoading && rutas.length === 0 ? skeletonRutas
           : rutas.length === 0 ? <p className="px-4 py-8 text-xs text-muted-foreground text-center">No hay rutas configuradas todavía.</p>
@@ -1095,31 +1106,19 @@ export default function Pasajero() {
     const nivelIdx: Record<string, number> = { vacio: 1, medio: 2, lleno: 3 };
     const proxNivel = proxBus?.ocupacion ? (nivelIdx[proxBus.ocupacion] ?? 0) : 0;
     const otrosBuses = busesRutaSel.filter(({ bus: b }) => b.id !== proxBus?.id);
-    // Parada más cercana al pasajero (si compartió ubicación) para el subtítulo,
-    // igual que el marcador "Súbete aquí" del mapa.
-    const paradaCerca = userPos && ruta.paradas.length > 0
-      ? ruta.paradas.reduce(
-          (best, p) => {
-            const d = distanciaKm(userPos.lat, userPos.lng, p.latitud, p.longitud);
-            return d < best.d ? { p, d } : best;
-          },
-          { p: ruta.paradas[0]!, d: Infinity },
-        )
-      : null;
     return (
       <div
         className="tp-detail-col hidden md:flex flex-col overflow-hidden animate-in slide-in-from-left-4 fade-in duration-300"
         style={{ borderRight: "1px solid #e5e7eb", background: "#fff" }}
       >
         {/* Header: punto de color + nombre de ruta */}
-        <div className="flex items-center gap-2.5 px-4 py-3.5 shrink-0" style={{ borderBottom: "1px solid #eef2f7" }}>
-          <span className="w-3 h-3 rounded shrink-0" style={{ background: ruta.color }} />
+        <div className="flex items-center gap-3 px-4 py-3.5 shrink-0" style={{ borderBottom: "1px solid #eef2f7" }}>
+          <span className="w-3 h-3 rounded-full shrink-0" style={{ background: ruta.color }} />
           <div className="flex-1 min-w-0">
-            <h3 className="font-display font-extrabold text-base leading-tight truncate" style={{ color: "var(--color-navy)" }}>{ruta.nombre}</h3>
-            <p className="text-[11px] truncate mt-0.5" style={{ color: "#8a97a8" }}>
-              {paradaCerca
-                ? `${paradaCerca.p.nombre} · a ${fmtDist(paradaCerca.d)} de ti`
-                : `${ruta.paradas.length} ${ruta.paradas.length === 1 ? "parada" : "paradas"}`}
+            <h3 className="font-display font-bold text-base leading-tight truncate" style={{ color: "var(--color-navy)" }}>{ruta.nombre}</h3>
+            <p className="text-[11px] truncate" style={{ color: "var(--color-gray-text)" }}>
+              {ruta.paradas.length} {ruta.paradas.length === 1 ? "parada" : "paradas"}
+              {proxBus?.actualizado ? ` · actualizado ${tiempoRelativo(proxBus.actualizado)}` : ""}
             </p>
           </div>
           <button onClick={() => setSelectedRutaId(null)} aria-label="Cerrar detalle" title="Cerrar detalle" className="p-2 -mr-1.5 transition-colors hover:opacity-70" style={{ color: "var(--color-gray-text)" }}><X className="w-5 h-5" /></button>
@@ -1137,11 +1136,11 @@ export default function Pasajero() {
               </div>
               <div className="flex items-baseline gap-1.5 relative">
                 {proximoBus.eta <= 0 ? (
-                  <span className="font-display text-2xl font-black leading-none">¡Llegando!</span>
+                  <span className="text-2xl font-black leading-none">¡Llegando!</span>
                 ) : (
                   <>
-                    <span className="font-display text-[46px] font-extrabold leading-none">{proximoBus.eta}</span>
-                    <span className="font-display text-lg font-bold">min</span>
+                    <span className="text-[42px] font-black leading-none">{proximoBus.eta}</span>
+                    <span className="text-base font-bold">min</span>
                   </>
                 )}
                 <span className="ml-auto flex items-center gap-1 text-[11px] font-mono font-bold px-2 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.18)" }}>
@@ -1492,22 +1491,6 @@ export default function Pasajero() {
       {/* Mapa */}
       <div className="flex-1 relative">
         <div ref={mapContainerRef} className="w-full h-full" data-testid="map-container" role="application" aria-label="Mapa de Riohacha con los buses en tiempo real" />
-
-        {/* Pastilla flotante "N buses en vivo" (solo escritorio) */}
-        <div
-          className="hidden md:flex absolute top-4 left-4 z-[900] items-center gap-2 px-3 py-1.5 rounded-full"
-          style={{ background: "#fff", boxShadow: "0 8px 20px rgba(15,30,60,0.14)" }}
-        >
-          <span
-            className={`w-2 h-2 rounded-full ${activeBuses.length > 0 ? "animate-pulse" : ""}`}
-            style={{ background: activeBuses.length > 0 ? "var(--color-success)" : "var(--color-gray-text)" }}
-          />
-          <span className="text-xs font-bold" style={{ color: "var(--color-navy)" }}>
-            {activeBuses.length > 0
-              ? `${activeBuses.length} bus${activeBuses.length > 1 ? "es" : ""} en vivo`
-              : "Sin buses ahora"}
-          </span>
-        </div>
 
         {/* FAB "ver ruta completa" — solo con una ruta seleccionada, encima del de ubicación */}
         {vista === "mapa" && selectedRutaId !== null && (
