@@ -961,8 +961,22 @@ export default function Pasajero() {
             </button>
           )}
         </div>
-        {/* ¿A dónde vas? — recomendación por destino */}
-        <div className="mt-2.5">{panelDestino}</div>
+        {/* Centrar en mi ubicación */}
+        <div className="mt-2.5">
+          <button
+            onClick={locateMe}
+            disabled={locating}
+            className="w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl font-semibold text-sm transition-colors disabled:opacity-60 mb-2"
+            style={userPos
+              ? { background: "rgba(56,161,105,0.10)", color: "var(--color-success)", border: "1px solid rgba(56,161,105,0.3)" }
+              : { background: "rgba(123,184,213,0.18)", color: "var(--color-blue)", border: "1px solid rgba(123,184,213,0.4)" }}
+          >
+            {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />}
+            {userPos ? "Ubicación activa · volver a centrar" : "Centrar en mi ubicación"}
+          </button>
+          {/* ¿A dónde vas? — recomendación por destino */}
+          {panelDestino}
+        </div>
       </div>
 
       {/* Lista de rutas */}
