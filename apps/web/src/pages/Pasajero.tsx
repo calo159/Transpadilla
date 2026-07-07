@@ -1060,7 +1060,7 @@ export default function Pasajero() {
           <button
             onClick={() => setLocation("/login")}
             className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors group hover:shadow-sm"
-            style={{ background: "#fff", border: "1px solid rgba(37,88,165,0.2)" }}
+            style={{ background: "rgba(37,88,165,0.10)", border: "1px solid rgba(37,88,165,0.25)" }}
           >
             <div className="flex items-center gap-2">
               <LogIn className="w-4 h-4" style={{ color: "var(--color-blue)" }} />
@@ -1220,7 +1220,7 @@ export default function Pasajero() {
                 onClick={() => seguirBus(proxBus.id)}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm transition-transform active:scale-[0.98]"
                 style={siguiendoBusId === proxBus.id
-                  ? { background: "#fff", color: "var(--color-navy)", border: "2px solid var(--color-navy)" }
+                  ? { background: "rgba(37,88,165,0.08)", color: "var(--color-blue)", border: "2px solid var(--color-blue)" }
                   : { background: "var(--color-gold)", color: "#4a3300", boxShadow: "0 10px 22px rgba(245,183,49,.35)" }}
               >
                 <LocateFixed className="w-4 h-4" />
