@@ -1883,27 +1883,6 @@ export default function Pasajero() {
           </div>
         )}
 
-        {/* Botón de ayuda y ubicación — SOLO escritorio (en móvil están en la fila de acciones) */}
-        <button
-          onClick={() => setShowAyuda(true)}
-          className="hidden md:flex absolute md:bottom-36 left-3 z-[1000] items-center justify-center w-11 h-11 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg hover:bg-secondary active:scale-95 transition-all"
-          title="¿Cómo funciona?"
-          aria-label="¿Cómo funciona?"
-        >
-          <HelpCircle className="w-5 h-5" style={{ color: "var(--tp-sky)" }} />
-        </button>
-        <button
-          onClick={locateMe}
-          disabled={locating}
-          className="hidden md:flex absolute md:bottom-20 left-3 z-[1000] items-center justify-center w-11 h-11 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg hover:bg-secondary active:scale-95 transition-all disabled:opacity-60"
-          title="Centrar en mi ubicación"
-          aria-label="Centrar en mi ubicación"
-        >
-          {locating
-            ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
-            : <LocateFixed className="w-5 h-5 text-primary" />}
-        </button>
-
         {/* Chips de estado del MAPA — se ocultan si hay un menú/panel abierto (Rutas,
             Favoritos, Paraderos o ☰) para no solaparse con su encabezado. */}
         {vista === "mapa" && !menuAbierto && (
