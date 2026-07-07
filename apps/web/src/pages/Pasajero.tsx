@@ -27,7 +27,7 @@ import { WHATSAPP_NUMERO, INSTAGRAM_URL, TARIFA_COP } from "@/lib/constants";
 import type { BusLocation, Novedad } from "@/lib/types";
 import { tiempoRelativo } from "@/lib/format";
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { distanciaKm, velEfectiva } from "@/lib/geo";
+import { distanciaKm, velEfectiva, puntoMasCercanoEnLinea } from "@/lib/geo";
 import { recomendarRuta, busMasCercano } from "@/lib/sugerencia";
 import { escHtml } from "@/lib/html";
 import { ocupacionInfo, OCUPACION_ORDEN } from "@/lib/ocupacion";
@@ -83,6 +83,9 @@ export default function Pasajero() {
   const [conectado, setConectado] = useState(false);
   const [locating, setLocating] = useState(false);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
+  // Se incrementa cuando la geometría de calles de una ruta termina de cargar,
+  // para que el marcador "Súbete aquí" recalcule sobre la línea real dibujada.
+  const [geomVersion, setGeomVersion] = useState(0);
   // "¿A dónde vas?": el usuario arma el modo y toca el mapa para fijar su destino;
   // la app recomienda la ruta y el bus más cercano de esa ruta en vivo.
   const [modoDestino, setModoDestino] = useState(false);
@@ -305,6 +308,7 @@ export default function Pasajero() {
       fetchStreetRoute(ruta.paradas).then((coords) => {
         polyline.setLatLngs(coords);
         polyline.setStyle({ opacity: 0.85, dashArray: undefined });
+        setGeomVersion((v) => v + 1);
       });
     });
   }, [rutas]);
@@ -606,20 +610,23 @@ export default function Pasajero() {
     else destinoMarkerRef.current = L.marker([destino.lat, destino.lng], { icon }).bindPopup("Tu destino").addTo(map);
   }, [destino]);
 
-  // Marcador "Súbete aquí": resalta en el mapa la parada más cercana al pasajero
-  // de la ruta seleccionada (solo con ubicación activa). Se quita si no aplica.
+  // Marcador "Súbete aquí": resalta el PUNTO más cercano de la línea dibujada de
+  // la ruta seleccionada al pasajero (proyección perpendicular sobre la polilínea,
+  // no una parada). Solo con ubicación activa; se quita si no aplica.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     const quitar = () => { miParadaMarkerRef.current?.remove(); miParadaMarkerRef.current = null; };
     const ruta = rutas.find((r) => r.id === selectedRutaId);
     if (!userPos || !ruta || ruta.paradas.length === 0) { quitar(); return; }
-    let mejor = ruta.paradas[0]!, dMin = Infinity;
-    for (const p of ruta.paradas) {
-      const d = distanciaKm(userPos.lat, userPos.lng, p.latitud, p.longitud);
-      if (d < dMin) { dMin = d; mejor = p; }
-    }
-    const dTxt = dMin < 1 ? `${Math.round(dMin * 1000)} m` : `${dMin.toFixed(1)} km`;
+    const capa = routeLayersRef.current[ruta.id];
+    const puntos = capa ? (capa.getLatLngs() as L.LatLng[]) : [];
+    const linea: [number, number][] = puntos.length > 0
+      ? puntos.map((p) => [p.lat, p.lng])
+      : ruta.paradas.map((p) => [p.latitud, p.longitud]);
+    const cp = puntoMasCercanoEnLinea(userPos.lat, userPos.lng, linea);
+    if (!cp) { quitar(); return; }
+    const dTxt = cp.distKm < 1 ? `${Math.round(cp.distKm * 1000)} m` : `${cp.distKm.toFixed(1)} km`;
     const icon = L.divIcon({
       className: "",
       html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;width:34px;height:34px">
@@ -628,13 +635,13 @@ export default function Pasajero() {
         </div>`,
       iconSize: [34, 34], iconAnchor: [17, 17],
     });
-    const popup = `<div style="font-family:'Inter',system-ui,sans-serif"><b style="font-size:13px;color:#16a34a">Súbete aquí</b><br><span style="font-size:12px">${escHtml(mejor.nombre)}</span><br><span style="font-size:11px;color:#64748b">a ${dTxt} de ti</span></div>`;
+    const popup = `<div style="font-family:'Inter',system-ui,sans-serif"><b style="font-size:13px;color:#16a34a">Súbete aquí</b><br><span style="font-size:12px">El punto más cercano de la ruta</span><br><span style="font-size:11px;color:#64748b">a ${dTxt} de ti</span></div>`;
     if (miParadaMarkerRef.current) {
-      miParadaMarkerRef.current.setLatLng([mejor.latitud, mejor.longitud]).setIcon(icon).setPopupContent(popup);
+      miParadaMarkerRef.current.setLatLng([cp.lat, cp.lng]).setIcon(icon).setPopupContent(popup);
     } else {
-      miParadaMarkerRef.current = L.marker([mejor.latitud, mejor.longitud], { icon, zIndexOffset: 500 }).bindPopup(popup).addTo(map);
+      miParadaMarkerRef.current = L.marker([cp.lat, cp.lng], { icon, zIndexOffset: 500 }).bindPopup(popup).addTo(map);
     }
-  }, [selectedRutaId, userPos, rutas]);
+  }, [selectedRutaId, userPos, rutas, geomVersion]);
 
   // ETA del próximo bus por parada de la ruta seleccionada (lo calcula el API Node).
   useEffect(() => {
