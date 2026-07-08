@@ -5,6 +5,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useLeafletMap } from "@/hooks/use-leaflet-map";
 import { crearFlechasDireccion } from "@/lib/map-arrows";
+import { fetchStreetRoute } from "@/lib/routing";
 import { cardCls, SectionHeader } from "./shared";
 
 interface Props {
@@ -18,8 +19,8 @@ interface Props {
 
 /**
  * Mini-mapa en vivo del dashboard (solo escritorio): rutas como líneas de color
- * (rectas entre paradas, sin seguir calles — es una referencia, no el mapa
- * detallado del pasajero) + un punto por bus con GPS activo. Reusa el mismo
+ * siguiendo las calles (OSRM, igual que el mapa del pasajero — con una línea recta
+ * de respaldo mientras carga) + un punto por bus con GPS activo. Reusa el mismo
  * hook de mapa (`useLeafletMap`) que ya usa ParadasTab.
  */
 function DashboardMiniMap({ rutas, buses }: { rutas: Ruta[]; buses: Bus[] }) {
@@ -40,16 +41,22 @@ function DashboardMiniMap({ rutas, buses }: { rutas: Ruta[]; buses: Bus[] }) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+    let vigente = true;
     layerRef.current?.remove();
     const grupo = L.layerGroup();
     rutasConTrazo.forEach((ruta) => {
-      const puntos: [number, number][] = ruta.paradas
-        .slice()
-        .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
-        .map((p) => [p.latitud, p.longitud]);
-      L.polyline(puntos, { color: ruta.color, weight: 4, opacity: 0.75, lineCap: "round" }).addTo(grupo);
-      // Flechas que indican el sentido de circulación (orden de las paradas).
-      crearFlechasDireccion(puntos, ruta.color).addTo(grupo);
+      const paradasOrden = ruta.paradas.slice().sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+      const fallback: [number, number][] = paradasOrden.map((p) => [p.latitud, p.longitud]);
+      const polyline = L.polyline(fallback, { color: ruta.color, weight: 4, opacity: 0.75, lineCap: "round" }).addTo(grupo);
+      let flechas = crearFlechasDireccion(fallback, ruta.color).addTo(grupo);
+      // Reemplaza la línea recta por la geometría real de calle (OSRM), igual que
+      // el mapa del pasajero — la recta queda como respaldo si OSRM no responde.
+      fetchStreetRoute(paradasOrden).then((coords) => {
+        if (!vigente) return;
+        polyline.setLatLngs(coords);
+        flechas.remove();
+        flechas = crearFlechasDireccion(coords as [number, number][], ruta.color).addTo(grupo);
+      });
     });
     busesConGps.forEach((b) => {
       const icon = L.divIcon({
@@ -63,7 +70,7 @@ function DashboardMiniMap({ rutas, buses }: { rutas: Ruta[]; buses: Bus[] }) {
     layerRef.current = grupo;
     const todosPuntos = rutasConTrazo.flatMap((r) => r.paradas.map((p): [number, number] => [p.latitud, p.longitud]));
     if (todosPuntos.length >= 2) map.fitBounds(L.latLngBounds(todosPuntos), { padding: [24, 24] });
-    return () => { grupo.remove(); };
+    return () => { vigente = false; grupo.remove(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rutas, buses, mapRef]);
 
