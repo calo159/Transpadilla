@@ -11,8 +11,13 @@ const basePath = process.env.BASE_PATH ?? "/";
 // Se activa con la variable de entorno HTTPS=true (ver iniciar-https.ps1).
 const useHttps = process.env.HTTPS === "true";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   base: basePath,
+  // En producción elimina `console.*` y `debugger` del bundle (no filtra logs ni
+  // deja puntos de depuración); en dev se conservan para poder depurar.
+  esbuild: {
+    drop: mode === "production" ? (["console", "debugger"] as const).slice() : [],
+  },
   plugins: [
     ...(useHttps ? [basicSsl()] : []),
     react(),
@@ -82,6 +87,9 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    // Sin source maps en producción: no se exponen los fuentes originales (.ts/.tsx)
+    // ni la estructura del proyecto en DevTools. (Es el default de Vite; explícito por seguridad.)
+    sourcemap: false,
     rollupOptions: {
       output: {
         // Separa las librerías grandes (que cambian poco) en chunks cacheables,
@@ -122,4 +130,4 @@ export default defineConfig({
     host: "0.0.0.0",
     allowedHosts: true,
   },
-});
+}));

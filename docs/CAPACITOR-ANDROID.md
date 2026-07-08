@@ -43,6 +43,13 @@ queda en `android/app/build/outputs/apk/…` y se puede instalar en cualquier te
 > El GPS funciona con la pantalla encendida (Wake Lock, ya implementado), igual que
 > en la web.
 
+> ⚠️ **Esta fase 1 (`server.url`) ya no es la configuración actual del proyecto.**
+> El `capacitor.config.ts` de hoy empaqueta el build localmente (`webDir`, sin
+> `server.url`) — ver la Fase 2 y la sección de **build seguro** más abajo. Si alguna
+> vez reactivas `server.url` para probar algo, **nunca lo apuntes a un dev server de
+> Vite** (`http://<IP>:5173`): ese servidor entrega los archivos fuente `.tsx` sin
+> empaquetar, y quedarían visibles al inspeccionar el WebView.
+
 ---
 
 ## Fase 2 — GPS en segundo plano real (pantalla apagada)
@@ -76,6 +83,42 @@ Para que el GPS transmita con la **pantalla apagada / app en segundo plano** hay
 > **Publicar en Google Play** (opcional): cuenta de desarrollador US$25 (única vez).
 > El permiso de ubicación en segundo plano requiere una justificación en la revisión
 > de Google (viable para uso institucional de flota).
+
+---
+
+## Build seguro para producción (release) — evitar exponer el código fuente
+
+El código fuente (`.ts`/`.tsx`) **nunca debe verse** al inspeccionar la app instalada.
+El proyecto ya está configurado para eso, pero hay que generar el APK correcto:
+
+```bash
+cd apps/web
+pnpm run build              # build de producción: minificado, SIN source maps
+npx cap sync android        # copia dist/public → android/app/src/main/assets/public
+
+cd android
+./gradlew assembleRelease   # o: Android Studio → Build > Generate Signed Bundle/APK
+```
+
+Distribuye **solo** `android/app/build/outputs/apk/release/app-release.apk` (firmado).
+**Nunca** el `app-debug.apk` (variante `debug`): esa se compila sin minificar
+(`minifyEnabled false`) y con la depuración remota del WebView activable.
+
+Qué garantiza que el release no exponga nada:
+- `vite.config.ts` → `build.sourcemap: false` (sin `.map`) y en modo producción
+  elimina `console.*`/`debugger` del bundle (`esbuild.drop`).
+- `capacitor.config.ts` → `webDir` local, **sin `server.url`** (no depende de ningún
+  servidor externo ni de un dev server).
+- `MainActivity.java` → `WebView.setWebContentsDebuggingEnabled(false)` +
+  `FLAG_SECURE` (bloquea capturas de pantalla y la inspección remota vía
+  `chrome://inspect`).
+- `AndroidManifest.xml` → `android:debuggable="false"`.
+- `build.gradle` (`buildTypes.release`) → `minifyEnabled true` + `shrinkResources
+  true` + ProGuard.
+
+Verificación rápida tras el build: en `apps/web/dist/public` no debe haber ningún
+`*.map`, y `android/app/src/main/assets/public` no debe contener `src/` ni archivos
+`.ts`/`.tsx` (solo `assets/*.js` minificados con hash).
 
 ---
 
