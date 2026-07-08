@@ -67,6 +67,10 @@ export interface AsignarParadaInput {
   orden: number;
 }
 
+export interface ReordenarParadasInput {
+  orden: number[];
+}
+
 export interface Ruta {
   id: number;
   nombre: string;

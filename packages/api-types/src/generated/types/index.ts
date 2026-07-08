@@ -23,6 +23,7 @@ export * from './paradaInput';
 export * from './registerInput';
 export * from './registerInputRol';
 export * from './registerResponse';
+export * from './reordenarParadasInput';
 export * from './ruta';
 export * from './rutaInput';
 export * from './stats';

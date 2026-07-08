@@ -36,6 +36,7 @@ import type {
   ParadaInput,
   RegisterInput,
   RegisterResponse,
+  ReordenarParadasInput,
   Ruta,
   RutaInput,
   Stats
@@ -653,6 +654,78 @@ export const useAsignarParada = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAsignarParadaMutationOptions(options));
+    }
+
+export const getReordenarParadasUrl = (id: number,) => {
+
+
+
+
+  return `/api/rutas/${id}/paradas/orden`
+}
+
+/**
+ * @summary Reorder the stops of a route — defines travel direction (admin)
+ */
+export const reordenarParadas = async (id: number,
+    reordenarParadasInput: ReordenarParadasInput, options?: RequestInit): Promise<MessageResponse> => {
+
+  return customFetch<MessageResponse>(getReordenarParadasUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reordenarParadasInput)
+  }
+);}
+
+
+
+
+
+export const getReordenarParadasMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reordenarParadas>>, TError,{id: number;data: BodyType<ReordenarParadasInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reordenarParadas>>, TError,{id: number;data: BodyType<ReordenarParadasInput>}, TContext> => {
+
+const mutationKey = ['reordenarParadas'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reordenarParadas>>, {id: number;data: BodyType<ReordenarParadasInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reordenarParadas(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReordenarParadasMutationResult = NonNullable<Awaited<ReturnType<typeof reordenarParadas>>>
+    export type ReordenarParadasMutationBody = BodyType<ReordenarParadasInput>
+    export type ReordenarParadasMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Reorder the stops of a route — defines travel direction (admin)
+ */
+export const useReordenarParadas = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reordenarParadas>>, TError,{id: number;data: BodyType<ReordenarParadasInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reordenarParadas>>,
+        TError,
+        {id: number;data: BodyType<ReordenarParadasInput>},
+        TContext
+      > => {
+      return useMutation(getReordenarParadasMutationOptions(options));
     }
 
 export const getGetTodasParadasUrl = () => {

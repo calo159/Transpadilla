@@ -22,12 +22,13 @@ import { io, type Socket } from "socket.io-client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { fetchStreetRoute } from "@/lib/routing";
+import { crearFlechasDireccion } from "@/lib/map-arrows";
 import { useLeafletMap } from "@/hooks/use-leaflet-map";
 import { WHATSAPP_NUMERO, INSTAGRAM_URL, TARIFA_COP } from "@/lib/constants";
 import type { BusLocation, Novedad } from "@/lib/types";
 import { tiempoRelativo } from "@/lib/format";
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { distanciaKm, velEfectiva, puntoMasCercanoEnLinea } from "@/lib/geo";
+import { distanciaKm, velEfectiva, puntoMasCercanoEnLinea, posEnCircuito, distanciaAdelanteM } from "@/lib/geo";
 import { recomendarRuta, busMasCercano } from "@/lib/sugerencia";
 import { escHtml } from "@/lib/html";
 import { ocupacionInfo, OCUPACION_ORDEN } from "@/lib/ocupacion";
@@ -48,6 +49,7 @@ export default function Pasajero() {
   // que solo mueve el bus evitamos reconstruir el DOM (setIcon/setPopupContent).
   const markerSigRef = useRef<Record<number, string>>({});
   const routeLayersRef = useRef<Record<number, L.Polyline>>({});
+  const arrowLayersRef = useRef<Record<number, L.LayerGroup>>({});
   const stopMarkersRef = useRef<Array<{ rutaId: number; marker: L.Marker }>>([]);
   const socketRef = useRef<Socket | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
@@ -253,18 +255,29 @@ export default function Pasajero() {
     for (const ruta of rutas) {
       const rutaBuses = buses.filter((b) => b.ruta_id === ruta.id && b.estado !== "inactivo" && b.lat != null && b.lng != null);
       if (rutaBuses.length === 0 || ruta.paradas.length === 0) { map[ruta.id] = null; continue; }
+      // Con mi ubicación: ETA del próximo bus que viene hacia mí por el recorrido
+      // (distancia por delante en el circuito). Sin ubicación o si no se puede
+      // proyectar: bus más cercano a cualquier parada en línea recta (fallback).
+      const miPos = userPos && ruta.paradas.length >= 2 ? posEnCircuito(userPos.lat, userPos.lng, ruta.paradas) : null;
       let mejor = Infinity;
       for (const b of rutaBuses) {
-        for (const p of ruta.paradas) {
-          const d = distanciaKm(b.lat!, b.lng!, p.latitud, p.longitud);
-          const t = (d / velEfectiva(b.velocidad)) * 60;
+        if (miPos) {
+          const busPos = posEnCircuito(b.lat!, b.lng!, ruta.paradas);
+          const distKm = busPos ? distanciaAdelanteM(busPos.s, miPos.s, miPos.L) / 1000 : distanciaKm(userPos!.lat, userPos!.lng, b.lat!, b.lng!);
+          const t = (distKm / velEfectiva(b.velocidad)) * 60;
           if (t < mejor) mejor = t;
+        } else {
+          for (const p of ruta.paradas) {
+            const d = distanciaKm(b.lat!, b.lng!, p.latitud, p.longitud);
+            const t = (d / velEfectiva(b.velocidad)) * 60;
+            if (t < mejor) mejor = t;
+          }
         }
       }
       map[ruta.id] = Number.isFinite(mejor) ? Math.max(0, Math.round(mejor)) : null;
     }
     return map;
-  }, [rutas, buses]);
+  }, [rutas, buses, userPos]);
 
   // El mapa lo crea y destruye useLeafletMap (ver declaración de mapRef arriba).
 
@@ -275,6 +288,8 @@ export default function Pasajero() {
 
     Object.values(routeLayersRef.current).forEach((l) => l.remove());
     routeLayersRef.current = {};
+    Object.values(arrowLayersRef.current).forEach((g) => g.remove());
+    arrowLayersRef.current = {};
     stopMarkersRef.current.forEach(({ marker }) => marker.remove());
     stopMarkersRef.current = [];
 
@@ -321,6 +336,12 @@ export default function Pasajero() {
       fetchStreetRoute(ruta.paradas).then((coords) => {
         polyline.setLatLngs(coords);
         polyline.setStyle({ opacity: 0.85, dashArray: undefined });
+        // Flechas de sentido a lo largo de la geometría de calle.
+        arrowLayersRef.current[ruta.id]?.remove();
+        const flechas = crearFlechasDireccion(coords as [number, number][], ruta.color);
+        arrowLayersRef.current[ruta.id] = flechas;
+        const sel = selectedRutaIdRef.current;
+        if (sel === null || sel === ruta.id) flechas.addTo(map);
         setGeomVersion((v) => v + 1);
       });
     });
@@ -329,11 +350,19 @@ export default function Pasajero() {
   // Al seleccionar una ruta: mostrar SOLO esa ruta y SOLO sus paradas.
   // Sin selección: se muestran todas.
   useEffect(() => {
+    const map = mapRef.current;
     Object.entries(routeLayersRef.current).forEach(([idStr, polyline]) => {
       const id = Number(idStr);
       if (selectedRutaId === null) polyline.setStyle({ opacity: 0.85, weight: 5 });
       else if (id === selectedRutaId) { polyline.setStyle({ opacity: 1, weight: 7 }); polyline.bringToFront(); }
       else polyline.setStyle({ opacity: 0, weight: 0 }); // oculta las demás rutas
+      // Las flechas de sentido siguen la visibilidad de su ruta.
+      const flechas = arrowLayersRef.current[id];
+      if (flechas && map) {
+        const visible = selectedRutaId === null || id === selectedRutaId;
+        if (visible && !map.hasLayer(flechas)) flechas.addTo(map);
+        else if (!visible && map.hasLayer(flechas)) flechas.remove();
+      }
     });
     stopMarkersRef.current.forEach(({ rutaId, marker }) => {
       const visible = selectedRutaId === null || rutaId === selectedRutaId;
@@ -706,20 +735,27 @@ export default function Pasajero() {
   };
   const busSeguido = buses.find((b) => b.id === siguiendoBusId);
 
-  // Buses activos de la ruta seleccionada, ordenados del más cercano a mí, con
-  // la distancia y el tiempo estimado de llegada a MI ubicación.
-  const busesRutaSel = useMemo(
-    () =>
-      (selectedRuta ? buses : [])
-        .filter((b) => b.ruta_id === selectedRuta?.id && b.estado !== "inactivo" && b.lat != null && b.lng != null)
-        .map((b) => {
-          const distKm = userPos ? distanciaKm(userPos.lat, userPos.lng, b.lat!, b.lng!) : null;
-          const etaMin = distKm != null ? Math.max(0, Math.round((distKm / velEfectiva(b.velocidad)) * 60)) : null;
-          return { bus: b, distKm, etaMin };
-        })
-        .sort((a, b) => (a.distKm ?? Infinity) - (b.distKm ?? Infinity)),
-    [selectedRuta, buses, userPos],
-  );
+  // Buses activos de la ruta seleccionada, ordenados por el PRÓXIMO en llegar a mí
+  // según el sentido del recorrido (distancia por delante en el circuito cerrado),
+  // no por cercanía en línea recta. Un bus que ya me pasó cae al final.
+  const busesRutaSel = useMemo(() => {
+    const paradas = selectedRuta?.paradas ?? [];
+    const miPos = userPos && paradas.length >= 2 ? posEnCircuito(userPos.lat, userPos.lng, paradas) : null;
+    return (selectedRuta ? buses : [])
+      .filter((b) => b.ruta_id === selectedRuta?.id && b.estado !== "inactivo" && b.lat != null && b.lng != null)
+      .map((b) => {
+        let distKm: number | null = null;
+        if (miPos) {
+          const busPos = posEnCircuito(b.lat!, b.lng!, paradas);
+          distKm = busPos ? distanciaAdelanteM(busPos.s, miPos.s, miPos.L) / 1000 : distanciaKm(userPos!.lat, userPos!.lng, b.lat!, b.lng!);
+        } else if (userPos) {
+          distKm = distanciaKm(userPos.lat, userPos.lng, b.lat!, b.lng!);
+        }
+        const etaMin = distKm != null ? Math.max(0, Math.round((distKm / velEfectiva(b.velocidad)) * 60)) : null;
+        return { bus: b, distKm, etaMin };
+      })
+      .sort((a, b) => (a.distKm ?? Infinity) - (b.distKm ?? Infinity));
+  }, [selectedRuta, buses, userPos]);
 
   // ── "¿A dónde vas?": recomendación de ruta + bus más cercano ────────────────
   // Recalcula la ruta recomendada cuando cambia el destino, las rutas o el origen.
@@ -732,7 +768,7 @@ export default function Pasajero() {
   const busSugerido = useMemo(() => {
     if (!sugerencia) return null;
     const ref = sugerencia.paradaOrigen ?? sugerencia.paradaDestino;
-    return busMasCercano(buses, sugerencia.ruta.id, { lat: ref.latitud, lng: ref.longitud });
+    return busMasCercano(buses, sugerencia.ruta.id, { lat: ref.latitud, lng: ref.longitud }, sugerencia.ruta.paradas);
   }, [sugerencia, buses]);
 
   const armarDestino = () => {

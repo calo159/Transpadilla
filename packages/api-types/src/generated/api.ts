@@ -140,6 +140,22 @@ export const AsignarParadaResponse = zod.object({
 
 
 /**
+ * @summary Reorder the stops of a route — defines travel direction (admin)
+ */
+export const ReordenarParadasParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReordenarParadasBody = zod.object({
+  "orden": zod.array(zod.number())
+})
+
+export const ReordenarParadasResponse = zod.object({
+  "mensaje": zod.string()
+})
+
+
+/**
  * @summary Get all stops
  */
 export const GetTodasParadasResponseItem = zod.object({

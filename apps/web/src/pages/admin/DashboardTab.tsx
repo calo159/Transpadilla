@@ -4,6 +4,7 @@ import type { Bus, Ruta, Stats } from "@workspace/api-client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useLeafletMap } from "@/hooks/use-leaflet-map";
+import { crearFlechasDireccion } from "@/lib/map-arrows";
 import { cardCls, SectionHeader } from "./shared";
 
 interface Props {
@@ -47,6 +48,8 @@ function DashboardMiniMap({ rutas, buses }: { rutas: Ruta[]; buses: Bus[] }) {
         .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
         .map((p) => [p.latitud, p.longitud]);
       L.polyline(puntos, { color: ruta.color, weight: 4, opacity: 0.75, lineCap: "round" }).addTo(grupo);
+      // Flechas que indican el sentido de circulación (orden de las paradas).
+      crearFlechasDireccion(puntos, ruta.color).addTo(grupo);
     });
     busesConGps.forEach((b) => {
       const icon = L.divIcon({

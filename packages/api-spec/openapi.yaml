@@ -172,6 +172,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
 
+  /rutas/{id}/paradas/orden:
+    put:
+      operationId: reordenarParadas
+      tags: [rutas]
+      summary: Reorder the stops of a route — defines travel direction (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReordenarParadasInput"
+      responses:
+        "200":
+          description: Order updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
   /rutas/paradas/todas:
     get:
       operationId: getTodasParadas
@@ -529,6 +554,15 @@ components:
           type: integer
         orden:
           type: integer
+
+    ReordenarParadasInput:
+      type: object
+      required: [orden]
+      properties:
+        orden:
+          type: array
+          items:
+            type: integer
 
     Ruta:
       type: object

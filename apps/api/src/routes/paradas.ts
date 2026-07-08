@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, paradas, ruta_paradas, rutas } from "@workspace/db";
-import { eq, asc, and } from "drizzle-orm";
+import { eq, asc, and, desc } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
 import { validarBody, requerido, texto, numeroEnRango, parseIdParam } from "../middleware/validate";
 import { registrarAuditoria } from "../lib/auditoria";
@@ -113,7 +113,6 @@ router.post(
       res.status(400).json({ error: "parada_id inválido" });
       return;
     }
-    const ordenNum = Number.isFinite(Number(orden)) ? Number(orden) : 0;
     // La ruta debe existir (si no, el insert revienta con error de FK → 500 confuso).
     const [rutaExiste] = await db.select({ id: rutas.id }).from(rutas).where(eq(rutas.id, rutaId));
     if (!rutaExiste) { res.status(404).json({ error: "Ruta no encontrada" }); return; }
@@ -126,9 +125,66 @@ router.post(
       res.status(409).json({ error: "Esa parada ya está en la ruta" });
       return;
     }
+    // Si no se especifica `orden`, la parada se agrega AL FINAL del recorrido
+    // (max actual + 1), no en 0, para no colisionar con las existentes.
+    let ordenNum: number;
+    if (Number.isFinite(Number(orden))) {
+      ordenNum = Number(orden);
+    } else {
+      const [ultima] = await db
+        .select({ orden: ruta_paradas.orden })
+        .from(ruta_paradas)
+        .where(eq(ruta_paradas.ruta_id, rutaId))
+        .orderBy(desc(ruta_paradas.orden))
+        .limit(1);
+      ordenNum = ultima ? ultima.orden + 1 : 0;
+    }
     await db.insert(ruta_paradas).values({ ruta_id: rutaId, parada_id: pid, orden: ordenNum });
     registrarAuditoria(req, "asignar_parada", "ruta", rutaId, { parada_id: pid, orden: ordenNum });
     res.status(201).json({ mensaje: "Parada asignada" });
+  },
+);
+
+// Reordenar (definir el SENTIDO de circulación de) las paradas de una ruta. El
+// body trae `orden`: los ids de parada en el orden deseado del recorrido; se asigna
+// `ruta_paradas.orden = índice`. "Invertir sentido" = el frontend manda el array al revés.
+router.put(
+  "/rutas/:id/paradas/orden",
+  authMiddleware,
+  requireRol("admin"),
+  async (req, res) => {
+    const rutaId = parseIdParam(req.params["id"]);
+    if (rutaId === null) { res.status(400).json({ error: "Id de ruta inválido" }); return; }
+    const { orden } = req.body as { orden?: unknown };
+    if (!Array.isArray(orden) || orden.length === 0 || !orden.every((x) => Number.isInteger(x) && Number(x) > 0)) {
+      res.status(400).json({ error: "orden debe ser un arreglo de ids de parada" });
+      return;
+    }
+    const ids = orden.map((x) => Number(x));
+    if (new Set(ids).size !== ids.length) {
+      res.status(400).json({ error: "orden tiene ids repetidos" });
+      return;
+    }
+    // Todos los ids deben ser paradas actualmente asignadas a la ruta (ni más ni menos).
+    const actuales = await db
+      .select({ parada_id: ruta_paradas.parada_id })
+      .from(ruta_paradas)
+      .where(eq(ruta_paradas.ruta_id, rutaId));
+    const setActuales = new Set(actuales.map((r) => r.parada_id));
+    if (setActuales.size !== ids.length || !ids.every((id) => setActuales.has(id))) {
+      res.status(400).json({ error: "orden debe incluir exactamente las paradas de la ruta" });
+      return;
+    }
+    await db.transaction(async (tx) => {
+      for (let i = 0; i < ids.length; i++) {
+        await tx
+          .update(ruta_paradas)
+          .set({ orden: i })
+          .where(and(eq(ruta_paradas.ruta_id, rutaId), eq(ruta_paradas.parada_id, ids[i]!)));
+      }
+    });
+    registrarAuditoria(req, "reordenar_paradas", "ruta", rutaId, { orden: ids });
+    res.json({ mensaje: "Orden actualizado" });
   },
 );
 

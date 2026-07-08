@@ -43,23 +43,26 @@ describe("calcularEtaPorParada", () => {
     expect(etas[2]!).toBeLessThan(etas[3]!);
   });
 
-  it("bus en medio (s2): respeta la guarda idx<=j (no aplica a paradas anteriores)", () => {
+  it("bus en medio (s2), circuito cerrado: las paradas ya pasadas dan casi una vuelta", () => {
     const r = calcularEtaPorParada(secuencia, [bus("MID", 0.10, 0)]);
-    expect(r.paradas[0]!.eta_min).toBeNull(); // s0 antes del bus
-    expect(r.paradas[1]!.eta_min).toBeNull(); // s1 antes del bus
     expect(r.paradas[2]!.eta_min).toBe(0);    // s2 = posición del bus
     expect(r.paradas[2]!.placa).toBe("MID");
-    expect(r.paradas[3]!.eta_min!).toBeGreaterThan(0); // s3 por delante
+    expect(r.paradas[3]!.eta_min!).toBeGreaterThan(0); // s3 justo por delante
+    // s0 y s1 quedan "detrás": el bus las alcanza dando la vuelta (no null, no 0),
+    // y por eso su ETA es MAYOR que la de s3 (que está justo adelante).
+    expect(r.paradas[0]!.eta_min!).toBeGreaterThan(r.paradas[3]!.eta_min!);
+    expect(r.paradas[1]!.eta_min!).toBeGreaterThan(r.paradas[0]!.eta_min!);
+    expect(r.paradas.every((p) => Number.isFinite(p.eta_min!))).toBe(true);
   });
 
-  it("con dos buses, cada parada elige el que llega más pronto", () => {
-    const lejano = bus("FAR", 0, 0);      // en s0 (idx 0)
-    const cercano = bus("NEAR", 0.10, 0); // en s2 (idx 2)
+  it("con dos buses, cada parada elige el que llega más pronto (por delante en el circuito)", () => {
+    const lejano = bus("FAR", 0, 0);      // en s0
+    const cercano = bus("NEAR", 0.10, 0); // en s2
     const r = calcularEtaPorParada(secuencia, [lejano, cercano]);
     expect(r.buses_activos).toBe(2);
-    // s1: solo el lejano la alcanza (el cercano va en idx 2 > 1).
+    // s1: el de s0 llega en 1 segmento; el de s2 tendría que dar casi la vuelta → gana FAR.
     expect(r.paradas[1]!.placa).toBe("FAR");
-    // s3: ambos la alcanzan; el cercano (s2) llega antes que el lejano (s0).
+    // s3: el de s2 la alcanza en 1 segmento; el de s0 en 3 → gana NEAR.
     expect(r.paradas[3]!.placa).toBe("NEAR");
   });
 

@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useCreateRuta, useDeleteRuta, getGetRutasQueryKey, type Ruta,
 } from "@workspace/api-client";
-import { Plus, Route, Pencil, Trash2, MapPin, X, Power } from "lucide-react";
+import { Plus, Route, Pencil, Trash2, MapPin, X, Power, GripVertical, ChevronUp, ChevronDown, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +32,44 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
   const [color, setColor] = useState("#2558A5");
   // Qué ruta tiene la paleta de color abierta en la lista (null = ninguna).
   const [editColorId, setEditColorId] = useState<number | null>(null);
+  // Parada que se está arrastrando (para reordenar el recorrido).
+  const [drag, setDrag] = useState<{ rutaId: number; idx: number } | null>(null);
+
+  // Guarda el nuevo orden de las paradas de una ruta (define el sentido de circulación).
+  const guardarOrden = async (rutaId: number, ids: number[]) => {
+    try {
+      const res = await apiFetch(`/api/rutas/${rutaId}/paradas/orden`, { method: "PUT", body: JSON.stringify({ orden: ids }) });
+      if (!res.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
+    } catch {
+      toast({ title: "Error al reordenar las paradas", variant: "destructive" });
+    }
+  };
+
+  // Mueve una parada una posición arriba/abajo en el recorrido.
+  const moverParada = (ruta: Ruta, idx: number, dir: -1 | 1) => {
+    const ids = ruta.paradas.map((p) => p.id);
+    const j = idx + dir;
+    if (j < 0 || j >= ids.length) return;
+    [ids[idx], ids[j]] = [ids[j]!, ids[idx]!];
+    void guardarOrden(ruta.id, ids);
+  };
+
+  // Suelta la parada arrastrada en la posición `idx`.
+  const soltarEn = (ruta: Ruta, idx: number) => {
+    if (!drag || drag.rutaId !== ruta.id || drag.idx === idx) { setDrag(null); return; }
+    const ids = ruta.paradas.map((p) => p.id);
+    const [movido] = ids.splice(drag.idx, 1);
+    ids.splice(idx, 0, movido!);
+    setDrag(null);
+    void guardarOrden(ruta.id, ids);
+  };
+
+  // Invierte el sentido de circulación (recorre las paradas al revés).
+  const invertirSentido = (ruta: Ruta) => {
+    if (ruta.paradas.length < 2) return;
+    void guardarOrden(ruta.id, ruta.paradas.map((p) => p.id).reverse());
+  };
 
   // Pausar / reactivar una ruta. Pausada = no aparece para los pasajeros.
   const togglePausa = async (ruta: Ruta) => {
@@ -188,6 +226,9 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
                     </p>
                     <p className="text-xs text-muted-foreground">{ruta.paradas.length} paradas</p>
                   </div>
+                  <Button variant="ghost" size="sm" onClick={() => invertirSentido(ruta)} disabled={ruta.paradas.length < 2} className="h-9 w-9 p-0 text-muted-foreground hover:text-primary" title="Invertir sentido de circulación">
+                    <ArrowUpDown className="w-4 h-4" />
+                  </Button>
                   <Button variant="ghost" size="sm" onClick={() => togglePausa(ruta)} className={`h-9 w-9 p-0 ${ruta.activa === false ? "text-amber-500" : "text-muted-foreground hover:text-green-500"}`} title={ruta.activa === false ? "Reactivar ruta" : "Pausar ruta (ocultarla a los pasajeros)"}>
                     <Power className="w-4 h-4" />
                   </Button>
@@ -212,19 +253,39 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
                     ))}
                   </div>
                 )}
-                {/* Paradas de la ruta — quitar cada una sin borrarla */}
+                {/* Recorrido: paradas EN ORDEN = sentido de circulación. Arrastra o usa ↑↓ para reordenar. */}
                 {ruta.paradas.length > 0 && (
                   <div className="mt-2 pl-7 space-y-1">
-                    {ruta.paradas.map((p) => (
-                      <div key={p.id} className="flex items-center gap-2 text-xs">
+                    {ruta.paradas.length > 1 && (
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70 mb-1">
+                        Recorrido (arrastra para ordenar)
+                      </p>
+                    )}
+                    {ruta.paradas.map((p, i) => (
+                      <div
+                        key={p.id}
+                        draggable
+                        onDragStart={() => setDrag({ rutaId: ruta.id, idx: i })}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={() => soltarEn(ruta, i)}
+                        className={`flex items-center gap-1.5 text-xs rounded-md py-0.5 ${drag?.rutaId === ruta.id && drag.idx === i ? "opacity-40" : ""}`}
+                      >
+                        <GripVertical className="w-3 h-3 text-muted-foreground/40 flex-shrink-0 cursor-grab" />
+                        <span className="w-4 text-center font-bold text-[10px] text-primary flex-shrink-0">{i + 1}</span>
                         <MapPin className="w-3 h-3 text-sky-400 flex-shrink-0" />
                         <span className="flex-1 truncate text-muted-foreground">{p.nombre}</span>
+                        <button onClick={() => moverParada(ruta, i, -1)} disabled={i === 0} className="p-0.5 rounded text-muted-foreground hover:text-primary disabled:opacity-30" title="Subir">
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => moverParada(ruta, i, 1)} disabled={i === ruta.paradas.length - 1} className="p-0.5 rounded text-muted-foreground hover:text-primary disabled:opacity-30" title="Bajar">
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
                         <button
                           onClick={() => quitarParada(ruta.id, p.id, p.nombre)}
-                          className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          className="p-0.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                           title="Quitar de la ruta"
                         >
-                          <X className="w-3 h-3" /> Quitar
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ))}

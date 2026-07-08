@@ -1,7 +1,7 @@
 import webpush from "web-push";
 import { pool } from "@workspace/db";
 import { logger } from "./logger";
-import { haversineMetros, velEfectiva } from "./geo";
+import { haversineMetros, velEfectiva, posEnCircuito, distanciaAdelanteM } from "./geo";
 
 export { suscripcionesParaRuta } from "./push-util";
 
@@ -77,15 +77,29 @@ export async function notificarProximidad(
     );
     if (!conteo || conteo.n === 0) return;
 
+    // Paradas ORDENADAS por el sentido del recorrido (circuito cerrado).
     const paradas = await pool.query(
-      `SELECT p.latitud, p.longitud FROM ruta_paradas rp JOIN paradas p ON p.id = rp.parada_id WHERE rp.ruta_id = $1`,
+      `SELECT p.latitud, p.longitud FROM ruta_paradas rp JOIN paradas p ON p.id = rp.parada_id
+       WHERE rp.ruta_id = $1 ORDER BY rp.orden ASC`,
       [rutaId],
     );
     if (paradas.rows.length === 0) return;
+    const coords = paradas.rows.map((p) => ({ latitud: p.latitud as number, longitud: p.longitud as number }));
 
-    const minMetros = Math.min(
-      ...paradas.rows.map((p) => haversineMetros(lat, lng, p.latitud as number, p.longitud as number)),
-    );
+    // Distancia POR DELANTE (en el sentido de circulación) al próximo paradero: así el
+    // aviso dispara cuando el bus VIENE hacia sus paradas, no cuando acaba de pasarlas.
+    // Si no se puede proyectar sobre el circuito, se cae al mínimo en línea recta.
+    let minMetros: number;
+    const pos = posEnCircuito(lat, lng, coords);
+    if (pos) {
+      const acum: number[] = [0];
+      for (let i = 1; i < coords.length; i++) {
+        acum.push(acum[i - 1]! + haversineMetros(coords[i - 1]!.latitud, coords[i - 1]!.longitud, coords[i]!.latitud, coords[i]!.longitud));
+      }
+      minMetros = Math.min(...acum.map((sParada) => distanciaAdelanteM(pos.s, sParada, pos.L)).filter((d) => d > 1));
+    } else {
+      minMetros = Math.min(...coords.map((p) => haversineMetros(lat, lng, p.latitud, p.longitud)));
+    }
     const minutos = (minMetros / 1000) / velEfectiva(velocidad) * 60;
     if (minutos <= UMBRAL_MIN) {
       ultimaProx.set(busId, ahora);

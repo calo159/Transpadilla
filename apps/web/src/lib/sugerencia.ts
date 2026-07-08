@@ -1,5 +1,5 @@
 import type { Bus, Ruta, Parada } from "@workspace/api-client";
-import { distanciaKm, velEfectiva } from "@/lib/geo";
+import { distanciaKm, velEfectiva, posEnCircuito, distanciaAdelanteM } from "@/lib/geo";
 
 export interface Punto { lat: number; lng: number }
 
@@ -62,9 +62,14 @@ export function recomendarRuta(rutas: Ruta[], destino: Punto, origen?: Punto | n
       if (orig) {
         paradaOrigen = orig.parada;
         dCaminaOrigenKm = orig.distKm;
-        score = orig.distKm + dest.distKm;
-        // Penaliza el sentido contrario (subir después de la parada de bajada).
-        if (orig.idx > dest.idx) score += 5;
+        // Caminata total (origen→abordaje + bajada→destino). En un circuito cerrado
+        // NO se penaliza "subir después de bajar": el bus siempre alcanza la parada de
+        // bajada dando la vuelta. Como desempate se suma el trayecto a bordo (más corto
+        // = más directo) escalado a un peso pequeño para no dominar sobre la caminata.
+        const abordaje = posEnCircuito(orig.parada.latitud, orig.parada.longitud, ruta.paradas);
+        const bajada = posEnCircuito(dest.parada.latitud, dest.parada.longitud, ruta.paradas);
+        const trayectoKm = abordaje && bajada ? distanciaAdelanteM(abordaje.s, bajada.s, abordaje.L) / 1000 : 0;
+        score = orig.distKm + dest.distKm + trayectoKm * 0.1;
       }
     }
 
@@ -86,16 +91,28 @@ export function recomendarRuta(rutas: Ruta[], destino: Punto, origen?: Punto | n
 }
 
 /**
- * Entre los buses ACTIVOS de una ruta con posición conocida, el más cercano al
- * punto de referencia (la parada de abordaje, o el destino si no hay origen),
- * con su tiempo estimado de llegada a ese punto.
+ * Entre los buses ACTIVOS de una ruta con posición conocida, el PRÓXIMO en llegar
+ * al punto de referencia (la parada de abordaje, o el destino si no hay origen).
+ *
+ * Con `paradas` (las de la ruta, en orden) se usa la distancia POR DELANTE en el
+ * sentido de circulación del circuito: un bus que ya pasó la referencia queda al
+ * final (debe dar casi toda la vuelta), no primero por estar cerca en línea recta.
+ * Sin `paradas` (o si la proyección falla) se cae a la distancia en línea recta.
+ * `distKm` en el resultado es la distancia usada para ordenar (a lo largo o recta).
  */
-export function busMasCercano(buses: Bus[], rutaId: number, referencia: Punto): BusCercano | null {
+export function busMasCercano(buses: Bus[], rutaId: number, referencia: Punto, paradas?: Parada[]): BusCercano | null {
+  const refPos = paradas && paradas.length >= 2 ? posEnCircuito(referencia.lat, referencia.lng, paradas) : null;
   let mejor: BusCercano | null = null;
   for (const bus of buses) {
     if (bus.ruta_id !== rutaId || bus.estado === "inactivo") continue;
     if (bus.lat == null || bus.lng == null) continue;
-    const distKm = distanciaKm(referencia.lat, referencia.lng, bus.lat, bus.lng);
+    let distKm: number;
+    if (refPos) {
+      const busPos = posEnCircuito(bus.lat, bus.lng, paradas!);
+      distKm = busPos ? distanciaAdelanteM(busPos.s, refPos.s, refPos.L) / 1000 : distanciaKm(referencia.lat, referencia.lng, bus.lat, bus.lng);
+    } else {
+      distKm = distanciaKm(referencia.lat, referencia.lng, bus.lat, bus.lng);
+    }
     const etaMin = Math.max(0, Math.round((distKm / velEfectiva(bus.velocidad)) * 60));
     if (!mejor || distKm < mejor.distKm) mejor = { bus, distKm, etaMin };
   }
