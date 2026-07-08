@@ -105,6 +105,22 @@ export const colorHex = (campo: string): Regla => (b) => {
 };
 
 /**
+ * Data URL de imagen (`data:image/<tipo>;base64,...`). Se usa para los banners que
+ * el admin sube: la imagen viaja embebida en base64 (comprimida en el navegador).
+ * Acota el tamaño para no aceptar cuerpos gigantes en la BD.
+ */
+export const dataUrlImagen = (campo: string, maxLen = 6_000_000): Regla => (b) => {
+  const v = b[campo];
+  if (v === undefined || v === null) return null; // usar junto a requerido() si es obligatorio
+  if (typeof v !== "string") return `"${campo}" debe ser texto.`;
+  if (!/^data:image\/[a-zA-Z0-9.+-]+;base64,/.test(v)) {
+    return `"${campo}" debe ser una imagen (data URL base64).`;
+  }
+  if (v.length > maxLen) return `"${campo}" es demasiado grande; usa una imagen más liviana.`;
+  return null;
+};
+
+/**
  * Parsea un :id de la URL a entero positivo, o `null` si no lo es.
  * (parseInt("abc") da NaN y parseInt("12abc") da 12 — ambos inaceptables
  * como id; esto exige que TODO el segmento sea un entero > 0.)

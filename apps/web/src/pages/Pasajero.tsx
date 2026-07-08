@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
-import { useGetRutas, useGetBuses, getGetBusesQueryKey } from "@workspace/api-client";
+import { useGetRutas, useGetBuses, getGetBusesQueryKey, useGetBannerActivo, getGetBannerActivoQueryKey } from "@workspace/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 import { cerrarSesion, getUser } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
@@ -146,6 +146,19 @@ export default function Pasajero() {
   };
   // Panel de ayuda "¿Cómo funciona?" — accesible en cualquier momento con el botón ?.
   const [showAyuda, setShowAyuda] = useState(false);
+  // Anuncio a pantalla completa que publica el admin: se muestra a cada visita (no
+  // se persiste "visto"). Se cierra con la X o solo a los 15s. 204 → data null.
+  const { data: bannerActivo } = useGetBannerActivo({
+    query: { queryKey: getGetBannerActivoQueryKey() },
+  });
+  const banner = bannerActivo && typeof bannerActivo === "object" ? bannerActivo : null;
+  const [bannerCerrado, setBannerCerrado] = useState(false);
+  const showAnuncio = !!banner && !bannerCerrado;
+  useEffect(() => {
+    if (!showAnuncio) return;
+    const t = setTimeout(() => setBannerCerrado(true), 15000);
+    return () => clearTimeout(t);
+  }, [showAnuncio]);
   // Banner "Instalar app" (PWA). El navegador dispara beforeinstallprompt cuando
   // la app es instalable; lo guardamos para ofrecer la instalación a un toque.
   const [installEvt, setInstallEvt] = useState<BeforeInstallPrompt | null>(null);
@@ -1768,6 +1781,29 @@ export default function Pasajero() {
               </Button>
               <p className="text-[11px] text-white/40 text-center mt-2">No necesitas cuenta para ver los buses.</p>
             </div>
+          </div>
+        )}
+
+        {/* Anuncio a pantalla completa (banner del admin) */}
+        {showAnuncio && banner && (
+          <div
+            onClick={() => setBannerCerrado(true)}
+            className="fixed inset-0 z-[1200] flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.9)" }}
+          >
+            <img
+              src={banner.imagen_url}
+              alt={banner.titulo ?? "Anuncio"}
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+            />
+            <button
+              onClick={() => setBannerCerrado(true)}
+              aria-label="Cerrar anuncio"
+              className="absolute top-4 right-4 w-11 h-11 rounded-full flex items-center justify-center text-white bg-black/60 hover:bg-black/80 border border-white/30 shadow-lg"
+            >
+              <X className="w-6 h-6" />
+            </button>
           </div>
         )}
 

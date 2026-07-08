@@ -121,7 +121,11 @@ app.use(
 // Límites de tamaño de body: payloads pequeños bastan para esta API; cerrar la
 // puerta a cuerpos enormes evita un vector de DoS por memoria/parseo.
 // Se verifica Content-Length ANTES de parsear para devolver 413 sin tocar el body.
+// Excepción: POST /api/banners lleva una imagen en base64 (data URL), que supera
+// los 32kb; ese cuerpo se parsea con un límite mayor abajo y se acota en su parser.
+const esSubidaBanner = (req: Request) => req.method === "POST" && req.path === "/api/banners";
 app.use((req, res, next) => {
+  if (esSubidaBanner(req)) return next();
   const len = parseInt(req.headers["content-length"] ?? "0", 10);
   if (len > 33_000) {
     res.status(413).json({ error: "Payload demasiado grande" });
@@ -129,6 +133,9 @@ app.use((req, res, next) => {
   }
   next();
 });
+// Parser dedicado para la subida de banners (imagen base64). Va ANTES del parser
+// global de 32kb: al leer el body marca req._body, así el parser global lo omite.
+app.use("/api/banners", express.json({ limit: "6mb" }));
 app.use(express.json({ limit: "32kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 

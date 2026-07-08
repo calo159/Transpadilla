@@ -18,6 +18,8 @@ tags:
     description: Bus management and GPS
   - name: stats
     description: Dashboard statistics
+  - name: banners
+    description: Full-screen announcement banners
 
 paths:
   /healthz:
@@ -344,6 +346,91 @@ paths:
               schema:
                 $ref: "#/components/schemas/Stats"
 
+  /banners/activo:
+    get:
+      operationId: getBannerActivo
+      tags: [banners]
+      summary: Get the currently active banner (public)
+      responses:
+        "200":
+          description: Active banner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Banner"
+        "204":
+          description: No active banner
+
+  /banners:
+    get:
+      operationId: getBanners
+      tags: [banners]
+      summary: List all banners (admin)
+      responses:
+        "200":
+          description: List of banners
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Banner"
+    post:
+      operationId: createBanner
+      tags: [banners]
+      summary: Create a banner (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BannerInput"
+      responses:
+        "201":
+          description: Banner created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Banner"
+
+  /banners/{id}/activo:
+    patch:
+      operationId: activarBanner
+      tags: [banners]
+      summary: Set a banner as the active one, deactivating the rest (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Banner activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Banner"
+
+  /banners/{id}:
+    delete:
+      operationId: deleteBanner
+      tags: [banners]
+      summary: Delete a banner (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Banner deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -546,6 +633,32 @@ components:
       properties:
         mensaje:
           type: string
+
+    Banner:
+      type: object
+      required: [id, imagen_url, activo]
+      properties:
+        id:
+          type: integer
+        imagen_url:
+          type: string
+        titulo:
+          type: ["string", "null"]
+        activo:
+          type: boolean
+        creado_en:
+          type: ["string", "null"]
+
+    BannerInput:
+      type: object
+      required: [imagen_url]
+      properties:
+        imagen_url:
+          type: string
+        titulo:
+          type: ["string", "null"]
+        activo:
+          type: boolean
 
     Stats:
       type: object

@@ -95,6 +95,14 @@ CREATE POLICY service_all_auditoria            ON auditoria            FOR ALL T
 CREATE POLICY service_all_suscripciones_push   ON suscripciones_push   FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_all_tokens_revocados     ON tokens_revocados     FOR ALL TO service_role USING (true) WITH CHECK (true);
 
+-- 7) `banners` — solo el backend ---------------------------------------------
+-- Anuncios a pantalla completa que publica el admin. El pasajero los recibe por
+-- el GET público de Express (que corre como `postgres` y bypasea RLS), así que
+-- no hace falta política para `anon`; a nivel BD solo `service_role` accede.
+ALTER TABLE banners ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS service_all_banners ON banners;
+CREATE POLICY service_all_banners ON banners FOR ALL TO service_role USING (true) WITH CHECK (true);
+
 -- ============================================================================
 -- Verificación rápida (opcional):
 --   SELECT relname, relrowsecurity, relforcerowsecurity

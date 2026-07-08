@@ -9,7 +9,7 @@ import { getUser, cerrarSesion, homeForRol } from "@/lib/auth";
 import {
   Bus, LogOut, Map, MapPin, BarChart3,
   RefreshCw, Users, Route,
-  UserCheck, KeyRound, TrendingUp,
+  UserCheck, KeyRound, TrendingUp, Megaphone,
 } from "lucide-react";
 import DashboardTab from "./admin/DashboardTab";
 import RutasTab from "./admin/RutasTab";
@@ -17,6 +17,7 @@ import BusesTab from "./admin/BusesTab";
 import ParadasTab from "./admin/ParadasTab";
 import ConductoresTab from "./admin/ConductoresTab";
 import ResumenEjecutivoTab from "./admin/ResumenEjecutivoTab";
+import BannersTab from "./admin/BannersTab";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { LogoTP } from "@/components/LogoTP";
@@ -25,7 +26,7 @@ import { PromptDialog, type PromptOpts } from "@/components/PromptDialog";
 import { CambiarPasswordDialog } from "@/components/CambiarPasswordDialog";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 
-type Tab = "dashboard" | "ejecutivo" | "rutas" | "buses" | "paradas" | "conductores";
+type Tab = "dashboard" | "ejecutivo" | "rutas" | "buses" | "paradas" | "conductores" | "anuncios";
 
 export default function Admin() {
   useDocumentTitle("Panel admin · TransPadilla");
@@ -69,6 +70,7 @@ export default function Admin() {
     { id: "buses"       as Tab, label: "Buses",       icon: <Bus className="w-4 h-4" /> },
     { id: "paradas"     as Tab, label: "Paradas",     icon: <MapPin className="w-4 h-4" /> },
     { id: "conductores" as Tab, label: "Conductores", icon: <UserCheck className="w-4 h-4" /> },
+    { id: "anuncios"    as Tab, label: "Anuncios",    icon: <Megaphone className="w-4 h-4" /> },
   ];
 
 
@@ -79,6 +81,7 @@ export default function Admin() {
     buses:       "Gestión de Buses",
     paradas:     "Gestión de Paradas",
     conductores: "Conductores",
+    anuncios:    "Anuncios a Pantalla Completa",
   };
 
   // Evita que el panel admin se muestre (aunque sea un instante) a quien no es admin;
@@ -251,6 +254,9 @@ export default function Admin() {
 
           {/* RESUMEN EJECUTIVO (KPIs + km por ruta + ocupación + descarga PDF/CSV) */}
           {tab === "ejecutivo" && <ResumenEjecutivoTab />}
+
+          {/* ANUNCIOS (banners a pantalla completa para el pasajero) */}
+          {tab === "anuncios" && <BannersTab setConfirmar={setConfirmar} />}
 
          </div>
         </div>

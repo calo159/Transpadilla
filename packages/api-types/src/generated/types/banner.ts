@@ -6,9 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface GpsInput {
-  bus_id: number;
-  lat: number;
-  lng: number;
-  velocidad?: number;
+export interface Banner {
+  id: number;
+  imagen_url: string;
+  /** @nullable */
+  titulo?: string | null;
+  activo: boolean;
+  /** @nullable */
+  creado_en?: string | null;
 }

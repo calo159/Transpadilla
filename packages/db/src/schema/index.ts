@@ -149,6 +149,18 @@ export const favoritos = pgTable(
   ],
 );
 
+// Banners / anuncios a pantalla completa que el admin publica al pasajero. La
+// imagen se guarda como data URL (base64, comprimida en el navegador) para no
+// depender de almacenamiento externo. Solo uno debe estar `activo` a la vez: el
+// backend desactiva los demás al activar/crear uno (ver routes/banners.ts).
+export const banners = pgTable("banners", {
+  id: serial("id").primaryKey(),
+  imagen_url: text("imagen_url").notNull(),
+  titulo: varchar("titulo", { length: 120 }),
+  activo: boolean("activo").notNull().default(false),
+  creado_en: timestamp("creado_en").notNull().defaultNow(),
+});
+
 // Lista negra de tokens JWT revocados (cierre de sesión real). Se guarda el hash
 // del token, no el token. Se purga cuando `expira_en` pasa (ya no hace falta).
 export const tokens_revocados = pgTable("tokens_revocados", {
@@ -165,3 +177,4 @@ export type RutaParada = typeof ruta_paradas.$inferSelect;
 export type Bus = typeof buses.$inferSelect;
 export type PosicionHistorial = typeof posiciones_historial.$inferSelect;
 export type Auditoria = typeof auditoria.$inferSelect;
+export type Banner = typeof banners.$inferSelect;
