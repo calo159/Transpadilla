@@ -35,7 +35,7 @@ import type {
   Parada,
   ParadaInput,
   RegisterInput,
-  RegisterResponse,
+  RegisteredUser,
   ReordenarParadasInput,
   Ruta,
   RutaInput,
@@ -228,9 +228,9 @@ export const getRegisterUrl = () => {
 /**
  * @summary Register a new user
  */
-export const register = async (registerInput: RegisterInput, options?: RequestInit): Promise<RegisterResponse> => {
+export const register = async (registerInput: RegisterInput, options?: RequestInit): Promise<RegisteredUser> => {
 
-  return customFetch<RegisterResponse>(getRegisterUrl(),
+  return customFetch<RegisteredUser>(getRegisterUrl(),
   {
     ...options,
     method: 'POST',

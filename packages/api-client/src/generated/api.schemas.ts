@@ -42,7 +42,7 @@ export interface AuthResponse {
   usuario: Usuario;
 }
 
-export interface RegisterResponse {
+export interface RegisteredUser {
   id: number;
   rol: string;
 }

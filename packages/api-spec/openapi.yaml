@@ -73,7 +73,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RegisterResponse"
+                $ref: "#/components/schemas/RegisteredUser"
         "409":
           description: Email already registered
 
@@ -498,7 +498,7 @@ components:
         usuario:
           $ref: "#/components/schemas/Usuario"
 
-    RegisterResponse:
+    RegisteredUser:
       type: object
       required: [id, rol]
       properties:

@@ -57,14 +57,21 @@ describe("recomendarRuta", () => {
     expect(sug!.paradaOrigen?.id).toBe(10);
   });
 
-  it("penaliza el sentido contrario (abordar después de la parada de bajada)", () => {
-    const origen = { lat: 0.005, lng: 0 };
-    // Mal sentido: el orden pone primero la parada de bajada y luego la de abordaje.
-    const malSentido = ruta(1, [parada(10, 0.0005, 0), parada(11, 0.0045, 0)]);
-    // Buen sentido: abordaje (cerca del origen) va antes que bajada (cerca del destino).
-    const buenSentido = ruta(2, [parada(20, 0.0045, 0), parada(21, 0.0005, 0)]);
-    const sug = recomendarRuta([malSentido, buenSentido], DEST, origen);
-    expect(sug!.ruta.id).toBe(2); // gana el buen sentido por la penalización
+  it("en empate de caminata, prefiere el recorrido en bus más corto (circuito cerrado)", () => {
+    // Las rutas son circuitos cerrados: cualquier origen→destino es alcanzable
+    // dando la vuelta, así que ya no se descarta un "sentido"; en empate de
+    // caminata se prefiere el trayecto A BORDO más corto en el sentido de la ruta.
+    const origenStop = parada(10, 0.01, 0);
+    const destStop = parada(11, 0, 0.01);
+    const waypoint = parada(12, 0.01, 0.01);
+    const origen = { lat: 0.01, lng: 0 };
+    const destino = { lat: 0, lng: 0.01 };
+    // Corta: abordaje → bajada es el tramo directo (~1.57 km a bordo).
+    const corta = ruta(1, [origenStop, destStop, waypoint]);
+    // Larga: abordaje → bajada pasa por el punto intermedio (~2.22 km a bordo).
+    const larga = ruta(2, [origenStop, waypoint, destStop]);
+    const sug = recomendarRuta([larga, corta], destino, origen);
+    expect(sug!.ruta.id).toBe(1); // gana la ruta con el trayecto a bordo más corto
   });
 });
 
