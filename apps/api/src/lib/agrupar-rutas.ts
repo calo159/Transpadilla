@@ -8,6 +8,10 @@ export interface RutaParadaRow {
   nombre: string;
   color: string;
   activa: boolean;
+  // Id de la fila ruta_paradas (la asignación), no de la parada física: una misma
+  // parada puede repetirse varias veces en el recorrido de una ruta, así que
+  // `parada_id` deja de ser único dentro de una ruta — `asignacion_id` sí lo es.
+  ruta_parada_id: number | null;
   parada_id: number | null;
   parada_nombre: string | null;
   latitud: number | null;
@@ -21,6 +25,7 @@ export interface ParadaSalida {
   latitud: number;
   longitud: number;
   orden: number;
+  asignacion_id: number;
 }
 
 export interface RutaConParadas {
@@ -44,13 +49,14 @@ export function agruparRutasConParadas(rows: RutaParadaRow[]): RutaConParadas[] 
       ruta = { id: r.id, nombre: r.nombre, color: r.color, activa: r.activa, paradas: [] };
       mapa.set(r.id, ruta);
     }
-    if (r.parada_id != null && r.latitud != null && r.longitud != null) {
+    if (r.parada_id != null && r.latitud != null && r.longitud != null && r.ruta_parada_id != null) {
       ruta.paradas.push({
         id: r.parada_id,
         nombre: r.parada_nombre ?? "",
         latitud: r.latitud,
         longitud: r.longitud,
         orden: r.orden ?? 0,
+        asignacion_id: r.ruta_parada_id,
       });
     }
   }

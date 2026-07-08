@@ -54,6 +54,8 @@ export interface Parada {
   longitud: number;
   /** @nullable */
   orden?: number | null;
+  /** @nullable */
+  asignacion_id?: number | null;
 }
 
 export interface ParadaInput {

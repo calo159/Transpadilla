@@ -35,10 +35,12 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
   // Parada que se está arrastrando (para reordenar el recorrido).
   const [drag, setDrag] = useState<{ rutaId: number; idx: number } | null>(null);
 
-  // Guarda el nuevo orden de las paradas de una ruta (define el sentido de circulación).
-  const guardarOrden = async (rutaId: number, ids: number[]) => {
+  // Guarda el nuevo orden de las paradas de una ruta (define el sentido de
+  // circulación). Los ids son de ASIGNACIÓN (no de parada): una misma parada
+  // puede repetirse en el recorrido, así que solo `asignacion_id` es único ahí.
+  const guardarOrden = async (rutaId: number, asignacionIds: number[]) => {
     try {
-      const res = await apiFetch(`/api/rutas/${rutaId}/paradas/orden`, { method: "PUT", body: JSON.stringify({ orden: ids }) });
+      const res = await apiFetch(`/api/rutas/${rutaId}/paradas/orden`, { method: "PUT", body: JSON.stringify({ orden: asignacionIds }) });
       if (!res.ok) throw new Error();
       queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
     } catch {
@@ -48,7 +50,7 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
 
   // Mueve una parada una posición arriba/abajo en el recorrido.
   const moverParada = (ruta: Ruta, idx: number, dir: -1 | 1) => {
-    const ids = ruta.paradas.map((p) => p.id);
+    const ids = ruta.paradas.map((p) => p.asignacion_id!);
     const j = idx + dir;
     if (j < 0 || j >= ids.length) return;
     [ids[idx], ids[j]] = [ids[j]!, ids[idx]!];
@@ -58,7 +60,7 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
   // Suelta la parada arrastrada en la posición `idx`.
   const soltarEn = (ruta: Ruta, idx: number) => {
     if (!drag || drag.rutaId !== ruta.id || drag.idx === idx) { setDrag(null); return; }
-    const ids = ruta.paradas.map((p) => p.id);
+    const ids = ruta.paradas.map((p) => p.asignacion_id!);
     const [movido] = ids.splice(drag.idx, 1);
     ids.splice(idx, 0, movido!);
     setDrag(null);
@@ -68,7 +70,7 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
   // Invierte el sentido de circulación (recorre las paradas al revés).
   const invertirSentido = (ruta: Ruta) => {
     if (ruta.paradas.length < 2) return;
-    void guardarOrden(ruta.id, ruta.paradas.map((p) => p.id).reverse());
+    void guardarOrden(ruta.id, ruta.paradas.map((p) => p.asignacion_id!).reverse());
   };
 
   // Pausar / reactivar una ruta. Pausada = no aparece para los pasajeros.
@@ -148,14 +150,16 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
     });
   };
 
-  const quitarParada = (rutaId: number, paradaId: number, paradaNombre: string) => {
+  // Quita UNA ocurrencia de la parada del recorrido (por id de asignación): si la
+  // misma parada aparece varias veces en la ruta, las demás no se ven afectadas.
+  const quitarParada = (rutaId: number, asignacionId: number, paradaNombre: string) => {
     setConfirmar({
       titulo: "Quitar parada de la ruta",
       descripcion: `¿Quitar la parada "${paradaNombre}" de esta ruta? La parada NO se borra.`,
       textoConfirmar: "Quitar",
       accion: async () => {
         try {
-          const res = await apiFetch(`/api/rutas/${rutaId}/paradas/${paradaId}`, { method: "DELETE" });
+          const res = await apiFetch(`/api/rutas/${rutaId}/asignaciones/${asignacionId}`, { method: "DELETE" });
           if (!res.ok) throw new Error();
           queryClient.invalidateQueries({ queryKey: getGetRutasQueryKey() });
           toast({ title: "Parada quitada de la ruta" });
@@ -263,7 +267,7 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
                     )}
                     {ruta.paradas.map((p, i) => (
                       <div
-                        key={p.id}
+                        key={p.asignacion_id}
                         draggable
                         onDragStart={() => setDrag({ rutaId: ruta.id, idx: i })}
                         onDragOver={(e) => e.preventDefault()}
@@ -281,7 +285,7 @@ export default function RutasTab({ rutas, rutasLoading, setConfirmar, setRenombr
                           <ChevronDown className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => quitarParada(ruta.id, p.id, p.nombre)}
+                          onClick={() => quitarParada(ruta.id, p.asignacion_id!, p.nombre)}
                           className="p-0.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                           title="Quitar de la ruta"
                         >

@@ -534,6 +534,12 @@ components:
           type: number
         orden:
           type: ["integer", "null"]
+        # Id de la asignación (fila ruta_paradas), presente solo cuando la parada
+        # viene embebida dentro de una ruta. Una misma parada física puede repetirse
+        # en el recorrido de una ruta, así que `id` deja de ser único ahí dentro —
+        # `asignacion_id` sí lo es, y se usa para reordenar/quitar esa ocurrencia.
+        asignacion_id:
+          type: ["integer", "null"]
 
     ParadaInput:
       type: object

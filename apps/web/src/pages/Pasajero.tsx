@@ -696,10 +696,14 @@ export default function Pasajero() {
         const data = (await res.json()) as {
           paradas: { parada_id: number; eta_min: number | null; placa: string | null }[];
         };
+        // Clave = POSICIÓN en el recorrido (no parada_id): una misma parada puede
+        // repetirse en la ruta, y el backend ya devuelve un resultado por posición
+        // en el mismo orden que `ruta.paradas`; indexar por parada_id colapsaría
+        // las repeticiones y perdería el ETA de todas menos la última.
         const mapa: Record<number, { eta: number; placa: string }> = {};
-        for (const p of data.paradas) {
-          if (p.eta_min !== null && p.placa) mapa[p.parada_id] = { eta: p.eta_min, placa: p.placa };
-        }
+        data.paradas.forEach((p, i) => {
+          if (p.eta_min !== null && p.placa) mapa[i] = { eta: p.eta_min, placa: p.placa };
+        });
         if (!cancelado) setEtaPorParada(mapa);
       } catch { /* ETA no disponible — se ignora */ }
     };
@@ -1311,11 +1315,11 @@ export default function Pasajero() {
             <div className="pt-2">
               <p className="text-[10px] font-bold uppercase tracking-widest px-1 mb-1.5" style={{ color: "var(--color-gray-text)" }}>Paradas de la ruta</p>
               {ruta.paradas.map((p, i, arr) => {
-                const eta = etaPorParada[p.id];
+                const eta = etaPorParada[i];
                 const first = i === 0;
                 const last = i === arr.length - 1;
                 return (
-                  <div key={p.id} className="relative flex items-center gap-2.5 py-1">
+                  <div key={p.asignacion_id ?? i} className="relative flex items-center gap-2.5 py-1">
                     <div className="relative flex flex-col items-center self-stretch w-3">
                       <div className="w-0.5 flex-1" style={{ background: first ? "transparent" : ruta.color + "55" }} />
                       <div className="w-2 h-2 rounded-full ring-2 ring-white flex-shrink-0" style={{ background: ruta.color }} />
@@ -1389,10 +1393,10 @@ export default function Pasajero() {
           const rutaNumero = rutas.findIndex((r) => r.id === selectedRuta.id) + 1;
           const paradas = selectedRuta.paradas;
           const conEta = paradas
-            .map((p, i) => ({ i, eta: etaPorParada[p.id]?.eta }))
+            .map((_p, i) => ({ i, eta: etaPorParada[i]?.eta }))
             .filter((x): x is { i: number; eta: number } => x.eta != null);
           const nextI = conEta.length ? conEta.sort((a, b) => a.eta - b.eta)[0]!.i : -1;
-          const proxEtaMin = nextI >= 0 ? etaPorParada[paradas[nextI]!.id]?.eta : undefined;
+          const proxEtaMin = nextI >= 0 ? etaPorParada[nextI]?.eta : undefined;
           const progresoPct = nextI >= 0 && paradas.length > 1 ? (nextI / (paradas.length - 1)) * 100 : 0;
           const hayDemora = busesRutaSel.some((x) => x.bus.estado === "demora");
           const busesConNovedad = busesRutaSel.filter((x) => x.bus.novedad);
@@ -1476,12 +1480,12 @@ export default function Pasajero() {
             {paradas.length > 0 && (
               <ul className="bg-white">
                 {paradas.map((p, i) => {
-                  const eta = etaPorParada[p.id]?.eta;
+                  const eta = etaPorParada[i]?.eta;
                   const past = nextI >= 0 && i < nextI;
                   const current = i === nextI;
                   const cercana = i === miParadaI; // la más cercana a mi ubicación
                   return (
-                    <li key={p.id} className="relative flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "#f1f4f8", background: current ? "rgba(123,184,213,0.10)" : cercana ? "rgba(56,161,105,0.07)" : "transparent", opacity: past ? 0.55 : 1 }}>
+                    <li key={p.asignacion_id ?? i} className="relative flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "#f1f4f8", background: current ? "rgba(123,184,213,0.10)" : cercana ? "rgba(56,161,105,0.07)" : "transparent", opacity: past ? 0.55 : 1 }}>
                       {current && <span className="absolute left-0 top-0 bottom-0 w-1" style={{ background: "var(--color-gold)" }} />}
                       {cercana && !current && <span className="absolute left-0 top-0 bottom-0 w-1" style={{ background: "var(--color-success)" }} />}
                       <div className="flex items-center gap-3 min-w-0">

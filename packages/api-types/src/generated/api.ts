@@ -64,7 +64,8 @@ export const GetRutasResponseItem = zod.object({
   "nombre": zod.string(),
   "latitud": zod.number(),
   "longitud": zod.number(),
-  "orden": zod.number().nullish()
+  "orden": zod.number().nullish(),
+  "asignacion_id": zod.number().nullish()
 }))
 })
 export const GetRutasResponse = zod.array(GetRutasResponseItem)
@@ -88,7 +89,8 @@ export const CreateRutaResponse = zod.object({
   "nombre": zod.string(),
   "latitud": zod.number(),
   "longitud": zod.number(),
-  "orden": zod.number().nullish()
+  "orden": zod.number().nullish(),
+  "asignacion_id": zod.number().nullish()
 }))
 })
 
@@ -117,7 +119,8 @@ export const GetParadasByRutaResponseItem = zod.object({
   "nombre": zod.string(),
   "latitud": zod.number(),
   "longitud": zod.number(),
-  "orden": zod.number().nullish()
+  "orden": zod.number().nullish(),
+  "asignacion_id": zod.number().nullish()
 })
 export const GetParadasByRutaResponse = zod.array(GetParadasByRutaResponseItem)
 
@@ -163,7 +166,8 @@ export const GetTodasParadasResponseItem = zod.object({
   "nombre": zod.string(),
   "latitud": zod.number(),
   "longitud": zod.number(),
-  "orden": zod.number().nullish()
+  "orden": zod.number().nullish(),
+  "asignacion_id": zod.number().nullish()
 })
 export const GetTodasParadasResponse = zod.array(GetTodasParadasResponseItem)
 
@@ -182,7 +186,8 @@ export const CrearParadaResponse = zod.object({
   "nombre": zod.string(),
   "latitud": zod.number(),
   "longitud": zod.number(),
-  "orden": zod.number().nullish()
+  "orden": zod.number().nullish(),
+  "asignacion_id": zod.number().nullish()
 })
 
 

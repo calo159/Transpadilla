@@ -5,6 +5,7 @@ const fila = (over: Partial<RutaParadaRow> & Pick<RutaParadaRow, "id">): RutaPar
   nombre: `R${over.id}`,
   color: "#000",
   activa: true,
+  ruta_parada_id: over.parada_id != null ? over.parada_id + 1000 : null,
   parada_id: null,
   parada_nombre: null,
   latitud: null,
@@ -33,7 +34,18 @@ describe("agruparRutasConParadas", () => {
     const r = agruparRutasConParadas(rows);
     expect(r).toHaveLength(1);
     expect(r[0]!.paradas.map((p) => p.id)).toEqual([100, 101]);
-    expect(r[0]!.paradas[0]).toEqual({ id: 100, nombre: "A", latitud: 1, longitud: 1, orden: 0 });
+    expect(r[0]!.paradas[0]).toEqual({ id: 100, nombre: "A", latitud: 1, longitud: 1, orden: 0, asignacion_id: 1100 });
+  });
+
+  it("una misma parada puede repetirse en la ruta (asignacion_id distingue cada ocurrencia)", () => {
+    const rows: RutaParadaRow[] = [
+      fila({ id: 1, ruta_parada_id: 900, parada_id: 100, parada_nombre: "A", latitud: 1, longitud: 1, orden: 0 }),
+      fila({ id: 1, ruta_parada_id: 901, parada_id: 200, parada_nombre: "B", latitud: 2, longitud: 2, orden: 1 }),
+      fila({ id: 1, ruta_parada_id: 902, parada_id: 100, parada_nombre: "A", latitud: 1, longitud: 1, orden: 2 }),
+    ];
+    const r = agruparRutasConParadas(rows);
+    expect(r[0]!.paradas.map((p) => p.id)).toEqual([100, 200, 100]);
+    expect(r[0]!.paradas.map((p) => p.asignacion_id)).toEqual([900, 901, 902]);
   });
 
   it("agrupa varias rutas por separado, en orden de id", () => {

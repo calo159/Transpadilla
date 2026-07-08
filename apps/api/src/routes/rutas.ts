@@ -20,6 +20,7 @@ const rutasCache = crearCacheTtl(3000, async () => {
       nombre: rutas.nombre,
       color: rutas.color,
       activa: rutas.activa,
+      ruta_parada_id: ruta_paradas.id,
       parada_id: paradas.id,
       parada_nombre: paradas.nombre,
       latitud: paradas.latitud,
