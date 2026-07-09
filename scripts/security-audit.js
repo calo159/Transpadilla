@@ -31,11 +31,39 @@ function req(method, path, opts = {}) {
 }
 
 const results = { pass: 0, fail: 0, warnings: 0, items: [] };
+function safeDetailForLog(detail) {
+  if (detail === null || detail === undefined) return "";
+
+  let text;
+  if (typeof detail === "string") {
+    text = detail;
+  } else if (typeof detail === "number" || typeof detail === "boolean") {
+    text = String(detail);
+  } else {
+    try {
+      text = JSON.stringify(detail);
+    } catch {
+      text = "[UNSERIALIZABLE_DETAIL]";
+    }
+  }
+
+  // Redact common sensitive token/key patterns if present.
+  text = text.replace(
+    /("?(?:password|passwd|pwd|token|secret|authorization|api[_-]?key|cookie|set-cookie)"?\s*:\s*)"[^"]*"/gi,
+    '$1"[REDACTED]"'
+  );
+
+  // Keep logs concise and reduce leakage risk.
+  if (text.length > 120) text = `${text.slice(0, 120)}…[TRUNCATED]`;
+  return text;
+}
+
 function check(name, severity, ok, detail) {
   const s = ok ? "PASS" : severity === "WARN" ? "WARN" : "FAIL";
   results.items.push({ name, severity: s, detail });
   results[s === "PASS" ? "pass" : s === "WARN" ? "warnings" : "fail"]++;
-  console.log(`  ${s === "PASS" ? "✅" : s === "WARN" ? "⚠️" : "❌"} [${s}] ${name}: ${detail}`);
+  const safeDetail = safeDetailForLog(detail);
+  console.log(`  ${s === "PASS" ? "✅" : s === "WARN" ? "⚠️" : "❌"} [${s}] ${name}: ${safeDetail}`);
 }
 async function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
