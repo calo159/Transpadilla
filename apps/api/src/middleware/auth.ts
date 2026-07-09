@@ -26,6 +26,10 @@ export interface AuthPayload {
   id: number;
   correo: string;
   rol: string;
+  // Versión de sesión vigente al firmar (usuarios.token_version). Cambiar la
+  // contraseña la incrementa: un token firmado con una versión vieja deja de
+  // servir de inmediato, aunque no haya expirado ni se haya cerrado sesión.
+  tv: number;
 }
 
 declare global {
@@ -56,18 +60,27 @@ export async function authMiddleware(
     res.status(401).json({ error: "Token inválido o expirado" });
     return;
   }
-  // Lista negra: si el token fue revocado (cierre de sesión), se rechaza.
-  // FAIL-CLOSED: si no se puede comprobar la revocación (BD caída, error de
-  // red), se responde 503 en vez de dejar pasar — de lo contrario un token
-  // revocado por logout volvería a funcionar justo cuando la BD falla, y el
-  // "cerrar sesión real" dejaría de ser una garantía.
+  // Dos comprobaciones en una sola consulta (evita 2 round-trips por request):
+  // 1) lista negra (cierre de sesión real) y 2) token_version vigente del
+  // usuario (cambiar contraseña la incrementa → invalida sesiones viejas).
+  // FAIL-CLOSED: si no se puede comprobar (BD caída, usuario borrado), se
+  // responde 401/503 en vez de dejar pasar — de lo contrario un token
+  // revocado/viejo volvería a funcionar justo cuando la BD falla, y esas
+  // garantías dejarían de serlo.
   try {
-    const { rowCount } = await pool.query(
-      `SELECT 1 FROM tokens_revocados WHERE token_hash = $1 LIMIT 1`,
-      [hashToken(token)],
+    const { rows } = await pool.query<{ token_version: number; revocado: boolean }>(
+      `SELECT u.token_version,
+              EXISTS(SELECT 1 FROM tokens_revocados r WHERE r.token_hash = $2) AS revocado
+         FROM usuarios u WHERE u.id = $1`,
+      [payload.id, hashToken(token)],
     );
-    if (rowCount && rowCount > 0) {
+    const fila = rows[0];
+    if (!fila || fila.revocado) {
       res.status(401).json({ error: "Sesión cerrada" });
+      return;
+    }
+    if (fila.token_version !== payload.tv) {
+      res.status(401).json({ error: "Tu contraseña cambió; inicia sesión de nuevo." });
       return;
     }
   } catch {

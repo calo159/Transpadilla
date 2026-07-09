@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/api";
+import { getUser, setAuth } from "@/lib/auth";
 
 /**
  * Diálogo de cambio de contraseña para el usuario autenticado (admin/conductor).
@@ -47,6 +48,12 @@ export function CambiarPasswordDialog({
         toast({ title: err.error ?? "No se pudo cambiar la contraseña", variant: "destructive" });
         return;
       }
+      // Cambiar la contraseña invalida en el servidor todos los tokens firmados
+      // antes (incluido este mismo, así otras sesiones/dispositivos quedan fuera).
+      // El backend devuelve uno nuevo para no cerrar la sesión actual de golpe.
+      const { token } = await res.json().catch(() => ({})) as { token?: string };
+      const user = getUser();
+      if (token && user) setAuth(token, user);
       toast({ title: "Contraseña actualizada" });
       cerrar();
     } catch {

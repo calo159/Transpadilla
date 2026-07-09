@@ -7,7 +7,7 @@ import type { Request, Response } from "express";
 // Nota: función plana (no vi.fn) — el tracking de resultados de vi.fn crea una
 // promesa derivada de la rechazada sin handler, y vitest la reporta como
 // "unhandled rejection" aunque el middleware sí capture el error.
-let queryImpl: () => Promise<{ rowCount: number }>;
+let queryImpl: () => Promise<{ rows: Array<{ token_version: number; revocado: boolean }> }>;
 let queryCalls = 0;
 vi.mock("@workspace/db", () => ({
   pool: { query: () => { queryCalls++; return queryImpl(); } },
@@ -29,15 +29,16 @@ function mockReqRes(token?: string) {
   return { req, res, next };
 }
 
-const tokenValido = () => jwt.sign({ id: 1, correo: "a@b.co", rol: "admin" }, JWT_SECRET);
+// tv=0 coincide con el token_version por defecto que devuelve el mock de BD.
+const tokenValido = (tv = 0) => jwt.sign({ id: 1, correo: "a@b.co", rol: "admin", tv }, JWT_SECRET);
 
-describe("authMiddleware — revocación fail-closed", () => {
+describe("authMiddleware — revocación y token_version, fail-closed", () => {
   beforeEach(() => {
     queryCalls = 0;
-    queryImpl = () => Promise.resolve({ rowCount: 0 });
+    queryImpl = () => Promise.resolve({ rows: [{ token_version: 0, revocado: false }] });
   });
 
-  it("token válido y no revocado → next()", async () => {
+  it("token válido, no revocado y token_version vigente → next()", async () => {
     const { req, res, next } = mockReqRes(tokenValido());
     await authMiddleware(req, res, next);
     expect(next).toHaveBeenCalled();
@@ -45,14 +46,32 @@ describe("authMiddleware — revocación fail-closed", () => {
   });
 
   it("token revocado → 401 y NO next()", async () => {
-    queryImpl = () => Promise.resolve({ rowCount: 1 });
+    queryImpl = () => Promise.resolve({ rows: [{ token_version: 0, revocado: true }] });
     const { req, res, next } = mockReqRes(tokenValido());
     await authMiddleware(req, res, next);
     expect(next).not.toHaveBeenCalled();
     expect(res.statusCode).toBe(401);
   });
 
-  it("fallo de BD al comprobar revocación → 503 (fail-closed), NO next()", async () => {
+  it("token_version vieja (contraseña cambiada después de firmar) → 401 y NO next()", async () => {
+    // El usuario cambió su clave: la BD quedó en token_version=1, pero este
+    // token se firmó antes (tv=0) → debe rechazarse aunque no esté revocado.
+    queryImpl = () => Promise.resolve({ rows: [{ token_version: 1, revocado: false }] });
+    const { req, res, next } = mockReqRes(tokenValido(0));
+    await authMiddleware(req, res, next);
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("usuario borrado (sin fila) → 401 y NO next()", async () => {
+    queryImpl = () => Promise.resolve({ rows: [] });
+    const { req, res, next } = mockReqRes(tokenValido());
+    await authMiddleware(req, res, next);
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("fallo de BD al comprobar sesión → 503 (fail-closed), NO next()", async () => {
     queryImpl = () => Promise.reject(new Error("db down"));
     const { req, res, next } = mockReqRes(tokenValido());
     await authMiddleware(req, res, next);

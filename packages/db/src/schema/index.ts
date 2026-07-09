@@ -24,6 +24,11 @@ export const usuarios = pgTable("usuarios", {
   // login exitoso. Complementa (no reemplaza) el rate-limit por IP.
   intentos_fallidos: integer("intentos_fallidos").notNull().default(0),
   bloqueado_hasta: timestamp("bloqueado_hasta"),
+  // Versión de sesión: se incluye en el JWT al firmar (claim `tv`) y se compara
+  // en cada request (authMiddleware). Cambiar la contraseña la incrementa, así
+  // todos los tokens firmados antes quedan inválidos de inmediato (no solo el
+  // hash cambia — la sesión robada/vieja deja de servir aunque no haya expirado).
+  token_version: integer("token_version").notNull().default(0),
   // Consentimiento de términos del conductor (Fase 3.4/3.1): se registra al
   // aceptar los Términos de Conductor en el primer ingreso. Guarda versión,
   // fecha e IP como evidencia del consentimiento (Ley 1581 de 2012).

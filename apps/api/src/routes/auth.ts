@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { db } from "@workspace/db";
 import { usuarios, buses } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { pool } from "@workspace/db";
 import { JWT_SECRET, authMiddleware, hashToken } from "../middleware/auth";
 import { validarBody, requerido, correoValido, texto, passwordFuerte } from "../middleware/validate";
@@ -69,7 +69,7 @@ router.post(
   await limpiarIntentos(usuario.id);
   registrarAuditoria(req, "login_exitoso", "usuario", usuario.id);
   const token = jwt.sign(
-    { id: usuario.id, correo: usuario.correo, rol: usuario.rol },
+    { id: usuario.id, correo: usuario.correo, rol: usuario.rol, tv: usuario.token_version },
     JWT_SECRET,
     {
       // Firma HS256 explícita (era el default); el verify fija este mismo algoritmo.
@@ -160,8 +160,22 @@ router.post(
       return;
     }
     const hash = await bcrypt.hash(nueva, 10);
-    await db.update(usuarios).set({ password: hash }).where(eq(usuarios.id, id));
-    res.json({ mensaje: "Contraseña actualizada" });
+    // Incrementar token_version invalida TODOS los tokens firmados antes de este
+    // cambio (otros dispositivos/sesiones robadas), no solo el hash de la clave.
+    const [actualizado] = await db
+      .update(usuarios)
+      .set({ password: hash, token_version: sql`${usuarios.token_version} + 1` })
+      .where(eq(usuarios.id, id))
+      .returning({ token_version: usuarios.token_version });
+    // La sesión ACTUAL también quedaría invalidada (su token trae la versión
+    // vieja) — se firma y devuelve un token nuevo para que quien acaba de
+    // cambiar su clave no quede desconectado de inmediato.
+    const nuevoToken = jwt.sign(
+      { id: usuario.id, correo: usuario.correo, rol: usuario.rol, tv: actualizado!.token_version },
+      JWT_SECRET,
+      { algorithm: "HS256", expiresIn: (process.env["JWT_EXPIRES_IN"] ?? "3d") as jwt.SignOptions["expiresIn"] },
+    );
+    res.json({ mensaje: "Contraseña actualizada", token: nuevoToken });
   },
 );
 
