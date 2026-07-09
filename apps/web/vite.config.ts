@@ -98,7 +98,7 @@ export default defineConfig(({ mode }) => ({
           if (!id.includes("node_modules")) return undefined;
           if (id.includes("leaflet")) return "leaflet";
           if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return "react-vendor";
-          if (id.includes("@tanstack") || id.includes("socket.io")) return "data-vendor";
+          if (/[\\/]node_modules[\\/](@tanstack|socket\.io)[\\/]/.test(id)) return "data-vendor";
           return "vendor";
         },
       },

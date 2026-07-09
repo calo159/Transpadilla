@@ -179,11 +179,18 @@ async function run() {
     corsTest.origin ? `Permite: ${corsTest.origin}` : "Sin ACAO (OK)");
 
   // ── 7. JWT Security ─────────────────────────────────
+  // Credenciales de prueba SIEMPRE por variable de entorno — nunca hardcodeadas
+  // en el script (ni siquiera un demo): AUDIT_ADMIN_EMAIL / AUDIT_ADMIN_PASSWORD.
   console.log("\n── 7. SEGURIDAD JWT ──");
-  const login = await req("POST", "/auth/login", {
-    body: { correo: "admin@transpadilla.co", password: "admin123" },
-  });
-  if (login.status === 200 && login.body?.token) {
+  const auditEmail = process.env.AUDIT_ADMIN_EMAIL;
+  const auditPassword = process.env.AUDIT_ADMIN_PASSWORD;
+  const login = auditEmail && auditPassword
+    ? await req("POST", "/auth/login", { body: { correo: auditEmail, password: auditPassword } })
+    : { status: 0 };
+  if (!auditEmail || !auditPassword) {
+    check("Login funcional en prod", "WARN", false,
+      "AUDIT_ADMIN_EMAIL/AUDIT_ADMIN_PASSWORD no definidos — se omite esta prueba");
+  } else if (login.status === 200 && login.body?.token) {
     const parts = login.body.token.split(".");
     let payload = {};
     try { payload = JSON.parse(Buffer.from(parts[1], "base64url").toString()); } catch {}

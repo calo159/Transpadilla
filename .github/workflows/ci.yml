@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+# Principio de mínimo privilegio: este workflow solo hace checkout, instala,
+# builda y testea — no necesita escribir en el repo ni tocar otros recursos.
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
