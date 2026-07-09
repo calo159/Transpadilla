@@ -18,11 +18,5 @@
   "devDependencies": {
     "prettier": "^3.8.3",
     "typescript": "~5.9.3"
-  },
-  "resolutions": {
-    "@capacitor/cli>tar": "^7.5.16",
-    "replace>minimatch": "^3.1.4",
-    "xcode>uuid": "^11.1.1",
-    "@esbuild-kit/core-utils>esbuild": "^0.25.0"
   }
 }
