@@ -144,19 +144,19 @@ async function run() {
 
   // ── 5. Acceso no autorizado ─────────────────────────
   console.log("\n── 5. ACCESO NO AUTORIZADO ──");
-  const noAuth = await req("POST", "/rutas", {
+  const intentoRutas = await req("POST", "/rutas", {
     body: { nombre: "test-hack", color: "#ff0000" },
   });
   check("POST /rutas sin auth (debe 401/403)", "HIGH",
-    noAuth.status === 401 || noAuth.status === 403,
-    `Status: ${noAuth.status}`);
+    intentoRutas.status === 401 || intentoRutas.status === 403,
+    `Status: ${intentoRutas.status}`);
 
-  const noAuthBus = await req("POST", "/buses", {
+  const intentoBuses = await req("POST", "/buses", {
     body: { placa: "XXX-000" },
   });
   check("POST /buses sin auth (debe 401/403)", "HIGH",
-    noAuthBus.status === 401 || noAuthBus.status === 403,
-    `Status: ${noAuthBus.status}`);
+    intentoBuses.status === 401 || intentoBuses.status === 403,
+    `Status: ${intentoBuses.status}`);
 
   // ── 6. CORS ─────────────────────────────────────────
   console.log("\n── 6. CORS ──");
