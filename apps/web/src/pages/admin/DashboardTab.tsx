@@ -189,9 +189,19 @@ export default function DashboardTab({
                     <span className="text-xs font-bold uppercase tracking-wider">{group.label}</span>
                     <span className="text-xl font-black">{group.items.length}</span>
                   </div>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-1.5">
                     {group.items.map((b) => (
-                      <span key={b.id} className="text-xs font-mono bg-black/20 px-2 py-0.5 rounded-md">{b.placa}</span>
+                      <span key={b.id} className="inline-flex items-center gap-1.5 text-xs bg-black/20 px-2 py-0.5 rounded-md">
+                        <span className="font-mono font-semibold">{b.placa}</span>
+                        {b.nombre_ruta ? (
+                          <span className="inline-flex items-center gap-1 opacity-80">
+                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: colorSeguro(b.color_ruta ?? "#2558A5") }} />
+                            {b.nombre_ruta}
+                          </span>
+                        ) : (
+                          <span className="opacity-60 italic">sin ruta</span>
+                        )}
+                      </span>
                     ))}
                   </div>
                 </div>
