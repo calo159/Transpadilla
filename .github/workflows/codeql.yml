@@ -45,10 +45,14 @@ jobs:
         include:
         - language: actions
           build-mode: none
-        - language: java-kotlin
-          build-mode: none # This mode only analyzes Java. Set this to 'autobuild' or 'manual' to analyze Kotlin too.
         - language: javascript-typescript
           build-mode: none
+        # java-kotlin excluido: el unico codigo Java del repo es el scaffold de
+        # Capacitor (apps/web/android), que referencia un archivo Gradle
+        # (capacitor-cordova-android-plugins/cordova.variables.gradle) generado
+        # solo por "npx cap sync" en local y gitignorado — CI no lo tiene, asi
+        # que el analisis fallaba al intentar leerlo. Sin logica propia en Java
+        # que valga la pena escanear.
         # CodeQL supports the following values keywords for 'language': 'actions', 'c-cpp', 'csharp', 'go', 'java-kotlin', 'javascript-typescript', 'python', 'ruby', 'rust', 'swift'
         # Use `c-cpp` to analyze code written in C, C++ or both
         # Use 'java-kotlin' to analyze code written in Java, Kotlin or both
