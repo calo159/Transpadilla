@@ -23,7 +23,7 @@ export const usuarios = pgTable("usuarios", {
   // fallido; al llegar a 5 se fija bloqueado_hasta = now()+15min. Se resetea en
   // login exitoso. Complementa (no reemplaza) el rate-limit por IP.
   intentos_fallidos: integer("intentos_fallidos").notNull().default(0),
-  bloqueado_hasta: timestamp("bloqueado_hasta"),
+  bloqueado_hasta: timestamp("bloqueado_hasta", { withTimezone: true }),
   // Versión de sesión: se incluye en el JWT al firmar (claim `tv`) y se compara
   // en cada request (authMiddleware). Cambiar la contraseña la incrementa, así
   // todos los tokens firmados antes quedan inválidos de inmediato (no solo el
@@ -34,7 +34,7 @@ export const usuarios = pgTable("usuarios", {
   // fecha e IP como evidencia del consentimiento (Ley 1581 de 2012).
   terminos_conductor_aceptados: boolean("terminos_conductor_aceptados").notNull().default(false),
   terminos_conductor_version: varchar("terminos_conductor_version", { length: 20 }),
-  terminos_conductor_fecha: timestamp("terminos_conductor_fecha"),
+  terminos_conductor_fecha: timestamp("terminos_conductor_fecha", { withTimezone: true }),
   terminos_conductor_ip: varchar("terminos_conductor_ip", { length: 64 }),
 });
 
@@ -78,7 +78,7 @@ export const buses = pgTable("buses", {
   velocidad: real("velocidad"),
   novedad: text("novedad"),
   ocupacion: varchar("ocupacion", { length: 10 }),
-  actualizado: timestamp("actualizado"),
+  actualizado: timestamp("actualizado", { withTimezone: true }),
 });
 
 // Historial de posiciones: snapshot periódico de los buses en circulación.
@@ -96,7 +96,7 @@ export const posiciones_historial = pgTable(
     lng: real("lng").notNull(),
     velocidad: real("velocidad"),
     ocupacion: varchar("ocupacion", { length: 10 }),
-    capturado: timestamp("capturado").notNull().defaultNow(),
+    capturado: timestamp("capturado", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index("idx_hist_bus_capturado").on(t.bus_id, t.capturado),
@@ -119,7 +119,7 @@ export const auditoria = pgTable(
     // acción administrativa. Igual que el resto de la tabla: solo INSERT.
     ip: varchar("ip", { length: 64 }),
     user_agent: text("user_agent"),
-    creado_en: timestamp("creado_en").notNull().defaultNow(),
+    creado_en: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("idx_auditoria_creado").on(t.creado_en)],
 );
@@ -132,7 +132,7 @@ export const suscripciones_push = pgTable("suscripciones_push", {
   p256dh: text("p256dh").notNull(),
   auth: text("auth").notNull(),
   rutas: jsonb("rutas").notNull().$type<number[]>().default([]),
-  creado_en: timestamp("creado_en").notNull().defaultNow(),
+  creado_en: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
 });
 
 // Favoritos del pasajero (sin cuenta): qué rutas marcó como favoritas cada
@@ -146,7 +146,7 @@ export const favoritos = pgTable(
     ruta_id: integer("ruta_id")
       .notNull()
       .references(() => rutas.id, { onDelete: "cascade" }),
-    creado_en: timestamp("creado_en").notNull().defaultNow(),
+    creado_en: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     uniqueIndex("idx_favoritos_cliente_ruta").on(t.cliente_id, t.ruta_id),
@@ -163,7 +163,7 @@ export const banners = pgTable("banners", {
   imagen_url: text("imagen_url").notNull(),
   titulo: varchar("titulo", { length: 120 }),
   activo: boolean("activo").notNull().default(false),
-  creado_en: timestamp("creado_en").notNull().defaultNow(),
+  creado_en: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
 });
 
 // Lista negra de tokens JWT revocados (cierre de sesión real). Se guarda el hash
@@ -171,8 +171,8 @@ export const banners = pgTable("banners", {
 export const tokens_revocados = pgTable("tokens_revocados", {
   id: serial("id").primaryKey(),
   token_hash: varchar("token_hash", { length: 64 }).notNull().unique(),
-  expira_en: timestamp("expira_en").notNull(),
-  creado_en: timestamp("creado_en").notNull().defaultNow(),
+  expira_en: timestamp("expira_en", { withTimezone: true }).notNull(),
+  creado_en: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export type Usuario = typeof usuarios.$inferSelect;
