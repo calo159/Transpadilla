@@ -9,3 +9,13 @@ export const escHtml = (s: string): string =>
     /[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string),
   );
+
+/**
+ * Devuelve el color si es un hex CSS válido (#RGB o #RRGGBB), o un color de
+ * respaldo si no. El color de ruta/bus se interpola crudo en `style="background:${color}"`
+ * dentro del HTML de los íconos/popups de Leaflet; el backend ya lo valida al
+ * escribir (`colorHex`), pero no conviene depender de una única validación —
+ * sin esto, un valor corrupto podría romper el atributo `style` e inyectar HTML.
+ */
+export const colorSeguro = (color: string, fallback = "#2558A5"): string =>
+  /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color) ? color : fallback;

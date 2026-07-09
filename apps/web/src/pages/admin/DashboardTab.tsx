@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import { useLeafletMap } from "@/hooks/use-leaflet-map";
 import { crearFlechasDireccion } from "@/lib/map-arrows";
 import { fetchStreetRoute } from "@/lib/routing";
+import { colorSeguro } from "@/lib/html";
 import { cardCls, SectionHeader } from "./shared";
 
 interface Props {
@@ -61,7 +62,7 @@ function DashboardMiniMap({ rutas, buses }: { rutas: Ruta[]; buses: Bus[] }) {
     busesConGps.forEach((b) => {
       const icon = L.divIcon({
         className: "",
-        html: `<div style="width:14px;height:14px;border-radius:50%;background:${b.color_ruta ?? "#2558A5"};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.35)"></div>`,
+        html: `<div style="width:14px;height:14px;border-radius:50%;background:${colorSeguro(b.color_ruta ?? "#2558A5")};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.35)"></div>`,
         iconSize: [14, 14], iconAnchor: [7, 7],
       });
       L.marker([b.lat!, b.lng!], { icon, interactive: false }).addTo(grupo);

@@ -7,7 +7,7 @@ WORKDIR /app
 RUN corepack enable
 # Copiamos todo el monorepo (el build necesita packages/* y apps/*).
 COPY . .
-RUN pnpm install --no-frozen-lockfile --prod=false
+RUN pnpm install --frozen-lockfile --prod=false
 RUN pnpm run build:prod
 
 FROM node:22-slim AS run

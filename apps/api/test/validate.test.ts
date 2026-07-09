@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { requerido, texto, correoValido, numeroEnRango, enLista, booleano, colorHex, parseIdParam, passwordFuerte } from "../src/middleware/validate";
+import { requerido, texto, correoValido, numeroEnRango, enLista, booleano, colorHex, parseIdParam, passwordFuerte, dataUrlImagen } from "../src/middleware/validate";
 
 describe("requerido", () => {
   it("falla si falta o está vacío", () => {
@@ -77,6 +77,29 @@ describe("passwordFuerte", () => {
   });
   it("acepta una contraseña fuerte real", () => {
     expect(passwordFuerte("password")({ password: "Rioh4cha#Buses26" })).toBeNull();
+  });
+});
+
+describe("dataUrlImagen", () => {
+  it("acepta raster (png/jpeg/webp/gif) en base64", () => {
+    expect(dataUrlImagen("img")({ img: "data:image/png;base64,AAAA" })).toBeNull();
+    expect(dataUrlImagen("img")({ img: "data:image/jpeg;base64,AAAA" })).toBeNull();
+    expect(dataUrlImagen("img")({ img: "data:image/jpg;base64,AAAA" })).toBeNull();
+    expect(dataUrlImagen("img")({ img: "data:image/webp;base64,AAAA" })).toBeNull();
+    expect(dataUrlImagen("img")({ img: "data:image/gif;base64,AAAA" })).toBeNull();
+  });
+  it("rechaza svg+xml (podría llevar <script>) y cualquier no-imagen", () => {
+    expect(dataUrlImagen("img")({ img: "data:image/svg+xml;base64,AAAA" })).toMatch(/png, jpg, webp o gif/);
+    expect(dataUrlImagen("img")({ img: "data:text/html;base64,AAAA" })).toMatch(/png, jpg, webp o gif/);
+    expect(dataUrlImagen("img")({ img: "no-es-una-data-url" })).toMatch(/png, jpg, webp o gif/);
+  });
+  it("respeta el tamaño máximo", () => {
+    const grande = "data:image/png;base64," + "A".repeat(20);
+    expect(dataUrlImagen("img", 10)({ img: grande })).toMatch(/demasiado grande/);
+  });
+  it("undefined/null pasan (se combina con requerido() si es obligatorio)", () => {
+    expect(dataUrlImagen("img")({})).toBeNull();
+    expect(dataUrlImagen("img")({ img: null })).toBeNull();
   });
 });
 

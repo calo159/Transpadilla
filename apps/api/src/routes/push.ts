@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { pool } from "@workspace/db";
 import { pushHabilitado, clavePublicaVapid } from "../lib/push";
+import { hostEndpointValido } from "../lib/push-util";
 import { rateLimit } from "../middleware/rate-limit";
 
 // Suscripción a notificaciones Web Push. PÚBLICO: el pasajero no tiene cuenta;
@@ -33,11 +34,14 @@ router.post("/push/suscribir", pushLimiter, async (req, res) => {
     return;
   }
   // Tamaños razonables (los endpoints reales de FCM/Mozilla rondan 150–400
-  // caracteres) y solo HTTPS — corta basura y payloads inflados en la BD.
-  const esLocal = process.env["NODE_ENV"] !== "production" && endpoint.startsWith("http://localhost");
+  // caracteres) y el host debe ser un servicio de push real (nunca lo escribe
+  // el usuario a mano) — corta basura, payloads inflados, y el SSRF ciego de
+  // apuntar `webpush.sendNotification` (que corre en el servidor) a un host
+  // interno o una IP arbitraria.
+  const esProduccion = process.env["NODE_ENV"] === "production";
   if (
     endpoint.length > 600 || p256dh.length > 256 || auth.length > 128 ||
-    (!endpoint.startsWith("https://") && !esLocal)
+    !hostEndpointValido(endpoint, esProduccion)
   ) {
     res.status(400).json({ error: "Suscripción inválida" });
     return;

@@ -34,8 +34,10 @@ services:
     #  panel de Render → Settings → Instance Type.)
     plan: free
     region: oregon
-    # pnpm 11 instala devDependencies por defecto (sin --prod).
-    buildCommand: pnpm install --no-frozen-lockfile && pnpm run build:prod
+    # pnpm 11 instala devDependencies por defecto (sin --prod). --frozen-lockfile
+    # instala exactamente lo que hay en pnpm-lock.yaml (lo mismo que audita CI),
+    # en vez de resolver versiones nuevas en cada deploy.
+    buildCommand: pnpm install --frozen-lockfile && pnpm run build:prod
     startCommand: pnpm --filter @workspace/api start
     healthCheckPath: /api/healthz
     envVars:

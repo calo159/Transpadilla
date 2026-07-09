@@ -133,6 +133,21 @@ app.use((req, res, next) => {
   }
   next();
 });
+// Límite propio y estricto para subir banners, ANTES de parsear el body de 6mb:
+// aunque la ruta exige admin, un token falso/expirado igual llega hasta aquí, y
+// sin este límite un anónimo podría forzar el parseo repetido de payloads de
+// 6mb (costo de memoria/CPU) a la velocidad del límite global de la API. El
+// rate-limit solo mira IP/cabeceras, así que puede rechazar con 429 antes de
+// tocar el body.
+const bannersUploadLimiter = rateLimit({
+  ventanaMs: 60_000,
+  max: 5,
+  mensaje: "Demasiadas subidas de anuncios. Espera un minuto.",
+});
+app.use("/api/banners", (req, res, next) => {
+  if (req.method !== "POST") return next();
+  return bannersUploadLimiter(req, res, next);
+});
 // Parser dedicado para la subida de banners (imagen base64). Va ANTES del parser
 // global de 32kb: al leer el body marca req._body, así el parser global lo omite.
 app.use("/api/banners", express.json({ limit: "6mb" }));

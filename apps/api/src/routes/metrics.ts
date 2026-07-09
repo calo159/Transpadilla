@@ -1,4 +1,5 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
+import crypto from "node:crypto";
 import { pool } from "@workspace/db";
 import { authMiddleware, requireRol } from "../middleware/auth";
 import { snapshot, metricasPrometheus } from "../lib/metrics";
@@ -20,12 +21,17 @@ router.get("/metrics", authMiddleware, requireRol("admin"), (_req, res) => {
  * se cae al flujo admin normal (authMiddleware + requireRol). Así Prometheus/
  * Grafana Agent puede hacer scrape sin tener que rotar el JWT cada pocos días.
  */
+/** Compara con tiempo constante (evita filtrar el token por temporización). */
+function tokenCoincide(header: string | undefined, esperado: string): boolean {
+  if (!header) return false;
+  const a = Buffer.from(header);
+  const b = Buffer.from(`Bearer ${esperado}`);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 function guardaMetricas(req: Request, res: Response, next: NextFunction): void {
   const metricsToken = process.env["METRICS_TOKEN"];
-  if (metricsToken) {
-    const header = req.headers.authorization;
-    if (header === `Bearer ${metricsToken}`) { next(); return; }
-  }
+  if (metricsToken && tokenCoincide(req.headers.authorization, metricsToken)) { next(); return; }
   authMiddleware(req, res, () => requireRol("admin")(req, res, next));
 }
 

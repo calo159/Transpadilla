@@ -10,6 +10,7 @@ import { validarBody, requerido, correoValido, texto, passwordFuerte } from "../
 import { rateLimit } from "../middleware/rate-limit";
 import { estaBloqueado, minutosRestantes, registrarFallo, limpiarIntentos } from "../lib/lockout";
 import { clienteIp } from "../lib/client-ip";
+import { registrarAuditoria } from "../lib/auditoria";
 
 const router = Router();
 
@@ -37,12 +38,14 @@ router.post(
     correo: string;
     password: string;
   };
+  const correoNorm = correo.trim().toLowerCase();
   const [usuario] = await db
     .select()
     .from(usuarios)
-    .where(eq(usuarios.correo, correo.trim().toLowerCase()));
+    .where(eq(usuarios.correo, correoNorm));
   if (!usuario) {
     await bcrypt.compare(password, DUMMY_HASH); // equaliza el tiempo (anti-enumeración)
+    registrarAuditoria(req, "login_fallido", "usuario", null, { correo: correoNorm });
     res.status(401).json({ error: "Credenciales inválidas" });
     return;
   }
@@ -50,6 +53,7 @@ router.post(
   // un atacante no pueda seguir probando contraseñas contra esta cuenta aunque
   // rote de IP (el rate-limit de arriba es por IP, esto es por cuenta).
   if (estaBloqueado(usuario)) {
+    registrarAuditoria(req, "login_bloqueado", "usuario", usuario.id);
     res.status(429).json({
       error: `Cuenta bloqueada temporalmente por intentos fallidos. Espera ${minutosRestantes(usuario)} min e inténtalo de nuevo.`,
     });
@@ -58,10 +62,12 @@ router.post(
   const valid = await bcrypt.compare(password, usuario.password);
   if (!valid) {
     await registrarFallo(usuario.id);
+    registrarAuditoria(req, "login_fallido", "usuario", usuario.id);
     res.status(401).json({ error: "Credenciales inválidas" });
     return;
   }
   await limpiarIntentos(usuario.id);
+  registrarAuditoria(req, "login_exitoso", "usuario", usuario.id);
   const token = jwt.sign(
     { id: usuario.id, correo: usuario.correo, rol: usuario.rol },
     JWT_SECRET,

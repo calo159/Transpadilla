@@ -4,9 +4,12 @@ import { logger } from "./logger";
 import { clienteIp } from "./client-ip";
 
 /**
- * Registra una acción administrativa en la tabla `auditoria`. Best-effort: si el
- * insert falla, NO rompe la request (la operación principal ya se hizo). Solo se
- * llama en mutaciones protegidas por `requireRol("admin")`.
+ * Registra una acción en la tabla `auditoria`. Best-effort: si el insert falla,
+ * NO rompe la request (la operación principal ya se hizo). Se usa tanto en
+ * mutaciones protegidas por `requireRol("admin")` como en eventos de login
+ * (exitoso/fallido/bloqueado) para dar visibilidad ante ataques de credenciales
+ * — ahí `req.usuario` aún no existe, así que `usuario_id` queda `null` y el
+ * `entidadId` identifica la cuenta involucrada.
  *
  * Recibe `req` (no solo el id) para capturar IP y user-agent de la petición.
  */

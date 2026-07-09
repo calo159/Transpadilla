@@ -30,7 +30,7 @@ import { tiempoRelativo } from "@/lib/format";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { distanciaKm, velEfectiva, puntoMasCercanoEnLinea, posEnCircuito, distanciaAdelanteM } from "@/lib/geo";
 import { recomendarRuta, busMasCercano } from "@/lib/sugerencia";
-import { escHtml } from "@/lib/html";
+import { escHtml, colorSeguro } from "@/lib/html";
 import { ocupacionInfo, OCUPACION_ORDEN } from "@/lib/ocupacion";
 
 /** Evento `beforeinstallprompt` (no está en los tipos estándar del DOM). */
@@ -294,17 +294,18 @@ export default function Pasajero() {
     stopMarkersRef.current = [];
 
     rutas.forEach((ruta) => {
+      const rutaColor = colorSeguro(ruta.color);
       ruta.paradas.forEach((p) => {
         const icon = L.divIcon({
           className: "",
-          html: `<div style="width:14px;height:14px;border-radius:50%;background:${ruta.color};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.6)"></div>`,
+          html: `<div style="width:14px;height:14px;border-radius:50%;background:${rutaColor};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.6)"></div>`,
           iconSize: [14, 14], iconAnchor: [7, 7],
         });
         const m = L.marker([p.latitud, p.longitud], { icon })
           .bindPopup(`
             <div style="min-width:140px;font-family:'Inter',system-ui,sans-serif">
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-                <div style="width:10px;height:10px;border-radius:50%;background:${ruta.color}"></div>
+                <div style="width:10px;height:10px;border-radius:50%;background:${rutaColor}"></div>
                 <b style="font-size:13px">${escHtml(p.nombre)}</b>
               </div>
               <span style="color:#94a3b8;font-size:11px">${escHtml(ruta.nombre)}</span>
@@ -377,10 +378,11 @@ export default function Pasajero() {
     (busId: number, lat: number, lng: number, color = "#2558A5", placa = "", rutaId?: number) => {
       if (!mapRef.current) return;
       const bus = busesRef.current.find((b) => b.id === busId);
-      // Valores de BD/usuario escapados (innerHTML del popup) → anti-XSS.
+      // Valores de BD/usuario escapados/validados (innerHTML del popup) → anti-XSS.
       const routeName = escHtml(bus?.nombre_ruta ?? "");
       const placaSafe = escHtml(placa || "BUS");
       const novedadSafe = bus?.novedad ? escHtml(bus.novedad) : "";
+      const colorSafe = colorSeguro(color);
       const vel = bus?.velocidad ?? 0;
       const ocup = ocupacionInfo(bus?.ocupacion);
 
@@ -418,18 +420,18 @@ export default function Pasajero() {
       // anillo expansivo (ping) detrás de la píldora, estilo mockup.
       const haloRing = seguido ? "box-shadow:0 4px 14px rgba(0,0,0,.4),0 0 0 4px rgba(245,183,49,.9);" : "box-shadow:0 4px 14px rgba(0,0,0,.4);";
       const pingRing = seguido
-        ? `<span class="tp-marker-ping" style="position:absolute;left:50%;top:50%;width:36px;height:36px;border-radius:50%;background:${color};z-index:-1;pointer-events:none"></span>`
+        ? `<span class="tp-marker-ping" style="position:absolute;left:50%;top:50%;width:36px;height:36px;border-radius:50%;background:${colorSafe};z-index:-1;pointer-events:none"></span>`
         : "";
       const icon = L.divIcon({
         className: seguido ? "tp-bus-seguido" : "",
         html: `<div class="tp-marker-bob" style="display:flex;flex-direction:column;align-items:center;font-family:'Inter',system-ui,sans-serif">
-            <div style="position:relative;display:flex;align-items:center;gap:4px;background:${color};color:#fff;min-height:30px;padding:4px 9px;border-radius:12px;font-size:11px;font-weight:800;white-space:nowrap;${haloRing}border:2px solid #fff;letter-spacing:.3px">
+            <div style="position:relative;display:flex;align-items:center;gap:4px;background:${colorSafe};color:#fff;min-height:30px;padding:4px 9px;border-radius:12px;font-size:11px;font-weight:800;white-space:nowrap;${haloRing}border:2px solid #fff;letter-spacing:.3px">
               ${pingRing}
               <span style="display:flex;line-height:0">${svgBus}</span>${placaSafe}
               <span style="position:absolute;bottom:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:${ocupDot};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.45)"></span>
               ${novBadge}
             </div>
-            <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid ${color};margin-top:-1px;filter:drop-shadow(0 2px 1px rgba(0,0,0,.3))"></div>
+            <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid ${colorSafe};margin-top:-1px;filter:drop-shadow(0 2px 1px rgba(0,0,0,.3))"></div>
           </div>`,
         iconSize: [96, 40], iconAnchor: [48, 40],
       });

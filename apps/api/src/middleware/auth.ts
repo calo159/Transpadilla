@@ -8,11 +8,15 @@ export function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-// En producción el JWT_SECRET es obligatorio: si falta, abortamos el arranque
-// (fail-fast) en vez de usar un secreto por defecto inseguro.
-if (process.env["NODE_ENV"] === "production" && !process.env["JWT_SECRET"]) {
+// JWT_SECRET es obligatorio salvo en desarrollo local explícito: el fallback
+// solo debe existir para `pnpm dev` sin .env configurado. Si NODE_ENV no es
+// exactamente "development" (staging, prod, o un despliegue mal configurado
+// sin NODE_ENV) y falta el secreto, abortamos el arranque (fail-fast) en vez
+// de firmar/verificar tokens con un secreto público conocido del repo — eso
+// permitiría forjar un JWT con rol "admin".
+if (process.env["NODE_ENV"] !== "development" && !process.env["JWT_SECRET"]) {
   throw new Error(
-    "FATAL: JWT_SECRET es obligatorio en producción. Configúralo en las variables de entorno.",
+    "FATAL: JWT_SECRET es obligatorio fuera de desarrollo. Configúralo en las variables de entorno.",
   );
 }
 const JWT_SECRET =

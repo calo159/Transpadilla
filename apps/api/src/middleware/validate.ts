@@ -113,8 +113,11 @@ export const dataUrlImagen = (campo: string, maxLen = 6_000_000): Regla => (b) =
   const v = b[campo];
   if (v === undefined || v === null) return null; // usar junto a requerido() si es obligatorio
   if (typeof v !== "string") return `"${campo}" debe ser texto.`;
-  if (!/^data:image\/[a-zA-Z0-9.+-]+;base64,/.test(v)) {
-    return `"${campo}" debe ser una imagen (data URL base64).`;
+  // Solo raster: excluye explícitamente svg+xml (podría llevar <script>). Aunque
+  // hoy se renderiza siempre dentro de <img src> (donde el script de un SVG no se
+  // ejecuta), restringir a raster elimina el vector por completo sin depender de eso.
+  if (!/^data:image\/(png|jpe?g|webp|gif);base64,/i.test(v)) {
+    return `"${campo}" debe ser una imagen (png, jpg, webp o gif) en base64.`;
   }
   if (v.length > maxLen) return `"${campo}" es demasiado grande; usa una imagen más liviana.`;
   return null;
