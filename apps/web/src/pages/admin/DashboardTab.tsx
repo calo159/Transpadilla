@@ -96,12 +96,24 @@ function DashboardMiniMap({ rutas, buses }: { rutas: Ruta[]; buses: Bus[] }) {
 }
 
 /** Tab "Dashboard" del panel Admin: resumen de la flota, rutas y novedades. */
+// Etiqueta + color de cada estado de bus (chip dentro de la caja de su ruta).
+const ESTADO_INFO: Record<string, { label: string; cls: string }> = {
+  activo: { label: "Activo", cls: "bg-green-500/15 text-green-400" },
+  demora: { label: "Con demora", cls: "bg-amber-500/15 text-amber-400" },
+  inactivo: { label: "Inactivo", cls: "bg-muted text-muted-foreground" },
+};
+
 export default function DashboardTab({
   stats, statsLoading, buses, busesLoading, rutas, rutasLoading,
 }: Props) {
-  const activeBuses = buses.filter((b) => b.estado === "activo");
-  const inactiveBuses = buses.filter((b) => b.estado === "inactivo");
-  const demoraBuses = buses.filter((b) => b.estado === "demora");
+  // Flota agrupada POR RUTA (una caja por ruta, con sus buses adentro) — en vez
+  // de agrupar por estado. Los buses sin ruta (o con una ruta ya borrada) van
+  // en un grupo aparte al final.
+  const idsRutas = new Set(rutas.map((r) => r.id));
+  const busesPorRuta = rutas
+    .map((ruta) => ({ ruta, items: buses.filter((b) => b.ruta_id === ruta.id) }))
+    .filter((g) => g.items.length > 0);
+  const busesSinRuta = buses.filter((b) => b.ruta_id == null || !idsRutas.has(b.ruta_id));
 
   // Guía de primeros pasos: solo cuando aún no hay rutas (sistema recién creado).
   const sinConfigurar = !rutasLoading && rutas.length === 0;
@@ -178,34 +190,46 @@ export default function DashboardTab({
           ) : buses.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">No hay buses registrados</p>
           ) : (
-            <div className="space-y-2">
-              {[
-                { label: "Activos",    items: activeBuses,   style: "border-green-500/20 bg-green-500/5 text-green-400" },
-                { label: "Con demora", items: demoraBuses,   style: "border-amber-500/20 bg-amber-500/5 text-amber-400" },
-                { label: "Inactivos",  items: inactiveBuses, style: "border-border bg-muted/5 text-muted-foreground" },
-              ].filter((g) => g.items.length > 0).map((group) => (
-                <div key={group.label} className={`border rounded-xl p-3 ${group.style}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider">{group.label}</span>
-                    <span className="text-xl font-black">{group.items.length}</span>
+            <div className="space-y-2 max-h-96 lg:max-h-[calc(100vh-24rem)] overflow-y-auto">
+              {busesPorRuta.map(({ ruta, items }) => (
+                <div key={ruta.id} className="border border-border rounded-xl p-3 bg-secondary/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: colorSeguro(ruta.color) }} />
+                    <span className="text-xs font-bold uppercase tracking-wider text-foreground truncate flex-1">{ruta.nombre}</span>
+                    <span className="text-xs font-black text-muted-foreground flex-shrink-0">{items.length}</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {group.items.map((b) => (
-                      <span key={b.id} className="inline-flex items-center gap-1.5 text-xs bg-black/20 px-2 py-0.5 rounded-md">
-                        <span className="font-mono font-semibold">{b.placa}</span>
-                        {b.nombre_ruta ? (
-                          <span className="inline-flex items-center gap-1 opacity-80">
-                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: colorSeguro(b.color_ruta ?? "#2558A5") }} />
-                            {b.nombre_ruta}
-                          </span>
-                        ) : (
-                          <span className="opacity-60 italic">sin ruta</span>
-                        )}
-                      </span>
-                    ))}
+                    {items.map((b) => {
+                      const info = ESTADO_INFO[b.estado] ?? ESTADO_INFO["inactivo"]!;
+                      return (
+                        <span key={b.id} className="inline-flex items-center gap-1.5 text-xs bg-black/20 px-2 py-0.5 rounded-md">
+                          <span className="font-mono font-semibold">{b.placa}</span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${info.cls}`}>{info.label}</span>
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
+              {busesSinRuta.length > 0 && (
+                <div className="border border-dashed border-border rounded-xl p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex-1">Sin ruta asignada</span>
+                    <span className="text-xs font-black text-muted-foreground flex-shrink-0">{busesSinRuta.length}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {busesSinRuta.map((b) => {
+                      const info = ESTADO_INFO[b.estado] ?? ESTADO_INFO["inactivo"]!;
+                      return (
+                        <span key={b.id} className="inline-flex items-center gap-1.5 text-xs bg-black/20 px-2 py-0.5 rounded-md">
+                          <span className="font-mono font-semibold">{b.placa}</span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${info.cls}`}>{info.label}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
