@@ -34,28 +34,27 @@ const results = { pass: 0, fail: 0, warnings: 0, items: [] };
 function safeDetailForLog(detail) {
   if (detail === null || detail === undefined) return "";
 
-  let text;
+  // Only allow a very small safe subset of string details to be logged as-is.
+  // Example preserved: "Status: 401"
   if (typeof detail === "string") {
-    text = detail;
-  } else if (typeof detail === "number" || typeof detail === "boolean") {
-    text = String(detail);
-  } else {
-    try {
-      text = JSON.stringify(detail);
-    } catch {
-      text = "[UNSERIALIZABLE_DETAIL]";
-    }
+    const statusMatch = detail.match(/^Status:\s*\d{3}$/);
+    if (statusMatch) return statusMatch[0];
+    return `[REDACTED_STRING length=${detail.length}]`;
   }
 
-  // Redact common sensitive token/key patterns if present.
-  text = text.replace(
-    /("?(?:password|passwd|pwd|token|secret|authorization|api[_-]?key|cookie|set-cookie)"?\s*:\s*)"[^"]*"/gi,
-    '$1"[REDACTED]"'
-  );
+  // Primitive non-string values are safe enough to render directly.
+  if (typeof detail === "number" || typeof detail === "boolean") {
+    return String(detail);
+  }
 
-  // Keep logs concise and reduce leakage risk.
-  if (text.length > 120) text = `${text.slice(0, 120)}…[TRUNCATED]`;
-  return text;
+  // For objects/arrays/other types, never log content; only metadata.
+  if (Array.isArray(detail)) return `[REDACTED_ARRAY length=${detail.length}]`;
+  if (typeof detail === "object") {
+    const keys = Object.keys(detail);
+    return `[REDACTED_OBJECT keys=${keys.length}]`;
+  }
+
+  return "[REDACTED_DETAIL]";
 }
 
 function check(name, severity, ok, detail) {
