@@ -85,6 +85,22 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+        // Los chunks exclusivos de Admin/Conductor (nunca los usa un pasajero: confirmado
+        // que CambiarPasswordDialog solo lo importan Admin.tsx/Conductor.tsx; jspdf/
+        // html2canvas son la exportación a PDF de "Resumen ejecutivo", solo Admin) quedan
+        // fuera del precache inicial — si no, el Service Worker los descarga y guarda en
+        // caché para CUALQUIER visitante apenas entra a "/", exponiendo todo ese código sin
+        // necesidad. Ya están lazy-loaded por ruta; con `runtimeCaching` abajo se cachean
+        // igual (CacheFirst, seguro por llevar el hash del contenido en el nombre) mas
+        // solo la primera vez que un admin/conductor de verdad navega a su panel.
+        globIgnores: [
+          "**/assets/Admin-*.js",
+          "**/assets/Conductor-*.js",
+          "**/assets/TerminosConductor-*.js",
+          "**/assets/CambiarPasswordDialog-*.js",
+          "**/assets/jspdf*.js",
+          "**/assets/html2canvas*.js",
+        ],
         // Añade los handlers de Web Push (push / notificationclick) al SW generado,
         // sin cambiar a injectManifest. El archivo vive en public/push-sw.js.
         importScripts: ["push-sw.js"],
@@ -104,6 +120,14 @@ export default defineConfig(({ mode }) => ({
             options: {
               cacheName: "osm-tiles",
               expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 7 },
+            },
+          },
+          {
+            urlPattern: /\/assets\/(Admin-|Conductor-|TerminosConductor-|CambiarPasswordDialog-|jspdf|html2canvas)[^/]*\.js$/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "role-chunks",
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 30 },
             },
           },
         ],
