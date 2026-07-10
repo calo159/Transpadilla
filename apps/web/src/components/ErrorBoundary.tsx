@@ -27,22 +27,36 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-background p-6">
-          <div className="max-w-sm w-full text-center bg-card border border-border rounded-2xl p-6 shadow-xl">
-            <div className="w-14 h-14 mx-auto mb-3 rounded-full flex items-center justify-center" style={{ background: "rgba(245,183,49,0.15)" }}>
-              <AlertTriangle className="w-7 h-7" style={{ color: "var(--tp-yellow, #F5B731)" }} />
+        <div
+          className="min-h-screen flex items-center justify-center p-6"
+          style={{ background: "var(--color-gray-light)" }}
+        >
+          <div
+            className="max-w-sm w-full text-center rounded-2xl overflow-hidden shadow-xl"
+            style={{ background: "#fff" }}
+          >
+            <div style={{ height: 4, background: "var(--color-danger)" }} />
+            <div className="p-6">
+              <div
+                className="w-14 h-14 mx-auto mb-3 rounded-full flex items-center justify-center"
+                style={{ background: "color-mix(in srgb, var(--color-danger) 12%, #fff)" }}
+              >
+                <AlertTriangle className="w-7 h-7" style={{ color: "var(--color-danger)" }} />
+              </div>
+              <h1 className="text-lg font-bold mb-1" style={{ color: "var(--color-navy)" }}>
+                Algo salió mal
+              </h1>
+              <p className="text-sm mb-5" style={{ color: "var(--color-gray-text)" }}>
+                Ocurrió un error inesperado. Por favor recarga la página.
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full h-11 rounded-xl font-bold text-white border-0 active:scale-95 transition-transform"
+                style={{ background: "var(--color-blue)" }}
+              >
+                Recargar
+              </button>
             </div>
-            <h1 className="text-lg font-bold text-foreground mb-1">Algo salió mal</h1>
-            <p className="text-sm text-muted-foreground mb-5">
-              Ocurrió un error inesperado. Por favor recarga la página.
-            </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full h-11 rounded-xl font-bold text-white border-0"
-              style={{ background: "linear-gradient(135deg, #2558A5 0%, var(--tp-sky) 100%)" }}
-            >
-              Recargar
-            </button>
           </div>
         </div>
       );
