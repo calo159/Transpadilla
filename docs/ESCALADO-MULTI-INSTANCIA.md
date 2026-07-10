@@ -23,9 +23,9 @@ los balanceara Render.
   pasaría de forma intermitente y aleatoria según el balanceo, muy difícil de diagnosticar en vivo.
 
 - **Rate limit en memoria** (`apps/api/src/middleware/rate-limit.ts`). Cada instancia lleva su
-  propio contador por IP. Con N instancias, el límite efectivo por IP se multiplica por N (ya
-  documentado como pendiente aceptado en `docs/MEJORAS-PENDIENTES.md`, punto 🟢 #11). Menos grave
-  que lo de Socket.IO, pero vale la pena resolverlo en la misma pasada.
+  propio contador por IP. Con N instancias, el límite efectivo por IP se multiplica por N —
+  pendiente aceptado (solo aplica al escalar a más de una instancia). Menos grave que lo de
+  Socket.IO, pero vale la pena resolverlo en la misma pasada.
 
 ### No hace falta tocar — ya funciona bien multi-instancia
 
