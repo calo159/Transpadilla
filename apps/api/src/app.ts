@@ -250,10 +250,21 @@ if (process.env["NODE_ENV"] === "production") {
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   // Si Express ya empezó a responder, no podemos enviar el error como JSON.
   if (res.headersSent) return;
-  // Express lanza un error con type "entity.too.large" cuando el body excede
-  // el limit de express.json() — debe responder 413, no 500.
-  if ((err as Record<string, unknown>)["type"] === "entity.too.large") {
-    res.status(413).json({ error: "Payload demasiado grande" });
+  // Errores 4xx del body-parser (JSON malformado → "entity.parse.failed",
+  // payload grande → "entity.too.large", charset/encoding no soportado, etc.)
+  // son entrada inválida del CLIENTE, no una falla del servidor: se responde
+  // su status real y NO se tratan como error interno. Antes, cualquier body
+  // malformado (p. ej. `{bad json` sin autenticar) caía al 500 de abajo, que
+  // dispara una alerta P1 — y P1 ignora el throttle (ver lib/alertas.ts) — así
+  // que un atacante podía inundar el webhook de alertas con requests triviales.
+  const e = err as Record<string, unknown>;
+  const status =
+    typeof e["status"] === "number" ? (e["status"] as number)
+    : typeof e["statusCode"] === "number" ? (e["statusCode"] as number)
+    : undefined;
+  if (status && status >= 400 && status < 500) {
+    const mensaje = status === 413 ? "Payload demasiado grande" : "Solicitud inválida";
+    res.status(status).json({ error: mensaje });
     return;
   }
   req.log?.error({ err }, "Unhandled error");

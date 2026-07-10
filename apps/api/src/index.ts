@@ -29,7 +29,17 @@ function logResumenSeguridad(): void {
   };
   logger.info({ seguridad: resumen }, "Configuración de seguridad activa");
   if (!resumen.cloudflareOriginSecret) {
-    logger.warn("Sin CLOUDFLARE_ORIGIN_SECRET: el origen es accesible directo. Recomendado configurarlo en producción (ver docs/CLOUDFLARE.md).");
+    if (resumen.detrasDeCloudflare) {
+      logger.warn(
+        "BEHIND_CLOUDFLARE=true sin CLOUDFLARE_ORIGIN_SECRET: el origen es accesible directo y " +
+        "CF-Connecting-IP NO se usa para el rate-limit (clienteIp() cae a la IP de conexión real, " +
+        "que si el origen queda detrás de Cloudflare de todas formas será la IP de borde de " +
+        "Cloudflare para TODO el tráfico legítimo). Configura el secreto para que el rate-limit " +
+        "vuelva a distinguir por IP real (ver docs/CLOUDFLARE.md).",
+      );
+    } else {
+      logger.warn("Sin CLOUDFLARE_ORIGIN_SECRET: el origen es accesible directo. Recomendado configurarlo en producción (ver docs/CLOUDFLARE.md).");
+    }
   }
 }
 

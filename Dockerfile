@@ -14,8 +14,11 @@ FROM node:22-slim AS run
 WORKDIR /app
 RUN corepack enable
 ENV NODE_ENV=production
-# Copiamos el repo ya construido (incluye node_modules y los dist/).
-COPY --from=build /app ./
+# Copiamos el repo ya construido (incluye node_modules y los dist/), con
+# ownership del usuario no-root "node" (viene incluido en la imagen base).
+COPY --from=build --chown=node:node /app ./
+# No correr como root dentro del contenedor: reduce el impacto de un RCE.
+USER node
 EXPOSE 8080
 # El servidor crea las tablas y arranca. DATABASE_URL y JWT_SECRET se inyectan
 # por entorno (ver docker-compose.yml).

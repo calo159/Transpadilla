@@ -3,6 +3,11 @@ node_modules
 **/dist
 **/.tsbuildinfo
 .git
-.env
+# ".env" sin "**/" solo ignora el de la raíz del contexto — NO los anidados
+# (apps/api/.env, packages/db/.env), que quedarían horneados en la imagen.
+**/.env
+**/.env.*
+*.key
+.mcp.json
 *.zip
 attached_assets

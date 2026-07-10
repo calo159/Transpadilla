@@ -156,12 +156,22 @@ quedan exentos. **Impide que un atacante golpee Render directo esquivando Cloudf
 ## 4. Base de datos
 
 ### Row Level Security (RLS)
-- Activado en **modo FORCE** en las 6 tablas (`packages/db/rls.sql`):
-  `usuarios`, `rutas`, `paradas`, `ruta_paradas`, `buses`, `favoritos`.
-- FORCE aplica RLS incluso al owner de la tabla. El backend conecta como rol de
-  servicio (bypass RLS) → opera normal.
-- Rol `anon` (cliente público): solo SELECT en rutas, paradas, ruta_paradas, buses.
-  `usuarios` no tiene política pública → completamente blindada al exterior.
+- Activado (`ENABLE ROW LEVEL SECURITY`) en las 11 tablas de `packages/db/rls.sql`.
+- **`FORCE` está deliberadamente comentado**, NO activo: el backend conecta a
+  Supabase como rol `postgres` (owner, `rolbypassrls=true`). Con `FORCE` el
+  owner también quedaría sujeto a RLS, y no hay policies para `postgres` → se
+  bloquearían todas las queries del backend. Ver el comentario en `rls.sql:26-29`.
+- **Consecuencia real de este diseño**: la RLS protege la superficie
+  PostgREST/`anon` de Supabase (si algún día se usa), pero **NO es una segunda
+  barrera para el propio backend** — toda la autorización real de la app vive
+  en Express (JWT + `requireRol`, ver §1). Una fuga de `DATABASE_URL` (el
+  connection string completo, con password) da acceso de owner que ignora
+  todas las policies; y una eventual inyección SQL en el backend (hoy no
+  existe, ver siguiente sección) tampoco encontraría RLS como contención.
+  Es un trade-off aceptado, no un hueco de configuración — documentarlo así
+  para no asumir una protección que no está activa.
+- Rol `anon` (cliente público, si se expone PostgREST directo): solo SELECT en
+  rutas, paradas, ruta_paradas, buses. `usuarios` no tiene política pública.
 - Idempotente: se puede correr varias veces sin error.
 
 ### SQL Injection
@@ -175,6 +185,21 @@ quedan exentos. **Impide que un atacante golpee Render directo esquivando Cloudf
   `supabase` o la URL trae `sslmode` (`packages/db/src/index.ts`).
 - En producción se usa el **Session pooler** de Supabase (host `pooler.supabase.com`),
   no la conexión directa IPv6 (que falla en Render).
+- **Por defecto NO se valida el certificado del servidor**
+  (`rejectUnauthorized: false`): cifra el tráfico pero no confirma que el
+  servidor es realmente Supabase, lo que deja una ventana a un atacante en
+  posición de red (MITM on-path). Verificado: el cert del pooler trae un
+  self-signed en la cadena, así que Node no lo valida contra sus CA públicas
+  por defecto (`rejectUnauthorized: true` a secas falla con
+  `self-signed certificate in certificate chain`).
+- **Verificación estricta disponible (opt-in, no es el default)**:
+  `DB_SSL_STRICT=true` activa `rejectUnauthorized: true`; si se necesita un CA
+  propio (como el de Supabase), apuntar `DB_SSL_CA_PATH` al archivo `.pem`
+  descargado desde el panel de Supabase (Project Settings → Database → SSL
+  Configuration — es específico del proyecto, requiere sesión iniciada, así
+  que no se puede automatizar ni commitear). Sin `DB_SSL_CA_PATH`, activar
+  `DB_SSL_STRICT=true` rompe la conexión (confirmado); solo activarlo en
+  producción después de descargar el CA y probar en un entorno de staging.
 
 ---
 
@@ -317,9 +342,12 @@ Al modificar cualquier parte del código, seguir estas reglas:
 ### Al modificar el frontend
 - Si se añade un recurso externo (fuente, tile, CDN), **actualizar la CSP** en
   `app.ts:60-78` o se bloqueará.
-- Si se añade `innerHTML`, escapar el contenido (Leaflet popups).
-- No almacenar tokens en `localStorage` si se puede evitar; usar cookies
-  httpOnly es más seguro pero requiere cambios en el backend.
+- Si se añade `innerHTML`, escapar el contenido (Leaflet popups) con
+  `escHtml()`/`colorSeguro()` (`apps/web/src/lib/html.ts`).
+- La sesión web ya usa cookie `httpOnly` (`tp_session`, ver
+  `apps/api/src/middleware/auth.ts`); en el APK de Capacitor sigue siendo
+  `Authorization: Bearer` + `localStorage` (`authMiddleware` acepta ambos). No
+  volver a guardar el JWT crudo en `localStorage` en el flujo web.
 
 ---
 
@@ -327,8 +355,17 @@ Al modificar cualquier parte del código, seguir estas reglas:
 
 Acciones que debe hacer el operador, no son cambios de código:
 
-- 🔴 **Rotar secretos expuestos**: llave de MapTiler, contraseña de Supabase,
-  contraseña del admin sembrada con `admin123` (demo).
+- 🔴 **Rotar secretos reales que vivieron en texto plano en disco de desarrollo**:
+  contraseña de Supabase (el connection string es de rol `postgres`/owner — ver
+  §4), `JWT_SECRET` y el par de claves VAPID. No están comprometidos por el
+  repo (gitignored, ausentes del historial de git), pero rotarlos es la
+  práctica correcta tras haber estado expuestos en `.env` locales. Rotar
+  también la llave de MapTiler si se usa una con `VITE_MAP_TILES_URL` (y
+  restringirla por dominio en el panel de MapTiler).
+- ⚠️ **Considerar `DB_SSL_STRICT=true`** (verificación completa del certificado
+  de Postgres) descargando el CA del proyecto desde el panel de Supabase y
+  configurando `DB_SSL_CA_PATH` — ver §4/SSL-TLS. Sin el CA correcto, activar
+  `DB_SSL_STRICT` rompe la conexión (confirmado).
 - ⚠️ **Poner Cloudflare delante** del dominio antes de producción real
   (ver `docs/CLOUDFLARE.md`; la app ya preparada).
 - ⚠️ **Ajustar `API_RATE_LIMIT`** según el tráfico real de la ciudad.
@@ -336,12 +373,16 @@ Acciones que debe hacer el operador, no son cambios de código:
   generate-vapid-keys` y poner en `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`).
 
 ### Limitaciones conocidas (aceptables a esta escala)
-- **JWT sin revocación temprana**: un token filtrado vale hasta su expiración (3d).
-  Mitigación: bajar `JWT_EXPIRES_IN` (ej. `12h`).
 - **`/auth/register` revela si un correo ya existe** (409). Enumeración menor.
 - **Rate-limit en memoria**: correcto con 1 instancia; con varias instancias se
   necesitaría Redis.
-- **Sin registro de auditoría** de acciones de admin (quién creó/borró qué).
+- **IDOR en favoritos** (`POST /favoritos`, `apps/api/src/routes/favoritos.ts`):
+  el `cliente_id` (un UUID anónimo generado en el navegador, no un secreto)
+  viene del body, no de un JWT — el endpoint es público a propósito (el
+  pasajero no tiene cuenta). Quien conozca el `cliente_id` de otro dispositivo
+  puede sobrescribir sus favoritos o inflar la métrica "ruta más solicitada"
+  de los reportes. Riesgo aceptado: el dato no es sensible (solo preferencias
+  de rutas) y no hay nada de identidad real detrás del UUID.
 
 ---
 
