@@ -1348,11 +1348,15 @@ export default function Pasajero() {
   // Card de detalle deslizable: aparece SOLO al seleccionar una ruta/bus o al pedir
   // una recomendación de destino. Se arrastra desde la barrita (swipe ↓ cierra/colapsa,
   // ↑ expande, tap alterna); el contenido scrollea aparte. Mapa limpio el resto del tiempo.
+  // z-[1002]: al expandirse debe quedar SOBRE la capa ambiente z-[1001] (buscador,
+  // banner instalar, bienvenida, píldora) para que su cabecera con la X (más abajo)
+  // no quede tapada por el buscador y sea fácil de cerrar. Sigue por debajo de los
+  // modales (ayuda/banner full) y no solapa el bottom-nav (está anclada en bottom-[72px]).
   const MobileSheet = () => {
     if (!selectedRuta && !destino) return null;
     return (
       <div
-        className="md:hidden fixed left-0 right-0 bottom-[72px] z-[1000] rounded-t-3xl overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-300 ease-out"
+        className="md:hidden fixed left-0 right-0 bottom-[72px] z-[1002] rounded-t-3xl overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-300 ease-out"
         style={{
           background: "var(--color-white)",
           boxShadow: "0 -8px 28px rgba(27,59,111,0.18)",
