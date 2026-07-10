@@ -1,34 +1,48 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
-import { buses, rutas, paradas } from "@workspace/db";
-import { count, eq } from "drizzle-orm";
+import { pool } from "@workspace/db";
+import { crearCacheTtl } from "../lib/cache";
 
 const router = Router();
 
-router.get("/stats", async (_req, res) => {
-  const [busCount] = await db.select({ total: count() }).from(buses);
-  const [rutaCount] = await db.select({ total: count() }).from(rutas);
-  const [paradaCount] = await db.select({ total: count() }).from(paradas);
-  const [activoCount] = await db
-    .select({ total: count() })
-    .from(buses)
-    .where(eq(buses.estado, "activo"));
-  const [demoraCount] = await db
-    .select({ total: count() })
-    .from(buses)
-    .where(eq(buses.estado, "demora"));
+interface Stats {
+  totalBuses: number;
+  busesActivos: number;
+  totalRutas: number;
+  totalParadas: number;
+  busesConDemora: number;
+  busesInactivos: number;
+}
 
-  res.json({
-    totalBuses: busCount?.total ?? 0,
-    busesActivos: activoCount?.total ?? 0,
-    totalRutas: rutaCount?.total ?? 0,
-    totalParadas: paradaCount?.total ?? 0,
-    busesConDemora: demoraCount?.total ?? 0,
-    busesInactivos:
-      (busCount?.total ?? 0) -
-      (activoCount?.total ?? 0) -
-      (demoraCount?.total ?? 0),
-  });
+// Antes eran 5 COUNT separados (5 round-trips a la BD). Ahora es UN solo query:
+// escanea `buses` una vez con COUNT(*) FILTER y trae rutas/paradas como escalares.
+// Cacheado 3 s (igual que /rutas) porque el dashboard lo consulta con frecuencia.
+// La respuesta JSON queda idéntica campo por campo.
+const statsCache = crearCacheTtl<Stats>(3000, async () => {
+  const { rows } = await pool.query(
+    `SELECT
+       (SELECT COUNT(*)::int FROM rutas)   AS total_rutas,
+       (SELECT COUNT(*)::int FROM paradas) AS total_paradas,
+       COUNT(*)::int                                   AS total_buses,
+       COUNT(*) FILTER (WHERE estado = 'activo')::int  AS activos,
+       COUNT(*) FILTER (WHERE estado = 'demora')::int  AS demora
+     FROM buses`,
+  );
+  const r = rows[0] ?? {};
+  const totalBuses = Number(r.total_buses ?? 0);
+  const busesActivos = Number(r.activos ?? 0);
+  const busesConDemora = Number(r.demora ?? 0);
+  return {
+    totalBuses,
+    busesActivos,
+    totalRutas: Number(r.total_rutas ?? 0),
+    totalParadas: Number(r.total_paradas ?? 0),
+    busesConDemora,
+    busesInactivos: totalBuses - busesActivos - busesConDemora,
+  };
+});
+
+router.get("/stats", async (_req, res) => {
+  res.json(await statsCache.obtener());
 });
 
 export default router;

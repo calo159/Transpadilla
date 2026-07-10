@@ -1,7 +1,7 @@
 import webpush from "web-push";
 import { pool } from "@workspace/db";
 import { logger } from "./logger";
-import { haversineMetros, velEfectiva, posEnCircuito, distanciaAdelanteM } from "./geo";
+import { haversineMetros, velEfectiva, precomputarCircuito, posEnCircuitoPre, distanciaAdelanteM } from "./geo";
 
 export { suscripcionesParaRuta } from "./push-util";
 
@@ -90,13 +90,13 @@ export async function notificarProximidad(
     // aviso dispara cuando el bus VIENE hacia sus paradas, no cuando acaba de pasarlas.
     // Si no se puede proyectar sobre el circuito, se cae al mínimo en línea recta.
     let minMetros: number;
-    const pos = posEnCircuito(lat, lng, coords);
-    if (pos) {
-      const acum: number[] = [0];
-      for (let i = 1; i < coords.length; i++) {
-        acum.push(acum[i - 1]! + haversineMetros(coords[i - 1]!.latitud, coords[i - 1]!.longitud, coords[i]!.latitud, coords[i]!.longitud));
-      }
-      minMetros = Math.min(...acum.map((sParada) => distanciaAdelanteM(pos.s, sParada, pos.L)).filter((d) => d > 1));
+    const circ = precomputarCircuito(coords);
+    const pos = circ ? posEnCircuitoPre(lat, lng, circ) : null;
+    if (pos && circ) {
+      // Posición `s` de cada parada = el acumulado ya calculado del circuito
+      // (sin el vértice de cierre), en vez de reconstruirlo aparte.
+      const paradasS = circ.acum.slice(0, coords.length);
+      minMetros = Math.min(...paradasS.map((sParada) => distanciaAdelanteM(pos.s, sParada, pos.L)).filter((d) => d > 1));
     } else {
       minMetros = Math.min(...coords.map((p) => haversineMetros(lat, lng, p.latitud, p.longitud)));
     }

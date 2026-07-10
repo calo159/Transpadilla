@@ -1,4 +1,4 @@
-import { haversineMetros, velEfectiva, posEnCircuito, distanciaAdelanteM } from "./geo";
+import { velEfectiva, precomputarCircuito, posEnCircuitoPre, distanciaAdelanteM } from "./geo";
 
 export interface EtaParadaInput {
   id: number;
@@ -36,19 +36,18 @@ export function calcularEtaPorParada(
 ): { buses_activos: number; paradas: EtaParadaResult[] } {
   if (secuencia.length === 0) return { buses_activos: 0, paradas: [] };
 
-  // Posición `s` de cada parada a lo largo del circuito cerrado (acumulado hasta ella).
-  const acum: number[] = [0];
-  for (let i = 1; i < secuencia.length; i++) {
-    const a = secuencia[i - 1]!;
-    const b = secuencia[i]!;
-    acum.push(acum[i - 1]! + haversineMetros(a.latitud, a.longitud, b.latitud, b.longitud));
-  }
+  // Geometría del circuito cerrado precalculada UNA vez (antes se reconstruía
+  // dentro de posEnCircuito por cada bus → O(N·paradas) redundante). `acum[j]` es
+  // la posición `s` de la parada j; para <2 paradas no hay circuito (todos los ETA
+  // quedan nulos, igual que antes).
+  const circ = precomputarCircuito(secuencia);
+  const acum = circ ? circ.acum : [0];
 
   // Buses con posición conocida → su `s` proyectado sobre el circuito y su velocidad.
   const busesInfo = activos
     .filter((b) => b.lat != null && b.lng != null)
     .map((b) => {
-      const pos = posEnCircuito(b.lat!, b.lng!, secuencia);
+      const pos = circ ? posEnCircuitoPre(b.lat!, b.lng!, circ) : null;
       return { placa: b.placa, s: pos ? pos.s : null, L: pos ? pos.L : null, vel: velEfectiva(b.velocidad) };
     });
 

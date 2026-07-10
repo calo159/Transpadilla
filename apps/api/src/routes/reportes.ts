@@ -316,7 +316,15 @@ router.get("/reportes/actividad", authMiddleware, requireRol("admin"), async (re
 // Cobertura y alcance del servicio: no es de periodo, son conteos actuales
 // (footprint del servicio + adopción por la comunidad). Para el resumen
 // ejecutivo — qué tan grande es el sistema y si realmente está operando.
-router.get("/reportes/cobertura", authMiddleware, requireRol("admin"), async (_req, res) => {
+// Cacheado 60 s igual que el resto de reportes (se llama en cada carga del
+// panel y hace 8 subconsultas de conteo, incluido un NOT EXISTS por ruta).
+interface Cobertura {
+  totalRutas: number; totalParadas: number; totalBuses: number;
+  busesActivosAhora: number; rutasSinBusActivo: number;
+  totalConductores: number; totalPasajeros: number; suscripcionesPush: number;
+}
+
+const coberturaCache = crearCacheTtl<Cobertura>(REPORTE_TTL_MS, async () => {
   const { rows } = await pool.query(
     `SELECT
        (SELECT COUNT(*)::int FROM rutas) AS total_rutas,
@@ -334,7 +342,7 @@ router.get("/reportes/cobertura", authMiddleware, requireRol("admin"), async (_r
        ) AS rutas_sin_bus_activo`,
   );
   const r = rows[0] ?? {};
-  res.json({
+  return {
     totalRutas: Number(r.total_rutas ?? 0),
     totalParadas: Number(r.total_paradas ?? 0),
     totalBuses: Number(r.total_buses ?? 0),
@@ -343,7 +351,11 @@ router.get("/reportes/cobertura", authMiddleware, requireRol("admin"), async (_r
     totalConductores: Number(r.total_conductores ?? 0),
     totalPasajeros: Number(r.total_pasajeros ?? 0),
     suscripcionesPush: Number(r.suscripciones_push ?? 0),
-  });
+  };
+});
+
+router.get("/reportes/cobertura", authMiddleware, requireRol("admin"), async (_req, res) => {
+  res.json(await coberturaCache.obtener());
 });
 
 export default router;

@@ -99,6 +99,13 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("leaflet")) return "leaflet";
           if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return "react-vendor";
           if (/[\\/]node_modules[\\/](@tanstack|socket\.io)[\\/]/.test(id)) return "data-vendor";
+          // Librerías pesadas que SOLO usa el panel Admin (tab "Resumen ejecutivo"):
+          // recharts (+ su motor d3) y jspdf. Se devuelve `undefined` para que Rollup
+          // las ubique en el grafo asíncrono (se cargan con la ruta Admin lazy / el
+          // `await import()` del PDF), en vez de forzarlas al `vendor` inicial que
+          // descarga todo pasajero. Forzar un chunk con nombre aquí creaba un ciclo
+          // charts↔vendor por las dependencias compartidas; delegar en Rollup lo evita.
+          if (/[\\/]node_modules[\\/](recharts|d3-|internmap|delaunator|robust-predicates|victory-vendor|jspdf|jspdf-autotable|canvg|html2canvas|rgbcolor)[\\/]/.test(id)) return undefined;
           return "vendor";
         },
       },

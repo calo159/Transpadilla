@@ -60,17 +60,21 @@ export function proyectarEnLinea(
 }
 
 /**
- * Proyecta un punto sobre el CIRCUITO CERRADO definido por las paradas en orden
- * (se cierra volviendo a la primera). Devuelve `s` (metros recorridos desde la 1ª
- * parada en el sentido del recorrido), `L` (longitud total del circuito) y
- * `distPerpM` (distancia perpendicular a la línea). Menos de 2 paradas → `null`.
- * Espejo de `posEnCircuito` de apps/web.
+ * Geometría precalculada de un circuito cerrado: la polilínea (paradas + cierre),
+ * la distancia acumulada por vértice y la longitud total `L`. Se calcula UNA vez
+ * por ruta y se reutiliza para proyectar todos los buses (ver `posEnCircuitoPre`),
+ * evitando reconstruir el acumulado por cada bus.
  */
-export function posEnCircuito(
-  lat: number,
-  lng: number,
+export interface Circuito {
+  linea: [number, number][];
+  acum: number[];
+  L: number;
+}
+
+/** Precalcula la geometría del circuito cerrado a partir de las paradas en orden. */
+export function precomputarCircuito(
   paradas: { latitud: number; longitud: number }[],
-): { s: number; L: number; distPerpM: number } | null {
+): Circuito | null {
   if (paradas.length < 2) return null;
   const linea: [number, number][] = paradas.map((p) => [p.latitud, p.longitud]);
   linea.push([paradas[0]!.latitud, paradas[0]!.longitud]); // cerrar el circuito
@@ -80,14 +84,40 @@ export function posEnCircuito(
     const [bLa, bLo] = linea[i]!;
     acum.push(acum[i - 1]! + haversineMetros(aLa, aLo, bLa, bLo));
   }
-  const L = acum[acum.length - 1]!;
-  const proy = proyectarEnLinea(lat, lng, linea);
+  return { linea, acum, L: acum[acum.length - 1]! };
+}
+
+/** Proyecta un punto sobre un circuito YA precalculado (ver `precomputarCircuito`). */
+export function posEnCircuitoPre(
+  lat: number,
+  lng: number,
+  circ: Circuito,
+): { s: number; L: number; distPerpM: number } | null {
+  const proy = proyectarEnLinea(lat, lng, circ.linea);
   if (!proy) return null;
-  const [aLa, aLo] = linea[proy.segIdx]!;
-  const [bLa, bLo] = linea[proy.segIdx + 1]!;
+  const [aLa, aLo] = circ.linea[proy.segIdx]!;
+  const [bLa, bLo] = circ.linea[proy.segIdx + 1]!;
   const lenSeg = haversineMetros(aLa, aLo, bLa, bLo);
-  const s = acum[proy.segIdx]! + proy.t * lenSeg;
-  return { s, L, distPerpM: proy.distPerpM };
+  const s = circ.acum[proy.segIdx]! + proy.t * lenSeg;
+  return { s, L: circ.L, distPerpM: proy.distPerpM };
+}
+
+/**
+ * Proyecta un punto sobre el CIRCUITO CERRADO definido por las paradas en orden
+ * (se cierra volviendo a la primera). Devuelve `s` (metros recorridos desde la 1ª
+ * parada en el sentido del recorrido), `L` (longitud total del circuito) y
+ * `distPerpM` (distancia perpendicular a la línea). Menos de 2 paradas → `null`.
+ * Espejo de `posEnCircuito` de apps/web. Para varios buses de la misma ruta, usar
+ * `precomputarCircuito` + `posEnCircuitoPre` para no recalcular la geometría.
+ */
+export function posEnCircuito(
+  lat: number,
+  lng: number,
+  paradas: { latitud: number; longitud: number }[],
+): { s: number; L: number; distPerpM: number } | null {
+  const circ = precomputarCircuito(paradas);
+  if (!circ) return null;
+  return posEnCircuitoPre(lat, lng, circ);
 }
 
 /**

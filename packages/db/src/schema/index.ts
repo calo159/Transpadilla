@@ -52,34 +52,54 @@ export const paradas = pgTable("paradas", {
   longitud: real("longitud").notNull(),
 });
 
-export const ruta_paradas = pgTable("ruta_paradas", {
-  id: serial("id").primaryKey(),
-  ruta_id: integer("ruta_id")
-    .notNull()
-    .references(() => rutas.id, { onDelete: "cascade" }),
-  parada_id: integer("parada_id")
-    .notNull()
-    .references(() => paradas.id, { onDelete: "cascade" }),
-  orden: integer("orden").notNull().default(0),
-});
+export const ruta_paradas = pgTable(
+  "ruta_paradas",
+  {
+    id: serial("id").primaryKey(),
+    ruta_id: integer("ruta_id")
+      .notNull()
+      .references(() => rutas.id, { onDelete: "cascade" }),
+    parada_id: integer("parada_id")
+      .notNull()
+      .references(() => paradas.id, { onDelete: "cascade" }),
+    orden: integer("orden").notNull().default(0),
+  },
+  // FK muy consultadas (Postgres no las indexa solas). Mismos nombres/columnas que
+  // el bootstrap `init-db.ts`, que ya los crea en producción: `WHERE ruta_id = X
+  // ORDER BY orden` (ETA/paradas/push) y el JOIN por parada.
+  (t) => [
+    index("idx_ruta_paradas_ruta").on(t.ruta_id, t.orden),
+    index("idx_ruta_paradas_parada").on(t.parada_id),
+  ],
+);
 
-export const buses = pgTable("buses", {
-  id: serial("id").primaryKey(),
-  placa: varchar("placa", { length: 20 }).notNull().unique(),
-  ruta_id: integer("ruta_id").references(() => rutas.id, {
-    onDelete: "set null",
-  }),
-  conductor_id: integer("conductor_id").references(() => usuarios.id, {
-    onDelete: "set null",
-  }),
-  estado: varchar("estado", { length: 20 }).notNull().default("inactivo"),
-  lat: real("lat"),
-  lng: real("lng"),
-  velocidad: real("velocidad"),
-  novedad: text("novedad"),
-  ocupacion: varchar("ocupacion", { length: 10 }),
-  actualizado: timestamp("actualizado", { withTimezone: true }),
-});
+export const buses = pgTable(
+  "buses",
+  {
+    id: serial("id").primaryKey(),
+    placa: varchar("placa", { length: 20 }).notNull().unique(),
+    ruta_id: integer("ruta_id").references(() => rutas.id, {
+      onDelete: "set null",
+    }),
+    conductor_id: integer("conductor_id").references(() => usuarios.id, {
+      onDelete: "set null",
+    }),
+    estado: varchar("estado", { length: 20 }).notNull().default("inactivo"),
+    lat: real("lat"),
+    lng: real("lng"),
+    velocidad: real("velocidad"),
+    novedad: text("novedad"),
+    ocupacion: varchar("ocupacion", { length: 10 }),
+    actualizado: timestamp("actualizado", { withTimezone: true }),
+  },
+  // Mismos nombres/columnas que el bootstrap `init-db.ts` (ya creados en prod):
+  // el compuesto (ruta_id, estado) sirve el `WHERE ruta_id = X AND estado='activo'`
+  // de ETA/reportes y también el filtro solo por ruta_id (prefijo izquierdo).
+  (t) => [
+    index("idx_buses_ruta_estado").on(t.ruta_id, t.estado),
+    index("idx_buses_conductor").on(t.conductor_id),
+  ],
+);
 
 // Historial de posiciones: snapshot periódico de los buses en circulación.
 // Base de los reportes (km recorridos, ocupación en el tiempo, actividad). NO se

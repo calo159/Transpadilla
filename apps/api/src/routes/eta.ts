@@ -62,11 +62,21 @@ function etaCache(rutaId: number): CacheTtl<EtaResultado> {
   return c;
 }
 
+// Set de ids de ruta válidos, cacheado 5 s. La validación de existencia corría en
+// CADA request de ETA (y el mapa hace polling cada pocos segundos por cada pasajero);
+// contra este set en memoria evita pegar a la BD en el camino caliente. Mantiene el
+// mismo 404 si la ruta no existe (la única diferencia es una ventana de ~5 s de
+// consistencia al crear/borrar rutas, algo que ya ocurre con el resto de cachés).
+const idsRutaCache = crearCacheTtl<Set<number>>(5000, async () => {
+  const filas = await db.select({ id: rutas.id }).from(rutas);
+  return new Set(filas.map((f) => f.id));
+});
+
 router.get("/rutas/:id/eta", async (req, res) => {
   const rutaId = parseIdParam(req.params["id"]);
   if (rutaId === null) { res.status(400).json({ error: "Id de ruta inválido" }); return; }
-  const existe = await db.select({ id: rutas.id }).from(rutas).where(eq(rutas.id, rutaId)).limit(1);
-  if (!existe.length) { res.status(404).json({ error: "Ruta no encontrada" }); return; }
+  const ids = await idsRutaCache.obtener();
+  if (!ids.has(rutaId)) { res.status(404).json({ error: "Ruta no encontrada" }); return; }
   res.json(await etaCache(rutaId).obtener());
 });
 
