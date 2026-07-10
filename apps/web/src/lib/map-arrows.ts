@@ -1,5 +1,6 @@
 import L from "leaflet";
 import { distanciaKm } from "@/lib/geo";
+import { colorSeguro } from "@/lib/html";
 
 /** Rumbo (grados, 0 = norte, sentido horario) del punto A al punto B. */
 function rumbo(aLat: number, aLng: number, bLat: number, bLng: number): number {
@@ -18,7 +19,7 @@ function flechaIcon(anguloDeg: number, color: string): L.DivIcon {
     className: "tp-flecha-ruta",
     html: `<div style="transform: rotate(${anguloDeg}deg); width:16px; height:16px; display:flex; align-items:center; justify-content:center;">
       <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-        <path d="M7 1 L12 11 L7 8.5 L2 11 Z" fill="${color}" stroke="white" stroke-width="1" stroke-linejoin="round" />
+        <path d="M7 1 L12 11 L7 8.5 L2 11 Z" fill="${colorSeguro(color)}" stroke="white" stroke-width="1" stroke-linejoin="round" />
       </svg></div>`,
     iconSize: [16, 16],
     iconAnchor: [8, 8],

@@ -17,6 +17,13 @@ export function getUser(): AuthUser | null {
   }
 }
 
+// Trade-off asumido a propósito: el token de sesión vive en localStorage (legible
+// por JS), no en cookie httpOnly. Es lo que necesita el APK de Capacitor, que llama
+// a la API con `Authorization: Bearer` (ver setAuthTokenGetter en App.tsx) — una
+// cookie httpOnly no aplica bien en el WebView nativo. El riesgo (robo de sesión)
+// solo se materializa con una XSS; se mitiga cerrando vías de XSS (todo texto de la
+// API se escapa con escHtml/colorSeguro) y con la CSP (backend + <meta> del build).
+// No migrar a cookie sin replantear la sesión del APK, o se rompe el login nativo.
 export function setAuth(token: string, user: AuthUser): void {
   localStorage.setItem("transpadilla_token", token);
   localStorage.setItem("transpadilla_user", JSON.stringify(user));

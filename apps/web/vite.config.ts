@@ -11,6 +11,43 @@ const basePath = process.env.BASE_PATH ?? "/";
 // Se activa con la variable de entorno HTTPS=true (ver iniciar-https.ps1).
 const useHttps = process.env.HTTPS === "true";
 
+// Content-Security-Policy embebida en el HTML SOLO en el build de producción.
+// En la web (Render) manda la cabecera del backend (apps/api/src/app.ts), pero en
+// el APK de Capacitor esa cabecera NO aplica (el bundle se sirve desde el origen
+// local nativo) → sin este <meta> la app nativa correría sin CSP. Solo en `build`
+// para no romper el HMR de dev (que usa scripts inline). Se omiten frame-ancestors
+// / report-uri porque un <meta> los ignora.
+// IMPORTANTE: mantener en sync con la CSP del backend (apps/api/src/app.ts:61-78).
+const CSP_META = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "form-action 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "connect-src 'self' https: wss: ws:",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+].join("; ");
+
+function cspMetaPlugin() {
+  return {
+    name: "tp-csp-meta-prod",
+    apply: "build" as const,
+    transformIndexHtml() {
+      return [
+        {
+          tag: "meta",
+          attrs: { "http-equiv": "Content-Security-Policy", content: CSP_META },
+          injectTo: "head-prepend" as const,
+        },
+      ];
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => ({
   base: basePath,
   // En producción elimina `console.*` y `debugger` del bundle (no filtra logs ni
@@ -20,6 +57,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     ...(useHttps ? [basicSsl()] : []),
+    cspMetaPlugin(),
     react(),
     tailwindcss(),
     VitePWA({

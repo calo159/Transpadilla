@@ -3,6 +3,14 @@
    tocarla, enfoca/abre la app. */
 /* eslint-disable no-undef */
 
+// Solo acepta rutas relativas del MISMO origen. Evita que la `url` del payload de
+// la notificación abra un sitio externo (open-redirect / phishing bajo la marca):
+// una ruta como "/" o "/admin" se conserva; "//evil.com", "https://evil.com" o
+// cualquier cosa rara cae a "/".
+function urlSegura(u) {
+  return typeof u === "string" && u.startsWith("/") && !u.startsWith("//") ? u : "/";
+}
+
 self.addEventListener("push", (event) => {
   let data = { titulo: "TransPadilla", cuerpo: "Novedad en tu ruta", url: "/" };
   try {
@@ -15,7 +23,7 @@ self.addEventListener("push", (event) => {
       body: data.cuerpo,
       icon: "/pwa-192x192.png",
       badge: "/favicon-32x32.png",
-      data: { url: data.url || "/" },
+      data: { url: urlSegura(data.url) },
       tag: "transpadilla",
       renotify: true,
     }),
@@ -24,7 +32,7 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || "/";
+  const url = urlSegura(event.notification.data && event.notification.data.url);
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((lista) => {
       for (const cliente of lista) {
