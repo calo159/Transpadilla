@@ -1,5 +1,6 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import path from "node:path";
 import fs from "node:fs";
 import pinoHttp from "pino-http";
@@ -117,6 +118,11 @@ app.use(
       : {}, // desarrollo: permitir todo
   ),
 );
+
+// Necesario para leer la cookie de sesión httpOnly (`tp_session`, ver
+// middleware/auth.ts). Sin secreto de firma: el valor de la cookie ES el JWT,
+// ya verificado criptográficamente por jwt.verify — no hace falta firmarla aparte.
+app.use(cookieParser());
 
 // Límites de tamaño de body: payloads pequeños bastan para esta API; cerrar la
 // puerta a cuerpos enormes evita un vector de DoS por memoria/parseo.

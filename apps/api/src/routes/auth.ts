@@ -5,7 +5,7 @@ import { db } from "@workspace/db";
 import { usuarios, buses } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { pool } from "@workspace/db";
-import { JWT_SECRET, authMiddleware, hashToken } from "../middleware/auth";
+import { JWT_SECRET, authMiddleware, hashToken, setSessionCookie, clearSessionCookie } from "../middleware/auth";
 import { validarBody, requerido, correoValido, texto, passwordFuerte } from "../middleware/validate";
 import { rateLimit } from "../middleware/rate-limit";
 import { estaBloqueado, minutosRestantes, registrarFallo, limpiarIntentos } from "../lib/lockout";
@@ -79,6 +79,10 @@ router.post(
       expiresIn: (process.env["JWT_EXPIRES_IN"] ?? "3d") as jwt.SignOptions["expiresIn"],
     },
   );
+  // Cookie httpOnly para el navegador web (mismo origen, sin CORS): el JWT deja
+  // de ser legible por JS ahí. El body sigue trayendo `token` sin cambios para
+  // el APK de Capacitor, que usa Bearer + localStorage (ver lib/auth.ts del web).
+  setSessionCookie(res, token);
   res.json({
     token,
     usuario: {
@@ -175,6 +179,7 @@ router.post(
       JWT_SECRET,
       { algorithm: "HS256", expiresIn: (process.env["JWT_EXPIRES_IN"] ?? "3d") as jwt.SignOptions["expiresIn"] },
     );
+    setSessionCookie(res, nuevoToken);
     res.json({ mensaje: "Contraseña actualizada", token: nuevoToken });
   },
 );
@@ -182,7 +187,7 @@ router.post(
 // Cierre de sesión REAL: revoca el token actual (lo agrega a la lista negra hasta
 // su expiración). Requiere token válido; tras esto ese token deja de servir.
 router.post("/auth/cerrar-sesion", authMiddleware, async (req, res) => {
-  const token = req.headers.authorization!.slice(7);
+  const token = req.tokenCrudo!;
   // exp del JWT (segundos epoch) → fecha de expiración para poder purgarlo luego.
   const decoded = jwt.decode(token) as { exp?: number } | null;
   const expira = decoded?.exp ? new Date(decoded.exp * 1000) : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
@@ -213,6 +218,7 @@ router.post("/auth/cerrar-sesion", authMiddleware, async (req, res) => {
       .where(eq(buses.conductor_id, req.usuario!.id));
   }
 
+  clearSessionCookie(res);
   res.json({ mensaje: "Sesión cerrada" });
 });
 

@@ -1,3 +1,5 @@
+import { Capacitor } from "@capacitor/core";
+
 export interface AuthUser {
   id: number;
   nombre: string;
@@ -17,15 +19,17 @@ export function getUser(): AuthUser | null {
   }
 }
 
-// Trade-off asumido a propósito: el token de sesión vive en localStorage (legible
-// por JS), no en cookie httpOnly. Es lo que necesita el APK de Capacitor, que llama
-// a la API con `Authorization: Bearer` (ver setAuthTokenGetter en App.tsx) — una
-// cookie httpOnly no aplica bien en el WebView nativo. El riesgo (robo de sesión)
-// solo se materializa con una XSS; se mitiga cerrando vías de XSS (todo texto de la
-// API se escapa con escHtml/colorSeguro) y con la CSP (backend + <meta> del build).
-// No migrar a cookie sin replantear la sesión del APK, o se rompe el login nativo.
+// Doble modo de sesión: en el navegador web, el backend fija una cookie httpOnly
+// (`tp_session`) que el JS ni puede ni necesita leer — por eso aquí NO se guarda
+// el token crudo en localStorage. En el APK de Capacitor, en cambio, SÍ hace falta
+// (llama a la API con `Authorization: Bearer`, ver setAuthTokenGetter en App.tsx):
+// una cookie httpOnly no viaja bien en el WebView nativo cross-origin. Detectar la
+// plataforma con Capacitor.isNativePlatform() evita romper el APK mientras cierra
+// la exposición del JWT a JS en la web (mitiga robo de sesión vía XSS).
 export function setAuth(token: string, user: AuthUser): void {
-  localStorage.setItem("transpadilla_token", token);
+  if (Capacitor.isNativePlatform()) {
+    localStorage.setItem("transpadilla_token", token);
+  }
   localStorage.setItem("transpadilla_user", JSON.stringify(user));
 }
 
@@ -37,16 +41,18 @@ export function clearAuth(): void {
 /**
  * Cierre de sesión REAL: avisa al backend para revocar el token (lista negra) y
  * luego limpia el estado local. Best-effort: si la red falla, igual limpia local.
+ *
+ * Se llama SIEMPRE (no solo si `getToken()` devuelve algo): en la web la sesión
+ * viaja por la cookie httpOnly, que el JS no puede leer, así que `getToken()`
+ * siempre da `null` ahí aunque sí haya sesión activa. El backend responde 401 si
+ * de verdad no había sesión — se ignora en el catch, es inofensivo.
  */
 export async function cerrarSesion(): Promise<void> {
-  const token = getToken();
-  if (token) {
-    try {
-      const { apiFetch } = await import("./api");
-      await apiFetch("/api/auth/cerrar-sesion", { method: "POST" });
-    } catch {
-      /* red caída: se limpia local de todas formas */
-    }
+  try {
+    const { apiFetch } = await import("./api");
+    await apiFetch("/api/auth/cerrar-sesion", { method: "POST" });
+  } catch {
+    /* red caída o sin sesión: se limpia local de todas formas */
   }
   clearAuth();
 }

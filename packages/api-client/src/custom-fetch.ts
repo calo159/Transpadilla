@@ -366,7 +366,12 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  // "same-origin" es el default de fetch(), pero se deja explícito a propósito:
+  // documenta la intención (la sesión web viaja por una cookie httpOnly del mismo
+  // origen) y evita depender de un default implícito en un punto sensible de
+  // seguridad — así tampoco se adjunta la cookie por accidente si algún día se
+  // llama a un origen distinto.
+  const response = await fetch(input, { ...init, method, headers, credentials: "same-origin" });
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

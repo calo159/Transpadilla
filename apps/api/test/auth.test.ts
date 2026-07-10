@@ -18,6 +18,24 @@ const { authMiddleware, JWT_SECRET } = await import("../src/middleware/auth");
 function mockReqRes(token?: string) {
   const req = {
     headers: token ? { authorization: `Bearer ${token}` } : {},
+    cookies: {},
+  } as unknown as Request;
+  const res = {
+    statusCode: 0,
+    body: undefined as unknown,
+    status(code: number) { this.statusCode = code; return this; },
+    json(payload: unknown) { this.body = payload; return this; },
+  } as unknown as Response & { statusCode: number; body: unknown };
+  const next = vi.fn();
+  return { req, res, next };
+}
+
+// Simula la sesión llegando SOLO por la cookie httpOnly (sin header Authorization),
+// como hace el navegador web tras el cambio a cookies (ver middleware/auth.ts).
+function mockReqResCookie(cookieToken?: string, bearerToken?: string) {
+  const req = {
+    headers: bearerToken ? { authorization: `Bearer ${bearerToken}` } : {},
+    cookies: cookieToken ? { tp_session: cookieToken } : {},
   } as unknown as Request;
   const res = {
     statusCode: 0,
@@ -92,5 +110,43 @@ describe("authMiddleware — revocación y token_version, fail-closed", () => {
     await authMiddleware(req, res, next);
     expect(next).not.toHaveBeenCalled();
     expect(res.statusCode).toBe(401);
+  });
+});
+
+describe("authMiddleware — sesión vía cookie (navegador web)", () => {
+  beforeEach(() => {
+    queryCalls = 0;
+    queryImpl = () => Promise.resolve({ rows: [{ token_version: 0, revocado: false }] });
+  });
+
+  it("token válido solo en la cookie (sin Bearer) → next()", async () => {
+    const { req, res, next } = mockReqResCookie(tokenValido());
+    await authMiddleware(req, res, next);
+    expect(next).toHaveBeenCalled();
+    expect(req.usuario?.rol).toBe("admin");
+  });
+
+  it("sin Bearer y sin cookie → 401", async () => {
+    const { req, res, next } = mockReqResCookie();
+    await authMiddleware(req, res, next);
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("cookie revocada → 401 y NO next() (misma lista negra que Bearer)", async () => {
+    queryImpl = () => Promise.resolve({ rows: [{ token_version: 0, revocado: true }] });
+    const { req, res, next } = mockReqResCookie(tokenValido());
+    await authMiddleware(req, res, next);
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("con Bearer Y cookie presentes, gana el Bearer (no rompe el flujo del APK)", async () => {
+    const bearerToken = tokenValido(0);
+    const cookieToken = "token.de.cookie.distinto.no.deberia.usarse";
+    const { req, res, next } = mockReqResCookie(cookieToken, bearerToken);
+    await authMiddleware(req, res, next);
+    expect(next).toHaveBeenCalled();
+    expect(req.tokenCrudo).toBe(bearerToken);
   });
 });

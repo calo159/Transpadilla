@@ -36,8 +36,46 @@ declare global {
   namespace Express {
     interface Request {
       usuario?: AuthPayload;
+      /** Token crudo ya extraído (de header o cookie) — ver `extraerToken`. */
+      tokenCrudo?: string;
     }
   }
+}
+
+// Nombre de la cookie de sesión (httpOnly) que usa el navegador web. El APK de
+// Capacitor sigue con `Authorization: Bearer` + localStorage (no encaja bien con
+// cookies en un WebView cross-origin); esta función acepta AMBOS sin romper nada:
+// Bearer tiene prioridad (comportamiento actual intacto), la cookie es el fallback
+// para el navegador, que ya no expone el JWT a JS.
+const COOKIE_SESION = "tp_session";
+
+function extraerToken(req: Request): string | null {
+  const header = req.headers.authorization;
+  if (header?.startsWith("Bearer ")) return header.slice(7);
+  const cookieToken = req.cookies?.[COOKIE_SESION];
+  return typeof cookieToken === "string" && cookieToken ? cookieToken : null;
+}
+
+/** Fija la cookie de sesión con el mismo vencimiento real del JWT (su `exp`). */
+export function setSessionCookie(res: Response, token: string): void {
+  const decoded = jwt.decode(token) as { exp?: number } | null;
+  const maxAge = decoded?.exp ? decoded.exp * 1000 - Date.now() : 3 * 24 * 60 * 60 * 1000;
+  res.cookie(COOKIE_SESION, token, {
+    httpOnly: true,
+    secure: process.env["NODE_ENV"] === "production",
+    sameSite: "lax",
+    maxAge: Math.max(maxAge, 0),
+    path: "/",
+  });
+}
+
+export function clearSessionCookie(res: Response): void {
+  res.clearCookie(COOKIE_SESION, {
+    httpOnly: true,
+    secure: process.env["NODE_ENV"] === "production",
+    sameSite: "lax",
+    path: "/",
+  });
 }
 
 export async function authMiddleware(
@@ -45,12 +83,11 @@ export async function authMiddleware(
   res: Response,
   next: NextFunction,
 ): Promise<void> {
-  const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) {
+  const token = extraerToken(req);
+  if (!token) {
     res.status(401).json({ error: "Token requerido" });
     return;
   }
-  const token = header.slice(7);
   let payload: AuthPayload;
   try {
     // Fijar el algoritmo (HS256) evita ataques de "confusión de algoritmo":
@@ -88,6 +125,7 @@ export async function authMiddleware(
     return;
   }
   req.usuario = payload;
+  req.tokenCrudo = token;
   next();
 }
 
