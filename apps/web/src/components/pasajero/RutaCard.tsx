@@ -1,4 +1,4 @@
-import { Bus, Star, ChevronRight, AlertTriangle } from "lucide-react";
+import { Bus, Star, Bell, BellRing, ChevronRight, AlertTriangle } from "lucide-react";
 import type { Ruta } from "@workspace/api-client";
 
 /**
@@ -15,6 +15,9 @@ export function RutaCard({
   favorito,
   onSelect,
   onToggleFavorito,
+  notificando = false,
+  onToggleNotificar,
+  mostrarNotificar = true,
   selected = false,
   dimmed = false,
   compact = false,
@@ -25,6 +28,9 @@ export function RutaCard({
   favorito: boolean;
   onSelect: () => void;
   onToggleFavorito: () => void;
+  notificando?: boolean;
+  onToggleNotificar?: () => void;
+  mostrarNotificar?: boolean;
   selected?: boolean;
   dimmed?: boolean;
   compact?: boolean;
@@ -77,6 +83,18 @@ export function RutaCard({
             )}
           </span>
         </div>
+        {mostrarNotificar && onToggleNotificar && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleNotificar(); }}
+            className={`flex-shrink-0 rounded-full active:scale-90 transition-transform ${compact ? "p-1.5" : "p-2.5"}`}
+            aria-label={notificando ? "Quitar notificaciones de esta ruta" : "Notificarme de esta ruta"}
+            aria-pressed={notificando}
+          >
+            {notificando
+              ? <BellRing className={compact ? "w-5 h-5" : "w-6 h-6"} style={{ color: "var(--color-gold)" }} />
+              : <Bell className={compact ? "w-5 h-5" : "w-6 h-6"} style={{ color: "#cbd5e1" }} />}
+          </button>
+        )}
         <button
           onClick={(e) => { e.stopPropagation(); onToggleFavorito(); }}
           className={`flex-shrink-0 rounded-full active:scale-90 transition-transform ${compact ? "p-1.5 -mr-0.5" : "p-2.5 -mr-1"}`}

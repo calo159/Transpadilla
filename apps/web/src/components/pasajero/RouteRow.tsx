@@ -1,4 +1,4 @@
-import { Star } from "lucide-react";
+import { Star, Bell, BellRing } from "lucide-react";
 import type { Ruta } from "@workspace/api-client";
 
 /**
@@ -15,6 +15,9 @@ export function RouteRow({
   selected,
   onSelect,
   onToggleFavorito,
+  notificando = false,
+  onToggleNotificar,
+  mostrarNotificar = true,
 }: {
   ruta: Ruta;
   vivos: number;
@@ -23,6 +26,9 @@ export function RouteRow({
   selected: boolean;
   onSelect: () => void;
   onToggleFavorito: () => void;
+  notificando?: boolean;
+  onToggleNotificar?: () => void;
+  mostrarNotificar?: boolean;
 }) {
   const enVivo = vivos > 0;
   return (
@@ -44,6 +50,21 @@ export function RouteRow({
       <span className="font-display text-[11px] font-bold flex-shrink-0" style={{ color: enVivo && etaMin != null ? ruta.color : "#c3ccd9" }}>
         {etaMin == null || !enVivo ? "—" : etaMin <= 0 ? "llegando" : `${etaMin} min`}
       </span>
+      {mostrarNotificar && onToggleNotificar && (
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => { e.stopPropagation(); onToggleNotificar(); }}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onToggleNotificar(); } }}
+          className="p-0.5 flex-shrink-0 rounded-full"
+          aria-label={notificando ? "Quitar notificaciones de esta ruta" : "Notificarme de esta ruta"}
+          aria-pressed={notificando}
+        >
+          {notificando
+            ? <BellRing className="w-[17px] h-[17px]" style={{ color: "var(--color-gold)" }} />
+            : <Bell className="w-[17px] h-[17px]" style={{ color: "#c3ccd9" }} />}
+        </span>
+      )}
       <span
         role="button"
         tabIndex={0}

@@ -14,7 +14,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LogoTP } from "@/components/LogoTP";
-import { NotificacionesToggle } from "@/components/NotificacionesToggle";
+import { useToast } from "@/hooks/use-toast";
+import {
+  pushSoportado, pushDisponibleEnServidor, estadoSuscripcion,
+  activarNotificaciones, desactivarNotificaciones, actualizarRutas,
+} from "@/lib/push";
 import { RutaCard } from "@/components/pasajero/RutaCard";
 import { RouteRow } from "@/components/pasajero/RouteRow";
 import { ParaderoCard } from "@/components/pasajero/ParaderoCard";
@@ -41,6 +45,7 @@ interface BeforeInstallPrompt extends Event {
 
 export default function Pasajero() {
   useDocumentTitle("TransPadilla — Buses de Riohacha en vivo");
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useLeafletMap(mapContainerRef, { zoom: 13 });
@@ -124,6 +129,59 @@ export default function Pasajero() {
     }, 400);
     return () => clearTimeout(t);
   }, [favoritos]);
+
+  // ── Notificaciones push por ruta (antes era un switch global "todas mis
+  // favoritas"; ahora una campana independiente por fila, junto a la estrella) ──
+  const [rutasNotificadas, setRutasNotificadas] = useState<number[]>(() => {
+    try { return JSON.parse(localStorage.getItem("tp_rutas_notificadas") ?? "[]") as number[]; }
+    catch { return []; }
+  });
+  const [pushDisponible, setPushDisponible] = useState(false);
+  const [pushActivo, setPushActivo] = useState(false);
+  useEffect(() => {
+    if (!pushSoportado()) return;
+    void pushDisponibleEnServidor().then(async (ok) => {
+      setPushDisponible(ok);
+      if (!ok) return;
+      const activo = await estadoSuscripcion();
+      setPushActivo(activo);
+      // Migración suave: ya había una suscripción (modelo viejo, "todas mis
+      // favoritas") pero nunca se guardó el array por-ruta nuevo → adoptar los
+      // favoritos actuales como notificadas, para no dejar de avisarle a nadie.
+      if (activo && rutasNotificadas.length === 0 && favoritos.length > 0) {
+        setRutasNotificadas(favoritos);
+        try { localStorage.setItem("tp_rutas_notificadas", JSON.stringify(favoritos)); } catch { /* ignore */ }
+        void actualizarRutas(favoritos);
+      }
+    });
+    // Solo al montar: es una migración de una sola vez, no debe repetirse con cada cambio de favoritos.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const toggleNotificarRuta = async (id: number) => {
+    const yaNotificada = rutasNotificadas.includes(id);
+    const next = yaNotificada ? rutasNotificadas.filter((x) => x !== id) : [...rutasNotificadas, id];
+    if (!yaNotificada && !pushActivo) {
+      const r = await activarNotificaciones(next);
+      if (!r.ok) {
+        if (r.motivo === "permiso-denegado") {
+          toast({ title: "Permiso denegado", description: "Activa las notificaciones en tu navegador.", variant: "destructive" });
+        } else {
+          toast({ title: "No se pudo activar", description: "Inténtalo de nuevo más tarde.", variant: "destructive" });
+        }
+        return;
+      }
+      setPushActivo(true);
+      toast({ title: "Notificaciones activadas", description: "Te avisaremos de esta ruta." });
+    } else if (next.length === 0 && pushActivo) {
+      await desactivarNotificaciones();
+      setPushActivo(false);
+    } else {
+      await actualizarRutas(next);
+    }
+    setRutasNotificadas(next);
+    try { localStorage.setItem("tp_rutas_notificadas", JSON.stringify(next)); } catch { /* ignore */ }
+  };
+
   // Última ruta vista (se recuerda en localStorage) para acceso rápido a ella.
   const [recientes, setRecientes] = useState<number[]>(() => {
     try { return (JSON.parse(localStorage.getItem("tp_recientes") ?? "[]") as number[]).slice(0, 1); }
@@ -1072,6 +1130,9 @@ export default function Pasajero() {
               selected={selectedRutaId === ruta.id}
               onSelect={() => handleSelectRuta(ruta.id)}
               onToggleFavorito={() => toggleFavorito(ruta.id)}
+              notificando={rutasNotificadas.includes(ruta.id)}
+              onToggleNotificar={() => toggleNotificarRuta(ruta.id)}
+              mostrarNotificar={pushDisponible}
             />
           ))}
         </div>
@@ -1153,9 +1214,6 @@ export default function Pasajero() {
             <ChevronRight className="w-3.5 h-3.5" style={{ color: "var(--color-gray-text)" }} />
           </button>
         )}
-        <div className="mt-2.5 flex justify-center">
-          <NotificacionesToggle rutas={favoritos} variant="pill" />
-        </div>
         <div className="flex items-center justify-center gap-2 mt-2.5 text-[10px]" style={{ color: "var(--color-gray-text)" }}>
           <a href="/privacidad" className="hover:underline">Privacidad</a>
           <span>·</span>
@@ -1694,9 +1752,6 @@ export default function Pasajero() {
               <button onClick={() => setShowAyuda(true)} className="w-full flex items-center gap-3 px-4 py-3.5 text-left border-t border-gray-100 active:bg-gray-100" style={{ color: "var(--color-navy)" }}>
                 <HelpCircle className="w-5 h-5 flex-shrink-0" style={{ color: "var(--color-sky)" }} /><span className="font-semibold text-sm">¿Cómo funciona?</span>
               </button>
-              <div onClick={(e) => e.stopPropagation()}>
-                <NotificacionesToggle rutas={favoritos} variant="menu" />
-              </div>
               {user && (
                 <>
                   <div className="flex items-center gap-3 px-4 py-3 border-t border-gray-100">
@@ -2075,6 +2130,9 @@ export default function Pasajero() {
                   favorito={favoritos.includes(r.id)}
                   onSelect={() => handleSelectRuta(r.id)}
                   onToggleFavorito={() => toggleFavorito(r.id)}
+                  notificando={rutasNotificadas.includes(r.id)}
+                  onToggleNotificar={() => toggleNotificarRuta(r.id)}
+                  mostrarNotificar={pushDisponible}
                 />
               );
 
