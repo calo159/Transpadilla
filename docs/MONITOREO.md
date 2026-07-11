@@ -1,6 +1,6 @@
 # Monitoreo y observabilidad — TransPadilla
 
-Fase 4 de [`PLAN.md`](../PLAN.md). Cómo saber si el sistema está sano y enterarse rápido cuando no
+Fase 4 del plan de trabajo original. Cómo saber si el sistema está sano y enterarse rápido cuando no
 lo está. Parte ya viene en el código (endpoints y alertas); el resto son servicios externos que se
 conectan siguiendo esta guía.
 

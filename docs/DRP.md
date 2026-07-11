@@ -1,6 +1,6 @@
 # Plan de Recuperación ante Desastres (DRP) — TransPadilla
 
-Fase 2.5 de [`PLAN.md`](../PLAN.md). Define qué hacer, quién y en cuánto tiempo, si algo grave
+Fase 2.5 del plan de trabajo original. Define qué hacer, quién y en cuánto tiempo, si algo grave
 falla en producción. Complementa (no reemplaza) el runbook operativo de la Fase 6 de `PLAN.md`
 (`docs/RUNBOOK.md`, aún no creado) — ese cubrirá incidentes del día a día; este documento cubre
 **desastres**: pérdida de datos o servicio prolongada.

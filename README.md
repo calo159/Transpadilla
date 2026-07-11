@@ -205,7 +205,7 @@ packages/
   api-types/        Tipos Zod generados — NO editar a mano
 docs/               Guías: ONBOARDING, DESPLIEGUE-PRODUCCION, SUPABASE, SEGURIDAD,
                     CLOUDFLARE, MAPA, CAPACITOR-ANDROID, UI-SKILL,
-                    ESCALADO-MULTI-INSTANCIA (+ maquetas stitch/)
+                    ESCALADO-MULTI-INSTANCIA
 .github/workflows/  CI: typecheck, build, test (con Postgres), audit
 render.yaml         Blueprint de Render (servicio web)
 CLAUDE.md           Referencia profunda de arquitectura y decisiones

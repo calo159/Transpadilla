@@ -1,6 +1,6 @@
 # Entorno de staging — TransPadilla
 
-Fase 2.2 de [`PLAN.md`](../PLAN.md). Hoy solo existe producción: cualquier cambio se prueba
+Fase 2.2 del plan de trabajo original. Hoy solo existe producción: cualquier cambio se prueba
 en vivo. Staging da un entorno idéntico donde probar antes de que un cambio llegue a los
 pasajeros/conductores reales.
 

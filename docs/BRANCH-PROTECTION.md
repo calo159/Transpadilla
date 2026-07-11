@@ -1,6 +1,6 @@
 # Branch protection y code review — TransPadilla
 
-Fase 2.3 de [`PLAN.md`](../PLAN.md). Hoy cualquiera con acceso de escritura puede mergear
+Fase 2.3 del plan de trabajo original. Hoy cualquiera con acceso de escritura puede mergear
 directo a `main` sin revisión, y `main` se despliega automáticamente a producción (Render) en
 cada push — así que un cambio sin revisar puede llegar a producción sin que nadie más lo vea
 antes. Esto se configura en el dashboard de GitHub (no hay equivalente por código/config en el
