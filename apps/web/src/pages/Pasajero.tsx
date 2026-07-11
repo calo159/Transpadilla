@@ -737,6 +737,10 @@ export default function Pasajero() {
     if (next !== null) {
       const b = buses.find((x) => x.id === next);
       if (b?.lat && b?.lng && mapRef.current) mapRef.current.setView([b.lat, b.lng], 16);
+      // Colapsa el sheet a la barra mínima para que el mapa (con el bus recién
+      // centrado) quede visible de una vez; la ruta sigue accesible tocando la
+      // barrita para reexpandir (mismo gesto que ya existe para "peek").
+      setSheetSnap("peek");
     }
   };
   const busSeguido = buses.find((b) => b.id === siguiendoBusId);
@@ -778,7 +782,9 @@ export default function Pasajero() {
   }, [sugerencia, buses]);
 
   const armarDestino = () => {
-    setModoDestino(true); // el card se oculta solo (no hay ruta/destino aún); el mapa queda libre
+    setModoDestino(true);
+    setSelectedRutaId(null); // oculta el sheet de la ruta previa: el mapa queda libre de una vez
+    setDestino(null); // por si ya había un destino marcado (p. ej. "Elegir otro destino")
   };
   const limpiarDestino = () => {
     setModoDestino(false);
