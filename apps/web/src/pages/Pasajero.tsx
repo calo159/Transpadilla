@@ -1836,7 +1836,7 @@ export default function Pasajero() {
             const activo = vista === t.id;
             const badge = t.id === "favoritos" && favoritos.length > 0 ? favoritos.length : null;
             return (
-              <button key={t.id} onClick={() => setVista(activo ? "mapa" : t.id)} aria-current={activo ? "page" : undefined} aria-label={badge !== null ? `${t.label} (${badge})` : t.label} className="relative flex flex-col items-center gap-1 rounded-2xl px-4 py-2 active:scale-90 transition-all" style={activo ? { background: "var(--color-gold)", color: "var(--color-navy)", boxShadow: "0 4px 12px rgba(245,183,49,0.4)" } : { color: "var(--color-blue)" }}>
+              <button key={t.id} onClick={() => { if (t.id === "mapa") cerrarCard(); setVista(activo ? "mapa" : t.id); }} aria-current={activo ? "page" : undefined} aria-label={badge !== null ? `${t.label} (${badge})` : t.label} className="relative flex flex-col items-center gap-1 rounded-2xl px-4 py-2 active:scale-90 transition-all" style={activo ? { background: "var(--color-gold)", color: "var(--color-navy)", boxShadow: "0 4px 12px rgba(245,183,49,0.4)" } : { color: "var(--color-blue)" }}>
                 <span className="relative">
                   {t.icon}
                   {badge !== null && (
