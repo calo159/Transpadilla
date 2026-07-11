@@ -628,6 +628,7 @@ export default function Pasajero() {
   }, [updateBusMarker, queryClient]);
 
   const handleSelectRuta = (rutaId: number) => {
+    setModoDestino(false); // elegir una ruta directo cancela "¿A dónde vas?" si estaba activo
     const next = selectedRutaId === rutaId ? null : rutaId;
     setSelectedRutaId(next);
     if (next !== null) {
@@ -864,6 +865,7 @@ export default function Pasajero() {
   const SNAPS = ["peek", "half", "full"] as const;
   const cerrarCard = () => {
     if (destino) limpiarDestino();
+    setModoDestino(false); // cancela "¿A dónde vas?" si estaba a medio elegir el punto
     setSelectedRutaId(null);
     setSheetSnap("half"); // resetea para el próximo abrir
   };
@@ -1854,7 +1856,7 @@ export default function Pasajero() {
             const activo = vista === t.id;
             const badge = t.id === "favoritos" && favoritos.length > 0 ? favoritos.length : null;
             return (
-              <button key={t.id} onClick={() => { if (t.id === "mapa") cerrarCard(); setVista(activo ? "mapa" : t.id); }} aria-current={activo ? "page" : undefined} aria-label={badge !== null ? `${t.label} (${badge})` : t.label} className="relative flex flex-col items-center gap-1 rounded-2xl px-4 py-2 active:scale-90 transition-all" style={activo ? { background: "var(--color-gold)", color: "var(--color-navy)", boxShadow: "0 4px 12px rgba(245,183,49,0.4)" } : { color: "var(--color-blue)" }}>
+              <button key={t.id} onClick={() => { setModoDestino(false); if (t.id === "mapa") cerrarCard(); setVista(activo ? "mapa" : t.id); }} aria-current={activo ? "page" : undefined} aria-label={badge !== null ? `${t.label} (${badge})` : t.label} className="relative flex flex-col items-center gap-1 rounded-2xl px-4 py-2 active:scale-90 transition-all" style={activo ? { background: "var(--color-gold)", color: "var(--color-navy)", boxShadow: "0 4px 12px rgba(245,183,49,0.4)" } : { color: "var(--color-blue)" }}>
                 <span className="relative">
                   {t.icon}
                   {badge !== null && (
