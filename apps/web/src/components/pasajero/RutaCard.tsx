@@ -86,21 +86,23 @@ export function RutaCard({
         {mostrarNotificar && onToggleNotificar && (
           <button
             onClick={(e) => { e.stopPropagation(); onToggleNotificar(); }}
-            className={`flex-shrink-0 rounded-full active:scale-90 transition-transform ${compact ? "p-1.5" : "p-2.5"}`}
+            className={`flex-shrink-0 flex flex-col items-center gap-0.5 rounded-xl active:scale-90 transition-transform ${compact ? "p-1.5" : "px-1.5 py-1"}`}
             aria-label={notificando ? "Quitar notificaciones de esta ruta" : "Notificarme de esta ruta"}
             aria-pressed={notificando}
           >
             {notificando
               ? <BellRing className={compact ? "w-5 h-5" : "w-6 h-6"} style={{ color: "var(--color-gold)" }} />
-              : <Bell className={compact ? "w-5 h-5" : "w-6 h-6"} style={{ color: "#cbd5e1" }} />}
+              : <Bell className={compact ? "w-5 h-5" : "w-6 h-6"} style={{ color: "#94a3b8" }} />}
+            {!compact && <span className="text-[10px] font-semibold leading-none" style={{ color: notificando ? "var(--tp-gold-ink)" : "#94a3b8" }}>Avisos</span>}
           </button>
         )}
         <button
           onClick={(e) => { e.stopPropagation(); onToggleFavorito(); }}
-          className={`flex-shrink-0 rounded-full active:scale-90 transition-transform ${compact ? "p-1.5 -mr-0.5" : "p-2.5 -mr-1"}`}
+          className={`flex-shrink-0 flex flex-col items-center gap-0.5 rounded-xl active:scale-90 transition-transform ${compact ? "p-1.5 -mr-0.5" : "px-1.5 py-1 -mr-1"}`}
           aria-label={favorito ? "Quitar de favoritas" : "Marcar favorita"}
         >
-          <Star className={compact ? "w-5 h-5" : "w-6 h-6"} style={favorito ? { color: "var(--color-gold)", fill: "var(--color-gold)" } : { color: "#cbd5e1" }} />
+          <Star className={compact ? "w-5 h-5" : "w-6 h-6"} style={favorito ? { color: "var(--color-gold)", fill: "var(--color-gold)" } : { color: "#94a3b8" }} />
+          {!compact && <span className="text-[10px] font-semibold leading-none" style={{ color: favorito ? "var(--tp-gold-ink)" : "#94a3b8" }}>Guardar</span>}
         </button>
       </div>
 
@@ -149,7 +151,7 @@ function EstadoPill({ vivos, compact }: { vivos: number; compact: boolean }) {
         className={`w-1.5 h-1.5 rounded-full ${hay ? "animate-pulse" : ""}`}
         style={{ background: hay ? "var(--color-success)" : "var(--color-gray-text)" }}
       />
-      {hay ? `${vivos} en vivo` : "Sin buses"}
+      {hay ? `${vivos} en vivo` : "Sin buses ahora"}
     </span>
   );
 }

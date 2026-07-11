@@ -56,13 +56,13 @@ export function RouteRow({
           tabIndex={0}
           onClick={(e) => { e.stopPropagation(); onToggleNotificar(); }}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onToggleNotificar(); } }}
-          className="p-0.5 flex-shrink-0 rounded-full"
+          className="p-1.5 flex-shrink-0 rounded-full"
           aria-label={notificando ? "Quitar notificaciones de esta ruta" : "Notificarme de esta ruta"}
           aria-pressed={notificando}
         >
           {notificando
             ? <BellRing className="w-[17px] h-[17px]" style={{ color: "var(--color-gold)" }} />
-            : <Bell className="w-[17px] h-[17px]" style={{ color: "#c3ccd9" }} />}
+            : <Bell className="w-[17px] h-[17px]" style={{ color: "#94a3b8" }} />}
         </span>
       )}
       <span
@@ -70,10 +70,10 @@ export function RouteRow({
         tabIndex={0}
         onClick={(e) => { e.stopPropagation(); onToggleFavorito(); }}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onToggleFavorito(); } }}
-        className="p-0.5 flex-shrink-0 rounded-full"
+        className="p-1.5 flex-shrink-0 rounded-full"
         aria-label={favorito ? "Quitar de favoritas" : "Marcar favorita"}
       >
-        <Star className="w-[17px] h-[17px]" style={favorito ? { color: "var(--color-gold)", fill: "var(--color-gold)" } : { color: "#c3ccd9" }} />
+        <Star className="w-[17px] h-[17px]" style={favorito ? { color: "var(--color-gold)", fill: "var(--color-gold)" } : { color: "#94a3b8" }} />
       </span>
     </button>
   );

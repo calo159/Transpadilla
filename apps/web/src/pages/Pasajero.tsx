@@ -88,6 +88,13 @@ export default function Pasajero() {
   const [busqueda, setBusqueda] = useState("");
   // Estado real de la conexión en vivo (Socket.IO). Empieza false; "connect" lo pone true.
   const [conectado, setConectado] = useState(false);
+  // Gracia de arranque: en los primeros instantes el socket aún no conectó, así que
+  // en vez de un alarmante "SIN CONEXIÓN" se muestra "CONECTANDO…" hasta que pase.
+  const [graciaConexion, setGraciaConexion] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setGraciaConexion(false), 2500);
+    return () => clearTimeout(t);
+  }, []);
   const [locating, setLocating] = useState(false);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
   // Se incrementa cuando la geometría de calles de una ruta termina de cargar,
@@ -912,7 +919,10 @@ export default function Pasajero() {
 
   // ── Centrar el mapa en la ubicación del pasajero ───────────────────────────
   const locateMe = () => {
-    if (!navigator.geolocation || !mapRef.current) return;
+    if (!navigator.geolocation || !mapRef.current) {
+      toast({ title: "Ubicación no disponible", description: "Tu dispositivo o navegador no permite ubicarte.", variant: "destructive" });
+      return;
+    }
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -930,7 +940,10 @@ export default function Pasajero() {
         map.setView([latitude, longitude], 15);
         setLocating(false);
       },
-      () => setLocating(false),
+      () => {
+        setLocating(false);
+        toast({ title: "No pudimos obtener tu ubicación", description: "Revisa que le hayas dado permiso de ubicación al navegador.", variant: "destructive" });
+      },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
     );
   };
@@ -984,7 +997,7 @@ export default function Pasajero() {
               ? { background: "var(--tp-sky)", color: "#001018" }
               : { background: "rgba(123,184,213,0.15)", color: "var(--tp-sky)" }}
           >
-            <LocateFixed className="w-3 h-3" />{siguiendoBusId === busSugerido.bus.id ? "Siguiendo" : "Seguir"}
+            <LocateFixed className="w-3 h-3" />{siguiendoBusId === busSugerido.bus.id ? "Siguiendo" : "Seguir bus"}
           </button>
         </div>
       ) : (
@@ -1058,7 +1071,7 @@ export default function Pasajero() {
         <span
           role="status"
           aria-live="polite"
-          className="notranslate flex items-center gap-1.5 text-[9px] font-bold px-2.5 py-1 rounded-full shrink-0"
+          className="notranslate flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0"
           style={conectado
             ? { background: "rgba(56,161,105,0.12)", color: "#2f8a56" }
             : { background: "var(--color-gray-light)", color: "var(--color-gray-text)" }}
@@ -1068,7 +1081,7 @@ export default function Pasajero() {
             className={`w-1.5 h-1.5 rounded-full ${conectado ? "animate-pulse" : ""}`}
             style={{ background: conectado ? "#38A169" : "var(--color-gray-text)" }}
           />
-          {conectado ? "EN VIVO" : "SIN CONEXIÓN"}
+          {conectado ? "EN VIVO" : graciaConexion ? "CONECTANDO…" : "SIN CONEXIÓN"}
         </span>
       </div>
 
@@ -1079,7 +1092,7 @@ export default function Pasajero() {
           <Input
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar ruta o parada"
+            placeholder="Buscar ruta"
             className="pl-9 h-10 text-xs rounded-xl border-transparent"
             style={{ background: "#f4f7fb", color: "var(--color-navy)" }}
           />
@@ -1306,7 +1319,7 @@ export default function Pasajero() {
             </div>
           ) : (
             <div className="rounded-2xl p-4 text-center text-sm font-medium" style={{ background: "var(--color-gray-light)", color: "var(--color-gray-text)" }}>
-              No hay buses circulando en esta ruta ahora mismo.
+              No hay buses en esta ruta ahora mismo.
             </div>
           )}
 
@@ -1366,7 +1379,7 @@ export default function Pasajero() {
                   : { background: "var(--color-gold)", color: "#4a3300", boxShadow: "0 10px 22px rgba(245,183,49,.35)" }}
               >
                 <LocateFixed className="w-4 h-4" />
-                {siguiendoBusId === proxBus.id ? "Siguiendo tu bus" : "Seguir mi bus"}
+                {siguiendoBusId === proxBus.id ? "Siguiendo" : "Seguir bus"}
               </button>
             )}
             <button
@@ -1532,7 +1545,7 @@ export default function Pasajero() {
                   </div>
                 </>
               ) : (
-                <p className="text-sm" style={{ color: "var(--color-gray-text)" }}>No hay buses en circulación en esta ruta ahora.</p>
+                <p className="text-sm" style={{ color: "var(--color-gray-text)" }}>No hay buses en esta ruta ahora mismo.</p>
               )}
             </div>
             {/* Banner de novedad — una línea por cada bus con novedad activa */}
@@ -1584,7 +1597,7 @@ export default function Pasajero() {
             <div className="px-4 pt-3 pb-1 bg-white">
               {proxBus ? (
                 <button onClick={() => seguirBus(proxBus.id)} className="w-full h-12 rounded-2xl font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform" style={siguiendoBusId === proxBus.id ? { background: "var(--color-sky)", color: "var(--color-navy)" } : { background: "var(--color-blue)", color: "#fff" }}>
-                  <LocateFixed className="w-5 h-5" /> {siguiendoBusId === proxBus.id ? "Siguiendo este bus" : "Seguir este bus"}
+                  <LocateFixed className="w-5 h-5" /> {siguiendoBusId === proxBus.id ? "Siguiendo" : "Seguir bus"}
                   {ocupProx && <span className="ml-1 text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.22)" }}>{ocupProx.label}</span>}
                 </button>
               ) : (
@@ -1644,14 +1657,18 @@ export default function Pasajero() {
           className="hidden md:flex absolute top-4 left-4 z-[900] items-center gap-2 px-3 py-1.5 rounded-full"
           style={{ background: "#fff", boxShadow: "0 8px 20px rgba(15,30,60,0.14)" }}
         >
+          {/* Sin ruta elegida el mapa no muestra buses, así que en vez de un conteo
+              (que contradiría lo visible) se guía al usuario a elegir una ruta. */}
           <span
-            className={`w-2 h-2 rounded-full ${activeBuses.length > 0 ? "animate-pulse" : ""}`}
+            className={`w-2 h-2 rounded-full ${activeBuses.length > 0 && selectedRutaId !== null ? "animate-pulse" : ""}`}
             style={{ background: activeBuses.length > 0 ? "var(--color-success)" : "var(--color-gray-text)" }}
           />
           <span className="text-xs font-bold" style={{ color: "var(--color-navy)" }}>
-            {activeBuses.length > 0
-              ? `${activeBuses.length} bus${activeBuses.length > 1 ? "es" : ""} en vivo`
-              : "Sin buses ahora"}
+            {selectedRutaId === null
+              ? (activeBuses.length > 0 ? "Elige una ruta" : "Sin buses ahora")
+              : activeBuses.length > 0
+                ? `${activeBuses.length} bus${activeBuses.length > 1 ? "es" : ""} en vivo`
+                : "Sin buses ahora"}
           </span>
         </div>
 
@@ -1681,17 +1698,18 @@ export default function Pasajero() {
           </button>
         )}
 
-        {/* FAB "¿A dónde vas?" (gold) — abajo-izquierda */}
+        {/* Botón "¿A dónde vas?" (gold) — abajo-izquierda. Píldora CON texto: su
+            función (recomendar ruta por destino) no se descubre si es solo un ícono. */}
         {vista === "mapa" && (
           <button
             onClick={armarDestino}
-            className="absolute left-4 z-[900] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform bottom-[88px] md:bottom-4"
+            className="absolute left-4 z-[900] flex items-center gap-2 h-12 pl-4 pr-5 rounded-full active:scale-95 transition-transform bottom-[88px] md:bottom-4"
             style={{ background: "var(--color-gold)", color: "var(--color-navy)", border: modoDestino ? "3px solid var(--color-navy)" : "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
             aria-label="Elegir mi destino en el mapa"
             aria-pressed={modoDestino}
-            title="¿A dónde vas?"
           >
-            <Navigation className="w-5 h-5" />
+            <Navigation className="w-5 h-5 flex-shrink-0" />
+            <span className="text-sm font-extrabold whitespace-nowrap">¿A dónde vas?</span>
           </button>
         )}
 
@@ -1721,7 +1739,7 @@ export default function Pasajero() {
               <span className="text-[11px] font-medium text-white/80">Moviendo la Ciudad</span>
               <span role="status" aria-live="polite" className="notranslate flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full" style={conectado ? { background: "rgba(245,183,49,0.2)", color: "var(--color-gold)" } : { background: "rgba(255,255,255,0.15)", color: "#fff" }}>
                 <span aria-hidden="true" className="tp-livedot" style={{ width: 6, height: 6, background: conectado ? "var(--color-gold)" : "#fcd34d", animationPlayState: conectado ? "running" : "paused" }} />
-                {conectado ? "EN VIVO" : "SIN CONEXIÓN"}
+                {conectado ? "EN VIVO" : graciaConexion ? "CONECTANDO…" : "SIN CONEXIÓN"}
               </span>
             </div>
           </div>
@@ -1840,12 +1858,12 @@ export default function Pasajero() {
                 <span className="relative">
                   {t.icon}
                   {badge !== null && (
-                    <span className="absolute -top-1.5 -right-2 min-w-[15px] h-[15px] px-1 rounded-full flex items-center justify-center text-[9px] font-black text-white" style={{ background: "var(--color-danger)", border: "1.5px solid #fff" }}>
+                    <span className="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] px-1 rounded-full flex items-center justify-center text-[10px] font-black text-white" style={{ background: "var(--color-danger)", border: "1.5px solid #fff" }}>
                       {badge}
                     </span>
                   )}
                 </span>
-                <span className="text-[10px] font-bold">{t.label}</span>
+                <span className="text-[11px] font-bold">{t.label}</span>
               </button>
             );
           })}
@@ -1947,7 +1965,7 @@ export default function Pasajero() {
                     { icon: <Search className="w-4 h-4" />, t: "Buscar ruta", d: "Escribe el nombre de tu ruta para encontrarla al instante." },
                     { icon: <MapPin className="w-4 h-4" />, t: "Seleccionar ruta", d: "Toca una ruta para resaltarla en el mapa y ver sus paradas y buses. Aparecen primero tus favoritas y las que tienen buses en vivo." },
                     { icon: <LocateFixed className="w-4 h-4" />, t: "Mi ubicación", d: "Centra el mapa en ti. Así los buses se ordenan del más cercano y ves cuánto tardan en llegar a ti." },
-                    { icon: <Clock className="w-4 h-4" />, t: "Tiempo de llegada (ETA)", d: "Minutos estimados que falta para que el bus llegue a tu ubicación o parada." },
+                    { icon: <Clock className="w-4 h-4" />, t: "Tiempo de llegada", d: "Minutos estimados que falta para que el bus llegue a tu ubicación o parada." },
                     { icon: <LocateFixed className="w-4 h-4" />, t: "Seguir un bus", d: "Elige un bus y el mapa lo seguirá automáticamente mientras se mueve." },
                     { icon: <Star className="w-4 h-4" />, t: "Favoritos", d: "Toca la estrella en cualquier ruta para guardarla; siempre aparece arriba en la lista." },
                     { icon: <MessageCircle className="w-4 h-4" />, t: "Atención al cliente", d: "Escríbenos por WhatsApp ante cualquier duda o reclamo." },
@@ -1968,8 +1986,8 @@ export default function Pasajero() {
                 <div className="pt-3 border-t border-white/10">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-2">Ocupación del bus</p>
                   <div className="flex flex-wrap gap-3 text-xs text-white/80">
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: "#22c55e" }} /> Vacío</span>
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: "#F5C200" }} /> Medio lleno</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: "#22c55e" }} /> Disponible</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: "#F5C200" }} /> Medio</span>
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: "#ef4444" }} /> Lleno</span>
                   </div>
                   <p className="text-[11px] text-white/45 mt-2 leading-snug">El borde de color de cada bus en el mapa indica su ocupación.</p>
@@ -2045,10 +2063,25 @@ export default function Pasajero() {
               <span className="text-xs text-muted-foreground font-medium">Cargando el mapa…</span>
             </div>
           )}
-          {activeBuses.length === 0 && !rutasLoading && rutas.length > 0 && selectedRutaId === null && (
+          {activeBuses.length === 0 && !rutasLoading && rutas.length > 0 && selectedRutaId === null && !modoDestino && (
             <div className="pointer-events-none flex items-center gap-2 rounded-full shadow-md px-4 py-2" style={{ background: "var(--color-white)", border: "1px solid #e8edf4" }}>
               <Bus className="w-4 h-4 flex-shrink-0" style={{ color: "var(--color-gold)" }} />
               <span className="text-xs font-semibold" style={{ color: "var(--color-navy)" }}>Sin buses activos · <span style={{ color: "var(--color-gray-text)" }}>5:00 am – 10:00 pm</span></span>
+            </div>
+          )}
+          {/* Hay servicio pero el usuario aún no eligió ruta: el mapa se ve sin buses.
+              Se le dice qué hacer y se le da un botón directo a la lista de rutas. */}
+          {activeBuses.length > 0 && !rutasLoading && rutas.length > 0 && selectedRutaId === null && !modoDestino && (
+            <div className="pointer-events-auto flex items-center gap-2.5 rounded-2xl shadow-lg pl-4 pr-2 py-2" style={{ background: "var(--color-white)", border: "1px solid #e8edf4" }}>
+              <Bus className="w-4 h-4 flex-shrink-0" style={{ color: "var(--color-gold)" }} />
+              <span className="text-xs font-semibold" style={{ color: "var(--color-navy)" }}>Elige una ruta para ver los buses en vivo</span>
+              <button
+                onClick={() => setVista("rutas")}
+                className="flex-shrink-0 text-xs font-bold rounded-xl px-3 py-1.5 active:scale-95 transition-transform"
+                style={{ background: "var(--color-blue)", color: "#fff" }}
+              >
+                Ver rutas
+              </button>
             </div>
           )}
           {modoDestino && (
