@@ -36,7 +36,7 @@ jobs:
       SEED_DEMO: "true"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Habilitar pnpm (corepack)
         run: corepack enable
