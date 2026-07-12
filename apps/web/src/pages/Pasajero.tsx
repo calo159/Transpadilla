@@ -776,18 +776,6 @@ export default function Pasajero() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modoDestino, rutas, userPos, selectedRutaId]);
 
-  // Tocar el mapa (zona vacía) deselecciona la ruta y cierra el panel — gesto
-  // natural en apps de mapas. Los toques en buses/paradas/recorrido no llegan
-  // aquí (tienen su propio handler). No aplica en modo destino.
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || modoDestino || selectedRutaId === null) return;
-    const onClick = () => cerrarCard();
-    map.on("click", onClick);
-    return () => { map.off("click", onClick); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modoDestino, selectedRutaId]);
-
   // Marcador del destino elegido (bandera). Se crea/mueve/elimina según `destino`.
   useEffect(() => {
     const map = mapRef.current;

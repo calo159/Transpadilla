@@ -25,8 +25,11 @@ export function useLeafletMap(
       L.tileLayer(TILES_URL, {
         attribution: TILES_ATTRIBUTION,
         crossOrigin: "anonymous",
-        updateWhenIdle: true,
-        updateWhenZooming: false,
+        // updateWhenZooming:false (antes) retrasaba la carga de tiles hasta el
+        // evento "zoomend" — en pellizco (pinch) para zoom, varios navegadores
+        // móviles no lo disparan de forma confiable, y el mapa se quedaba
+        // esperando ese evento para siempre (blanco). Con el default de Leaflet
+        // (true) los tiles se piden EN el gesto, sin depender de ese evento.
         keepBuffer: 2,
         // Permite acercar más allá del último nivel de tiles: Leaflet escala el tile
         // disponible en vez de mostrar el mapa en blanco.
