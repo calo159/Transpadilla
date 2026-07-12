@@ -19,19 +19,22 @@ export const TILES_URL =
 export const TILES_ATTRIBUTION =
   env.VITE_MAP_ATTRIBUTION ?? '© <a href="https://openstreetmap.org">OpenStreetMap</a>';
 
-// Zoom máximo del mapa (lo que el usuario puede acercar) y zoom máximo NATIVO de los
-// tiles (el último nivel que el proveedor realmente sirve). Si maxZoom > maxNativeZoom,
-// Leaflet ESCALA el último tile disponible (borroso, pero visible) en vez de no
-// tener nada que mostrar. maxZoom se deja con margen de sobra por encima del
-// nativo para que el usuario nunca "choque" contra el techo del zoom acercando
-// con los dedos — el default de maxNativeZoom se ajusta solo: OSM (sin
-// VITE_MAP_TILES_URL propio) llega a z19; cualquier proveedor configurado
-// explícitamente (MapTiler y la mayoría de proveedores raster estándar) llega a
-// z20. Ambos se pueden sobreescribir por variable de entorno si hace falta.
+// Zoom máximo NATIVO = el último nivel que el proveedor REALMENTE sirve como tile.
+// Si el mapa deja acercar más allá de este número, Leaflet no tiene un tile que
+// mostrar y lo estira sintéticamente: en varios navegadores móviles esa ampliación
+// se ve EN BLANCO. Por eso hay que clavarlo al valor real del proveedor, no a un
+// estimado. Valores confirmados contra el tiles.json de cada proveedor:
+//   - MapTiler streets-v2/256 → maxzoom 22 (consultado en api.maptiler.com).
+//   - OpenStreetMap (fallback de dev, tile.openstreetmap.org) → 19.
+// El default se elige según si hay un proveedor propio configurado; se puede
+// sobreescribir con VITE_MAP_MAX_NATIVE_ZOOM si se cambia de proveedor.
 export const MAP_MAX_NATIVE_ZOOM = Number(
-  env.VITE_MAP_MAX_NATIVE_ZOOM ?? (env.VITE_MAP_TILES_URL ? 20 : 19)
+  env.VITE_MAP_MAX_NATIVE_ZOOM ?? (env.VITE_MAP_TILES_URL ? 22 : 19)
 );
-export const MAP_MAX_ZOOM = Number(env.VITE_MAP_MAX_ZOOM ?? MAP_MAX_NATIVE_ZOOM + 3);
+// maxZoom = el nativo, SIN estiramiento sintético. z22 ya es nivel de edificio
+// (~1 m/píxel): sobra para el uso real, y así el mapa NUNCA muestra un tile
+// inventado en blanco — cada nivel al que se puede acercar tiene su tile real.
+export const MAP_MAX_ZOOM = Number(env.VITE_MAP_MAX_ZOOM ?? MAP_MAX_NATIVE_ZOOM);
 
 // Base del servicio OSRM (sin slash final). El de demo no es para producción.
 export const OSRM_URL = (
