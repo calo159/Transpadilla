@@ -310,7 +310,9 @@ export default function Pasajero() {
     (typeof navigator !== "undefined" && "standalone" in navigator && (navigator as Navigator & { standalone?: boolean }).standalone === true);
   // Dentro del APK (build con VITE_API_URL) no tiene sentido ofrecer instalar la PWA.
   const enAPK = !!import.meta.env.VITE_API_URL;
-  const mostrarInstall = bannerVisible && !installOculto && !yaInstalada && !enAPK && (!!installEvt || esIOS);
+  // Se oculta mientras la guía interactiva está activa: no debe competir por
+  // espacio/atención con el spotlight (reaparece solo al terminarla).
+  const mostrarInstall = bannerVisible && !installOculto && !yaInstalada && !enAPK && (!!installEvt || esIOS) && tourStep === "off";
   const instalarApp = async () => {
     if (!installEvt) return;
     await installEvt.prompt();
