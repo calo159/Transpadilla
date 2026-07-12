@@ -103,10 +103,21 @@ ALTER TABLE banners ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS service_all_banners ON banners;
 CREATE POLICY service_all_banners ON banners FOR ALL TO service_role USING (true) WITH CHECK (true);
 
+-- 8) `lugares` — lectura pública de los activos, escritura solo del backend ---
+-- Puntos de interés (hospital, mercado, terminal…) que el pasajero busca como
+-- destino. El GET público de Express ya expone solo los `activo = true`; se
+-- refleja la misma regla aquí por si algún cliente pega directo a PostgREST.
+ALTER TABLE lugares ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS service_all_lugares         ON lugares;
+DROP POLICY IF EXISTS anon_read_lugares_activos   ON lugares;
+CREATE POLICY service_all_lugares       ON lugares FOR ALL    TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY anon_read_lugares_activos ON lugares FOR SELECT TO anon        USING (activo = true);
+
 -- ============================================================================
 -- Verificación rápida (opcional):
 --   SELECT relname, relrowsecurity, relforcerowsecurity
 --   FROM pg_class WHERE relname IN
 --     ('usuarios','rutas','paradas','ruta_paradas','buses','favoritos',
---      'posiciones_historial','auditoria','suscripciones_push','tokens_revocados');
+--      'posiciones_historial','auditoria','suscripciones_push','tokens_revocados',
+--      'banners','lugares');
 -- ============================================================================

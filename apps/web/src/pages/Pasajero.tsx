@@ -953,6 +953,10 @@ export default function Pasajero() {
     setBusqueda("");
     setDestino(p);
     setVista("mapa");
+    // Limpia la ruta seleccionada ANTES de evaluar la sugerencia: si el lugar
+    // queda lejos de toda ruta (sin sugerencia), no debe quedar visible el
+    // detalle de una ruta previa que ya no tiene nada que ver con este destino.
+    setSelectedRutaId(null);
     const sug = recomendarRuta(rutas, p, userPos ?? undefined);
     if (sug) handleSelectRuta(sug.ruta.id);
     setSheetSnap("half");
