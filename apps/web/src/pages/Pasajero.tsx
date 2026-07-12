@@ -246,6 +246,12 @@ export default function Pasajero() {
   // Pasos: ubicacion → destino → elegir → resultado. Reemplaza la vieja bienvenida.
   type PasoGuia = "off" | "ubicacion" | "destino" | "elegir" | "resultado";
   const [tourStep, setTourStep] = useState<PasoGuia>("off");
+  // Si la guía ya se resolvió (terminada/saltada esta sesión, o ya vista antes):
+  // el banner "Instalar app" espera a esto para no competir con la guía ni
+  // aparecer de golpe antes de que ni siquiera arranque.
+  const [guiaTerminada, setGuiaTerminada] = useState(
+    () => typeof localStorage !== "undefined" && !!localStorage.getItem("tp_guia_visto"),
+  );
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const ubicacionCardRef = useRef<HTMLDivElement | null>(null);
   const fabDestinoRef = useRef<HTMLButtonElement | null>(null);
@@ -310,9 +316,10 @@ export default function Pasajero() {
     (typeof navigator !== "undefined" && "standalone" in navigator && (navigator as Navigator & { standalone?: boolean }).standalone === true);
   // Dentro del APK (build con VITE_API_URL) no tiene sentido ofrecer instalar la PWA.
   const enAPK = !!import.meta.env.VITE_API_URL;
-  // Se oculta mientras la guía interactiva está activa: no debe competir por
-  // espacio/atención con el spotlight (reaparece solo al terminarla).
-  const mostrarInstall = bannerVisible && !installOculto && !yaInstalada && !enAPK && (!!installEvt || esIOS) && tourStep === "off";
+  // Espera a que la guía interactiva termine (o a que ya estuviera vista de antes):
+  // no debe competir por espacio/atención con el spotlight ni aparecer antes de que
+  // el primerizo ni siquiera la haya visto.
+  const mostrarInstall = bannerVisible && !installOculto && !yaInstalada && !enAPK && (!!installEvt || esIOS) && guiaTerminada;
   const instalarApp = async () => {
     if (!installEvt) return;
     await installEvt.prompt();
@@ -1154,6 +1161,7 @@ export default function Pasajero() {
   };
   const terminarGuia = () => {
     setTourStep("off");
+    setGuiaTerminada(true);
     guiaArrancadaRef.current = true;
     try { localStorage.setItem("tp_guia_visto", "1"); } catch { /* ignore */ }
   };
@@ -1163,12 +1171,15 @@ export default function Pasajero() {
   useEffect(() => {
     if (guiaArrancadaRef.current || tourStep !== "off") return;
     if (typeof localStorage === "undefined") return;
-    if (localStorage.getItem("tp_guia_visto")) { guiaArrancadaRef.current = true; return; }
+    if (localStorage.getItem("tp_guia_visto")) { guiaArrancadaRef.current = true; setGuiaTerminada(true); return; }
+    // Si falló la carga de rutas, no se puede armar la guía: se da por resuelta
+    // igual (así el banner de instalar no queda esperando algo que no va a pasar).
+    if (rutasError) { guiaArrancadaRef.current = true; setGuiaTerminada(true); return; }
     if (rutasLoading || rutas.length === 0 || permisoGeo === null) return; // aún no
     guiaArrancadaRef.current = true;
     iniciarGuia();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rutas, rutasLoading, permisoGeo, tourStep]);
+  }, [rutas, rutasLoading, rutasError, permisoGeo, tourStep]);
 
   // Avance de la guía según la acción real del usuario (o si el paso deja de aplicar).
   useEffect(() => {
