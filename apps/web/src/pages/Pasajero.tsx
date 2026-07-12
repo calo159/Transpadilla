@@ -214,6 +214,29 @@ export default function Pasajero() {
     // Tras cerrar la guía, deja la lista de rutas abierta y a la vista (móvil).
     setVista("rutas");
   };
+  // Chip "elige una ruta": guía para quien recién entra y ve el mapa vacío.
+  // Se cierra con la X o deslizándolo, y una vez cerrada no vuelve a salir.
+  const [showGuiaMapa, setShowGuiaMapa] = useState(
+    () => typeof localStorage !== "undefined" && !localStorage.getItem("tp_guia_mapa_visto"),
+  );
+  const dismissGuiaMapa = () => {
+    setShowGuiaMapa(false);
+    try { localStorage.setItem("tp_guia_mapa_visto", "1"); } catch { /* ignore */ }
+  };
+  const guiaDragRef = useRef<{ startX: number } | null>(null);
+  const [guiaDragX, setGuiaDragX] = useState(0);
+  const onGuiaTouchStart = (e: React.TouchEvent) => {
+    guiaDragRef.current = { startX: e.touches[0]!.clientX };
+  };
+  const onGuiaTouchMove = (e: React.TouchEvent) => {
+    if (!guiaDragRef.current) return;
+    setGuiaDragX(e.touches[0]!.clientX - guiaDragRef.current.startX);
+  };
+  const onGuiaTouchEnd = () => {
+    guiaDragRef.current = null;
+    if (Math.abs(guiaDragX) > 70) dismissGuiaMapa();
+    setGuiaDragX(0);
+  };
   // Panel de ayuda "¿Cómo funciona?" — accesible en cualquier momento con el botón ?.
   const [showAyuda, setShowAyuda] = useState(false);
   // Anuncio a pantalla completa que publica el admin: se muestra a cada visita (no
@@ -2097,17 +2120,43 @@ export default function Pasajero() {
             </div>
           )}
           {/* Hay servicio pero el usuario aún no eligió ruta: el mapa se ve sin buses.
-              Se le dice qué hacer y se le da un botón directo a la lista de rutas. */}
-          {activeBuses.length > 0 && !rutasLoading && rutas.length > 0 && selectedRutaId === null && !modoDestino && (
-            <div className="pointer-events-auto flex items-center gap-2.5 rounded-2xl shadow-lg pl-4 pr-2 py-2" style={{ background: "var(--color-white)", border: "1px solid #e8edf4" }}>
-              <Bus className="w-4 h-4 flex-shrink-0" style={{ color: "var(--color-gold)" }} />
-              <span className="text-xs font-semibold" style={{ color: "var(--color-navy)" }}>Elige una ruta para ver los buses en vivo</span>
+              Guía para quien recién entra: se puede cerrar con la X o deslizándola,
+              y una vez cerrada no vuelve a aparecer (se recuerda en localStorage). */}
+          {activeBuses.length > 0 && !rutasLoading && rutas.length > 0 && selectedRutaId === null && !modoDestino && showGuiaMapa && (
+            <div
+              className="pointer-events-auto relative flex items-center gap-3 rounded-2xl shadow-xl pl-3 pr-2.5 py-2.5 animate-in fade-in slide-in-from-top-2 duration-300"
+              style={{
+                background: "linear-gradient(135deg, var(--color-navy), var(--color-blue))",
+                transform: `translateX(${guiaDragX}px)`,
+                opacity: 1 - Math.min(Math.abs(guiaDragX) / 140, 0.85),
+                transition: guiaDragRef.current ? "none" : "transform 0.25s ease, opacity 0.25s ease",
+                touchAction: "pan-y",
+              }}
+              onTouchStart={onGuiaTouchStart}
+              onTouchMove={onGuiaTouchMove}
+              onTouchEnd={onGuiaTouchEnd}
+            >
+              <span className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(245,183,49,0.22)" }}>
+                <Bus className="w-4 h-4" style={{ color: "var(--color-gold)" }} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[9px] font-bold uppercase tracking-wider leading-none mb-1" style={{ color: "rgba(255,255,255,0.6)" }}>Guía</p>
+                <p className="text-xs font-semibold text-white leading-tight">Elige una ruta para ver los buses en vivo</p>
+              </div>
               <button
                 onClick={() => setVista("rutas")}
                 className="flex-shrink-0 text-xs font-bold rounded-xl px-3 py-1.5 active:scale-95 transition-transform"
-                style={{ background: "var(--color-blue)", color: "#fff" }}
+                style={{ background: "var(--color-gold)", color: "var(--color-navy)" }}
               >
                 Ver rutas
+              </button>
+              <button
+                onClick={dismissGuiaMapa}
+                aria-label="Cerrar guía"
+                title="Cerrar"
+                className="flex-shrink-0 p-1.5 -mr-1 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
