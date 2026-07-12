@@ -118,3 +118,35 @@ export function distanciaAdelanteM(sDesde: number, sHasta: number, L: number): n
   if (L <= 0) return 0;
   return ((sHasta - sDesde) % L + L) % L;
 }
+
+/**
+ * ETA (minutos) de UN bus específico a cada parada de la ruta, indexado por
+ * POSICIÓN en `paradas` (no por id — una misma parada puede repetirse en el
+ * recorrido). A diferencia del ETA que calcula el backend (GET /rutas/:id/eta,
+ * que por cada parada se queda con el bus que llega más pronto ENTRE TODOS los
+ * de la ruta, mezclando buses distintos parada a parada), esta versión sigue
+ * SIEMPRE al mismo bus a lo largo de todo el recorrido — para cuando el
+ * pasajero elige seguir uno en particular y quiere ver su propio avance
+ * (qué paradas ya pasó, cuánto falta para las siguientes).
+ */
+export function etaPorParadaDeBus(
+  paradas: { latitud: number; longitud: number }[],
+  bus: { lat?: number | null; lng?: number | null; velocidad?: number | null },
+): Record<number, number> {
+  if (paradas.length < 2 || bus.lat == null || bus.lng == null) return {};
+  const busPos = posEnCircuito(bus.lat, bus.lng, paradas);
+  if (!busPos) return {};
+  // Distancia acumulada (m) desde la 1ª parada hasta cada parada, en el mismo
+  // circuito cerrado (paradas en orden + vuelta a la primera) que usa posEnCircuito.
+  const acumM = [0];
+  for (let i = 1; i < paradas.length; i++) {
+    acumM.push(acumM[i - 1]! + distanciaKm(paradas[i - 1]!.latitud, paradas[i - 1]!.longitud, paradas[i]!.latitud, paradas[i]!.longitud) * 1000);
+  }
+  const vel = velEfectiva(bus.velocidad);
+  const resultado: Record<number, number> = {};
+  paradas.forEach((_p, i) => {
+    const distM = distanciaAdelanteM(busPos.s, acumM[i]!, busPos.L);
+    resultado[i] = Math.round((distM / 1000 / vel) * 60);
+  });
+  return resultado;
+}

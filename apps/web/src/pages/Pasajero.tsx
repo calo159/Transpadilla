@@ -32,7 +32,7 @@ import { WHATSAPP_NUMERO, INSTAGRAM_URL, TARIFA_COP } from "@/lib/constants";
 import type { BusLocation, Novedad } from "@/lib/types";
 import { tiempoRelativo } from "@/lib/format";
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { distanciaKm, velEfectiva, puntoMasCercanoEnLinea, posEnCircuito, distanciaAdelanteM } from "@/lib/geo";
+import { distanciaKm, velEfectiva, puntoMasCercanoEnLinea, posEnCircuito, distanciaAdelanteM, etaPorParadaDeBus } from "@/lib/geo";
 import { recomendarRuta, busMasCercano } from "@/lib/sugerencia";
 import { escHtml, colorSeguro } from "@/lib/html";
 import { ocupacionInfo, OCUPACION_ORDEN } from "@/lib/ocupacion";
@@ -871,13 +871,6 @@ export default function Pasajero() {
     // recreaba el intervalo en cada refetch (~10s) y disparaba fetches de más.
   }, [selectedRutaId]);
 
-  // El próximo bus que llega (menor ETA entre las paradas de la ruta).
-  const proximoBus = (() => {
-    const vals = Object.values(etaPorParada);
-    if (!vals.length) return null;
-    return vals.reduce((a, b) => (b.eta < a.eta ? b : a));
-  })();
-
   // Mantener el ref sincronizado para el pan dentro de updateBusMarker.
   useEffect(() => { siguiendoBusRef.current = siguiendoBusId; }, [siguiendoBusId]);
   // Espejo de la ruta seleccionada para el handler del socket.
@@ -924,6 +917,29 @@ export default function Pasajero() {
       })
       .sort((a, b) => (a.distKm ?? Infinity) - (b.distKm ?? Infinity));
   }, [selectedRuta, buses, userPos]);
+
+  // Bus "en foco": de cuál se muestra el avance por parada (cuáles ya pasó,
+  // cuánto falta para las siguientes) en el detalle de la ruta. Si el pasajero
+  // sigue uno explícitamente (lista "Otros buses"), es ese; si no, el que está
+  // llegando hacia ÉL (busesRutaSel ya viene ordenado así). Así la tarjeta
+  // siempre refleja UN bus concreto — no una mezcla del "más rápido por parada"
+  // entre varios buses de la misma ruta (confuso con varios buses circulando).
+  const busFoco = busSeguido ?? busesRutaSel[0]?.bus ?? null;
+  const etaPorParadaMostrado = useMemo(() => {
+    if (busFoco && selectedRuta) {
+      const etas = etaPorParadaDeBus(selectedRuta.paradas, busFoco);
+      const resultado: Record<number, { eta: number; placa: string }> = {};
+      Object.entries(etas).forEach(([i, eta]) => { resultado[Number(i)] = { eta, placa: busFoco.placa }; });
+      return resultado;
+    }
+    return etaPorParada;
+  }, [busFoco, selectedRuta, etaPorParada]);
+  // El próximo bus que llega (menor ETA entre las paradas de la ruta EN FOCO).
+  const proximoBus = (() => {
+    const vals = Object.values(etaPorParadaMostrado);
+    if (!vals.length) return null;
+    return vals.reduce((a, b) => (b.eta < a.eta ? b : a));
+  })();
 
   // ── "¿A dónde vas?": recomendación de ruta + bus más cercano ────────────────
   // Recalcula la ruta recomendada cuando cambia el destino, las rutas o el origen.
@@ -1542,7 +1558,7 @@ export default function Pasajero() {
             <div className="pt-2">
               <p className="text-[10px] font-bold uppercase tracking-widest px-1 mb-1.5" style={{ color: "var(--color-gray-text)" }}>Paradas de la ruta</p>
               {ruta.paradas.map((p, i, arr) => {
-                const eta = etaPorParada[i];
+                const eta = etaPorParadaMostrado[i];
                 const first = i === 0;
                 const last = i === arr.length - 1;
                 return (
@@ -1624,10 +1640,10 @@ export default function Pasajero() {
           const rutaNumero = rutas.findIndex((r) => r.id === selectedRuta.id) + 1;
           const paradas = selectedRuta.paradas;
           const conEta = paradas
-            .map((_p, i) => ({ i, eta: etaPorParada[i]?.eta }))
+            .map((_p, i) => ({ i, eta: etaPorParadaMostrado[i]?.eta }))
             .filter((x): x is { i: number; eta: number } => x.eta != null);
           const nextI = conEta.length ? conEta.sort((a, b) => a.eta - b.eta)[0]!.i : -1;
-          const proxEtaMin = nextI >= 0 ? etaPorParada[nextI]?.eta : undefined;
+          const proxEtaMin = nextI >= 0 ? etaPorParadaMostrado[nextI]?.eta : undefined;
           const progresoPct = nextI >= 0 && paradas.length > 1 ? (nextI / (paradas.length - 1)) * 100 : 0;
           const hayDemora = busesRutaSel.some((x) => x.bus.estado === "demora");
           const busesConNovedad = busesRutaSel.filter((x) => x.bus.novedad);
@@ -1711,7 +1727,7 @@ export default function Pasajero() {
             {paradas.length > 0 && (
               <ul className="bg-white">
                 {paradas.map((p, i) => {
-                  const eta = etaPorParada[i]?.eta;
+                  const eta = etaPorParadaMostrado[i]?.eta;
                   const past = nextI >= 0 && i < nextI;
                   const current = i === nextI;
                   const cercana = i === miParadaI; // la más cercana a mi ubicación
