@@ -3,6 +3,7 @@ import { pool } from "@workspace/db";
 import { authMiddleware, requireRol } from "../middleware/auth";
 import { calcularFrecuencia, type MuestraFrec } from "../lib/frecuencia";
 import { crearCacheTtl, type CacheTtl } from "../lib/cache";
+import { rateLimit } from "../middleware/rate-limit";
 
 // Reportes históricos para el panel admin (km recorridos, ocupación, actividad).
 // Se calculan sobre posiciones_historial (alimentada por el job de snapshot),
@@ -12,6 +13,11 @@ import { crearCacheTtl, type CacheTtl } from "../lib/cache";
 // Solo admin: son datos de gestión, no públicos.
 const router = Router();
 const REPORTE_TTL_MS = 60_000;
+// El caché de 60s ya evita recalcular las consultas pesadas, pero cada request
+// igual paga la verificación de sesión (consulta a la BD en authMiddleware); un
+// token de admin robado no debería poder machacarla. Generoso para no chocar con
+// el refresco normal del panel (15-20s).
+router.use(rateLimit({ ventanaMs: 60_000, max: 60 }));
 
 // días del periodo, acotado a 1–90 (la retención por defecto es 30).
 function diasParam(raw: unknown): number {

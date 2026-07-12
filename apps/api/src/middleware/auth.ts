@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import crypto from "node:crypto";
 import { pool } from "@workspace/db";
+import { allowedOrigins } from "../lib/allowed-origins";
 
 /** Hash SHA-256 (hex) de un token: lo que se guarda en la lista negra, no el token. */
 export function hashToken(token: string): string {
@@ -49,11 +50,46 @@ declare global {
 // para el navegador, que ya no expone el JWT a JS.
 const COOKIE_SESION = "tp_session";
 
-function extraerToken(req: Request): string | null {
+function extraerToken(req: Request): { token: string; viaCookie: boolean } | null {
   const header = req.headers.authorization;
-  if (header?.startsWith("Bearer ")) return header.slice(7);
+  if (header?.startsWith("Bearer ")) return { token: header.slice(7), viaCookie: false };
   const cookieToken = req.cookies?.[COOKIE_SESION];
-  return typeof cookieToken === "string" && cookieToken ? cookieToken : null;
+  if (typeof cookieToken === "string" && cookieToken) return { token: cookieToken, viaCookie: true };
+  return null;
+}
+
+// Métodos que no mutan estado: no necesitan chequeo de Origin (siguiendo el
+// mismo criterio que SameSite=Lax usa para decidir qué peticiones cruzadas
+// bloquear).
+const METODOS_SEGUROS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+function origenDeReferer(referer: string | undefined): string | null {
+  if (!referer) return null;
+  try {
+    return new URL(referer).origin;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Defensa CSRF para la sesión por cookie: `tp_session` viaja automáticamente en
+ * cualquier petición del navegador a este origen, incluida una disparada desde
+ * OTRO sitio. `SameSite=lax` (ver setSessionCookie) ya bloquea el envío de la
+ * cookie en la mayoría de esos casos, pero como capa adicional (no todos los
+ * navegadores lo respetan igual) se exige que el Origin —o el Referer como
+ * respaldo— de las peticiones que mutan estado coincida con este mismo sitio o
+ * con uno de los orígenes explícitamente permitidos (APK/CORS_ORIGIN). El Bearer
+ * (usado por el APK) no viaja "solo" con el navegador, así que no lo necesita.
+ * Solo se exige en producción para no estorbar flujos de desarrollo local.
+ */
+function origenPermitidoParaCookie(req: Request): boolean {
+  if (process.env["NODE_ENV"] !== "production") return true;
+  if (METODOS_SEGUROS.has(req.method)) return true;
+  const origen = req.headers.origin ?? origenDeReferer(req.headers.referer);
+  if (!origen) return false;
+  const propio = `${req.protocol}://${req.get("host")}`;
+  return origen === propio || allowedOrigins().includes(origen);
 }
 
 /** Fija la cookie de sesión con el mismo vencimiento real del JWT (su `exp`). */
@@ -83,9 +119,14 @@ export async function authMiddleware(
   res: Response,
   next: NextFunction,
 ): Promise<void> {
-  const token = extraerToken(req);
-  if (!token) {
+  const extraido = extraerToken(req);
+  if (!extraido) {
     res.status(401).json({ error: "Token requerido" });
+    return;
+  }
+  const { token, viaCookie } = extraido;
+  if (viaCookie && !origenPermitidoParaCookie(req)) {
+    res.status(403).json({ error: "Origen no permitido" });
     return;
   }
   let payload: AuthPayload;

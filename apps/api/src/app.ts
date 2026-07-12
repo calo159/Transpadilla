@@ -9,6 +9,7 @@ import { logger } from "./lib/logger";
 import { rateLimit } from "./middleware/rate-limit";
 import { registrarRespuesta, registrarError } from "./lib/metrics";
 import { notificarAlerta } from "./lib/alertas";
+import { allowedOrigins } from "./lib/allowed-origins";
 
 const app: Express = express();
 const isProd = process.env["NODE_ENV"] === "production";
@@ -98,23 +99,14 @@ app.use((_req, res, next) => {
 // ── CORS ─────────────────────────────────────────────────────────────────────
 // En producción el frontend es del mismo origen, así que se restringe a la lista
 // de CORS_ORIGIN (separada por comas) si se define; en desarrollo se permite todo.
-const corsOrigins = (process.env["CORS_ORIGIN"] ?? "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
 // El APK de Capacitor carga el bundle localmente, así que su WebView corre con
 // origen https://localhost (o capacitor://localhost): toda llamada a la API es
 // cross-origin y necesita CORS. La web servida desde el mismo dominio NO pasa por
 // CORS (same-origin), así que añadir estos orígenes no la afecta.
-// El WebView de Capacitor usa https://localhost (androidScheme por defecto) o
-// capacitor://localhost. No incluimos http://localhost: no lo usa ningún cliente
-// legítimo y ensancharía la allowlist de producción sin necesidad.
-const capacitorOrigins = ["https://localhost", "capacitor://localhost"];
-const allowedOrigins = [...corsOrigins, ...capacitorOrigins];
 app.use(
   cors(
     isProd
-      ? { origin: allowedOrigins, credentials: true }
+      ? { origin: allowedOrigins(), credentials: true }
       : {}, // desarrollo: permitir todo
   ),
 );

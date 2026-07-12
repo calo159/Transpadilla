@@ -28,6 +28,9 @@ const loginLimiter = rateLimit({ ventanaMs: 5 * 60_000, max: 10 });
 const registerLimiter = rateLimit({ ventanaMs: 60 * 60_000, max: 20 });
 // Cambio de contraseña: limita reintentos de la clave actual por IP.
 const passwordLimiter = rateLimit({ ventanaMs: 15 * 60_000, max: 20 });
+// Cierre de sesión: requiere token válido, pero un token robado (o un cliente
+// con bug) no debería poder machacar la escritura en tokens_revocados/buses.
+const logoutLimiter = rateLimit({ ventanaMs: 60_000, max: 20 });
 
 router.post(
   "/auth/login",
@@ -186,7 +189,7 @@ router.post(
 
 // Cierre de sesión REAL: revoca el token actual (lo agrega a la lista negra hasta
 // su expiración). Requiere token válido; tras esto ese token deja de servir.
-router.post("/auth/cerrar-sesion", authMiddleware, async (req, res) => {
+router.post("/auth/cerrar-sesion", logoutLimiter, authMiddleware, async (req, res) => {
   const token = req.tokenCrudo!;
   // exp del JWT (segundos epoch) → fecha de expiración para poder purgarlo luego.
   const decoded = jwt.decode(token) as { exp?: number } | null;

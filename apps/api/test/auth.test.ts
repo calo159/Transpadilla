@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import jwt from "jsonwebtoken";
 import type { Request, Response } from "express";
 
@@ -36,6 +36,34 @@ function mockReqResCookie(cookieToken?: string, bearerToken?: string) {
   const req = {
     headers: bearerToken ? { authorization: `Bearer ${bearerToken}` } : {},
     cookies: cookieToken ? { tp_session: cookieToken } : {},
+  } as unknown as Request;
+  const res = {
+    statusCode: 0,
+    body: undefined as unknown,
+    status(code: number) { this.statusCode = code; return this; },
+    json(payload: unknown) { this.body = payload; return this; },
+  } as unknown as Response & { statusCode: number; body: unknown };
+  const next = vi.fn();
+  return { req, res, next };
+}
+
+// Igual que mockReqResCookie, pero con lo necesario para el chequeo anti-CSRF
+// por Origin: método HTTP, protocolo/host propios y headers Origin/Referer.
+function mockReqResCookieCsrf(opts: {
+  cookieToken?: string;
+  method?: string;
+  origin?: string;
+  referer?: string;
+}) {
+  const headers: Record<string, string> = {};
+  if (opts.origin !== undefined) headers["origin"] = opts.origin;
+  if (opts.referer !== undefined) headers["referer"] = opts.referer;
+  const req = {
+    method: opts.method ?? "POST",
+    protocol: "https",
+    headers,
+    cookies: opts.cookieToken ? { tp_session: opts.cookieToken } : {},
+    get(name: string) { return name.toLowerCase() === "host" ? "transpadilla-web.onrender.com" : undefined; },
   } as unknown as Request;
   const res = {
     statusCode: 0,
@@ -148,5 +176,75 @@ describe("authMiddleware — sesión vía cookie (navegador web)", () => {
     await authMiddleware(req, res, next);
     expect(next).toHaveBeenCalled();
     expect(req.tokenCrudo).toBe(bearerToken);
+  });
+});
+
+describe("authMiddleware — CSRF (Origin) para sesión por cookie", () => {
+  const NODE_ENV_ORIGINAL = process.env["NODE_ENV"];
+
+  beforeEach(() => {
+    queryCalls = 0;
+    queryImpl = () => Promise.resolve({ rows: [{ token_version: 0, revocado: false }] });
+  });
+
+  afterEach(() => {
+    process.env["NODE_ENV"] = NODE_ENV_ORIGINAL;
+  });
+
+  it("fuera de producción, no exige Origin aunque no coincida (no estorba el dev)", async () => {
+    process.env["NODE_ENV"] = "test";
+    const { req, res, next } = mockReqResCookieCsrf({ cookieToken: tokenValido(), origin: "https://evil.example" });
+    await authMiddleware(req, res, next);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it("en producción, método seguro (GET) sin Origin → next() (no es mutación)", async () => {
+    process.env["NODE_ENV"] = "production";
+    const { req, res, next } = mockReqResCookieCsrf({ cookieToken: tokenValido(), method: "GET" });
+    await authMiddleware(req, res, next);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it("en producción, POST por cookie con Origin propio → next()", async () => {
+    process.env["NODE_ENV"] = "production";
+    const { req, res, next } = mockReqResCookieCsrf({
+      cookieToken: tokenValido(),
+      origin: "https://transpadilla-web.onrender.com",
+    });
+    await authMiddleware(req, res, next);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it("en producción, POST por cookie con Origin de otro sitio → 403 y NO next()", async () => {
+    process.env["NODE_ENV"] = "production";
+    const { req, res, next } = mockReqResCookieCsrf({ cookieToken: tokenValido(), origin: "https://evil.example" });
+    await authMiddleware(req, res, next);
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(403);
+  });
+
+  it("en producción, POST por cookie sin Origin pero con Referer propio → next() (respaldo)", async () => {
+    process.env["NODE_ENV"] = "production";
+    const { req, res, next } = mockReqResCookieCsrf({
+      cookieToken: tokenValido(),
+      referer: "https://transpadilla-web.onrender.com/pasajero",
+    });
+    await authMiddleware(req, res, next);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it("en producción, POST por cookie sin Origin ni Referer → 403 y NO next()", async () => {
+    process.env["NODE_ENV"] = "production";
+    const { req, res, next } = mockReqResCookieCsrf({ cookieToken: tokenValido() });
+    await authMiddleware(req, res, next);
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(403);
+  });
+
+  it("en producción, POST por Bearer (APK) con Origin ausente → next() (no aplica a Bearer)", async () => {
+    process.env["NODE_ENV"] = "production";
+    const { req, res, next } = mockReqRes(tokenValido());
+    await authMiddleware(req, res, next);
+    expect(next).toHaveBeenCalled();
   });
 });

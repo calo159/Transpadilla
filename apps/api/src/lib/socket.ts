@@ -1,19 +1,17 @@
 import { Server } from "socket.io";
 import type { Server as HttpServer } from "http";
 import { logger } from "./logger";
+import { allowedOrigins } from "./allowed-origins";
 
 let io: Server | null = null;
 
-// Orígenes permitidos para el socket: en producción, la lista CORS_ORIGIN más los
-// orígenes del WebView de Capacitor (el APK carga el bundle local → cross-origin);
-// en desarrollo, cualquiera para no estorbar. La web same-origin no pasa por CORS.
+// Orígenes permitidos para el socket: en producción, la misma lista que usa CORS
+// para la API (CORS_ORIGIN + orígenes del WebView de Capacitor, ver
+// allowed-origins.ts); en desarrollo, cualquiera para no estorbar. La web
+// same-origin no pasa por CORS.
 function corsOrigin(): string[] | boolean {
   if (process.env["NODE_ENV"] !== "production") return true;
-  const lista = (process.env["CORS_ORIGIN"] ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return [...lista, "https://localhost", "capacitor://localhost"];
+  return allowedOrigins();
 }
 
 export function initSocketIO(httpServer: HttpServer): Server {
