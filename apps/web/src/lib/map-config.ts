@@ -21,10 +21,17 @@ export const TILES_ATTRIBUTION =
 
 // Zoom máximo del mapa (lo que el usuario puede acercar) y zoom máximo NATIVO de los
 // tiles (el último nivel que el proveedor realmente sirve). Si maxZoom > maxNativeZoom,
-// Leaflet ESCALA el último tile disponible en vez de mostrar blanco. OSM llega a z19;
-// MapTiler a z20 → en ese caso subir VITE_MAP_MAX_NATIVE_ZOOM=20.
+// Leaflet ESCALA el último tile disponible — en algunos navegadores móviles esa
+// ampliación sintética se ve en blanco en vez de un tile borroso. Para evitarlo,
+// el default de maxNativeZoom se ajusta solo: OSM (sin VITE_MAP_TILES_URL propio)
+// llega a z19; cualquier proveedor configurado explícitamente (MapTiler y la
+// mayoría de proveedores raster estándar) llega a z20, así que por defecto ya
+// coincide con maxZoom y Leaflet no necesita escalar nada. Se puede sobreescribir
+// con VITE_MAP_MAX_NATIVE_ZOOM si el proveedor real llega a otro nivel distinto.
 export const MAP_MAX_ZOOM = Number(env.VITE_MAP_MAX_ZOOM ?? 20);
-export const MAP_MAX_NATIVE_ZOOM = Number(env.VITE_MAP_MAX_NATIVE_ZOOM ?? 19);
+export const MAP_MAX_NATIVE_ZOOM = Number(
+  env.VITE_MAP_MAX_NATIVE_ZOOM ?? (env.VITE_MAP_TILES_URL ? 20 : 19)
+);
 
 // Base del servicio OSRM (sin slash final). El de demo no es para producción.
 export const OSRM_URL = (
