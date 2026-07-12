@@ -224,6 +224,34 @@ suite("API (integración)", () => {
     expect((await auth(request(app).delete("/api/conductores/999999"))).status).toBe(404);
     // id no numérico → 400, no 500
     expect((await auth(request(app).delete("/api/rutas/abc"))).status).toBe(400);
+
+    // POST /buses/gps como admin con bus_id inexistente → 404 (no 403: el
+    // formato del bus_id es válido, solo que ese bus no existe).
+    expect((await auth(request(app).post("/api/buses/gps").send({ bus_id: 999999, lat: 11.5, lng: -72.9 }))).status).toBe(404);
+    // bus_id ausente/inválido → 403 (no puede operar ningún bus).
+    expect((await auth(request(app).post("/api/buses/gps").send({ lat: 11.5, lng: -72.9 }))).status).toBe(403);
+  });
+
+  it("placa duplicada en crear/editar bus → 409 limpio (no 500)", async () => {
+    const login = await request(app)
+      .post("/api/auth/login")
+      .send({ correo: "admin@transpadilla.co", password: "admin123" });
+    if (login.status !== 200) return;
+    const token = login.body.token as string;
+    const auth = (r: request.Test) => r.set("Authorization", `Bearer ${token}`);
+
+    const placa = `DUP${Date.now()}`.slice(0, 20);
+    const crear1 = await auth(request(app).post("/api/buses").send({ placa }));
+    expect(crear1.status).toBe(201);
+    const crear2 = await auth(request(app).post("/api/buses").send({ placa }));
+    expect(crear2.status).toBe(409);
+
+    const otraPlaca = `OTR${Date.now()}`.slice(0, 20);
+    const crearOtro = await auth(request(app).post("/api/buses").send({ placa: otraPlaca }));
+    expect(crearOtro.status).toBe(201);
+    // Editar el segundo bus para que tome la placa del primero → también 409.
+    const editar = await auth(request(app).patch(`/api/buses/${crearOtro.body.id}`).send({ placa }));
+    expect(editar.status).toBe(409);
   });
 
   it("validaciones runtime: activa boolean, color hex, conductor con rol real", async () => {

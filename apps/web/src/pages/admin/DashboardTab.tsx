@@ -1,5 +1,7 @@
-import { useEffect, useRef } from "react";
-import { Bus as BusIcon, Activity, MapPin, Route, AlertTriangle, UserCheck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Bus as BusIcon, Activity, MapPin, Route, AlertTriangle, UserCheck, FlaskConical, Square } from "lucide-react";
+import { getGetBusesQueryKey } from "@workspace/api-client";
 import type { Bus, Ruta, Stats } from "@workspace/api-client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -7,7 +9,60 @@ import { useLeafletMap } from "@/hooks/use-leaflet-map";
 import { crearFlechasDireccion } from "@/lib/map-arrows";
 import { fetchStreetRoute } from "@/lib/routing";
 import { colorSeguro } from "@/lib/html";
+import { useToast } from "@/hooks/use-toast";
+import { iniciarSimulacion, detenerSimulacion, simulacionActiva, suscribirseSimulacion } from "@/lib/simulador-flota";
 import { cardCls, SectionHeader } from "./shared";
+
+/**
+ * Botón "Simular tráfico": crea 10 buses temporales (5 en cada una de las 2
+ * primeras rutas con paradas) y los mueve por el trazado real de calles a
+ * velocidad de bus urbano, repartidos parejo — para ver cómo se ve la app con
+ * varios buses circulando, sin depender de choferes reales. La simulación
+ * misma vive en lib/simulador-flota.ts (sobrevive a cambiar de pestaña dentro
+ * del panel); este botón solo refleja/dispara su estado.
+ */
+function BotonSimularTrafico({ rutas }: { rutas: Ruta[] }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [activa, setActiva] = useState(simulacionActiva());
+  const [cargando, setCargando] = useState(false);
+
+  useEffect(() => suscribirseSimulacion(() => setActiva(simulacionActiva())), []);
+
+  const refrescarBuses = () => queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
+
+  const alClick = async () => {
+    setCargando(true);
+    try {
+      if (activa) {
+        await detenerSimulacion();
+        toast({ title: "Simulación detenida", description: "Los buses de prueba se eliminaron." });
+      } else {
+        const r = await iniciarSimulacion(rutas);
+        if (!r.ok) { toast({ title: "No se pudo iniciar", description: r.error, variant: "destructive" }); return; }
+        toast({ title: "Simulación iniciada", description: "10 buses de prueba circulando (5 por ruta)." });
+      }
+      refrescarBuses();
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={alClick}
+      disabled={cargando}
+      className="inline-flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl disabled:opacity-60 active:scale-[0.98] transition-transform"
+      style={activa
+        ? { background: "rgba(229,62,62,0.15)", color: "#ef4444" }
+        : { background: "rgba(255,255,255,0.12)", color: "#fff" }}
+      title="Solo para pruebas: crea buses temporales (placa SIM-) que se borran al detener."
+    >
+      {activa ? <Square className="w-3.5 h-3.5" /> : <FlaskConical className="w-3.5 h-3.5" />}
+      {cargando ? "Un momento…" : activa ? "Detener simulación" : "Simular tráfico (10 buses)"}
+    </button>
+  );
+}
 
 interface Props {
   stats: Stats | undefined;
@@ -148,9 +203,12 @@ export default function DashboardTab({
       {/* Banda hero institucional: las cifras clave en vivo como una tira con
           divisores (no mosaicos), sobre el navy de marca con halo dorado. */}
       <div className="tp-admin-hero p-5 md:px-7 md:py-6">
-        <div className="flex items-center gap-2 mb-4 relative">
-          <span className="tp-livedot" style={{ width: 7, height: 7, background: "var(--color-gold)" }} />
-          <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/70">Estado del sistema en vivo</span>
+        <div className="flex items-center justify-between gap-2 mb-4 relative flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="tp-livedot" style={{ width: 7, height: 7, background: "var(--color-gold)" }} />
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/70">Estado del sistema en vivo</span>
+          </div>
+          {!rutasLoading && <BotonSimularTrafico rutas={rutas} />}
         </div>
         {statsLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-y-5 relative">

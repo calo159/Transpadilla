@@ -13,6 +13,18 @@ const router = Router();
 
 const OCUPACIONES = ["vacio", "medio", "lleno"] as const;
 
+/**
+ * true si `err` es una violación de constraint única de Postgres (23505). Drizzle
+ * envuelve el error real del driver `pg` en un `_DrizzleQueryError` y deja el que
+ * trae `.code` en `err.cause` (encadenado vía `Error.cause`), no en el propio
+ * `err.code` — hay que mirar ambos para no depender de un detalle interno de
+ * la versión de Drizzle.
+ */
+function esViolacionUnica(err: unknown): boolean {
+  const e = err as { code?: string; cause?: { code?: string } };
+  return e?.code === "23505" || e?.cause?.code === "23505";
+}
+
 // ─── Lectura pública (la usa el mapa del pasajero, sin login) ─────────────────
 
 // Caché de 2 s: colapsa los refetch en ráfaga (polling + invalidaciones por
@@ -66,9 +78,9 @@ router.post(
         .values({ placa: placa.toUpperCase(), ruta_id: ruta_id ?? null })
         .returning();
     } catch (err) {
-      // 23505 = unique_violation (Postgres): la placa ya existe. Sin este catch,
-      // caía al 500 genérico del final de app.ts (y disparaba una alerta P1).
-      if ((err as { code?: string }).code === "23505") {
+      // unique_violation (Postgres): la placa ya existe. Sin este catch, caía al
+      // 500 genérico del final de app.ts (y disparaba una alerta P1).
+      if (esViolacionUnica(err)) {
         res.status(409).json({ error: "Ya existe un bus con esa placa" });
         return;
       }
@@ -131,8 +143,8 @@ router.patch(
         .where(eq(buses.id, bid))
         .returning({ id: buses.id });
     } catch (err) {
-      // 23505 = unique_violation: la placa ya la tiene otro bus (ver POST /buses).
-      if ((err as { code?: string }).code === "23505") {
+      // unique_violation: la placa ya la tiene otro bus (ver POST /buses).
+      if (esViolacionUnica(err)) {
         res.status(409).json({ error: "Ya existe un bus con esa placa" });
         return;
       }
@@ -176,27 +188,31 @@ router.post(
     let row: { id: number; rutaId: number | null } | undefined;
     if (usuario.rol === "admin") {
       // Admin: el bus_id lo indica el body (puede operar cualquiera); se ignora
-      // cualquier otro campo — mismo criterio que busAutorizado.
+      // cualquier otro campo — mismo criterio que busAutorizado. bus_id con
+      // formato inválido/ausente → 403 (igual que busAutorizado); bus_id con
+      // formato válido pero que no existe → 404 (distinto: aquí sí sabemos que
+      // "parecía" una operación legítima, solo que ese bus no existe).
       const idRaw = Number((req.body as { bus_id?: unknown }).bus_id);
       const busIdAdmin = Number.isInteger(idRaw) && idRaw > 0 ? idRaw : null;
-      if (busIdAdmin) {
-        [row] = await db
-          .update(buses)
-          .set(cambios)
-          .where(eq(buses.id, busIdAdmin))
-          .returning({ id: buses.id, rutaId: buses.ruta_id });
-      }
+      if (!busIdAdmin) { res.status(403).json({ error: "No tienes un bus asignado" }); return; }
+      [row] = await db
+        .update(buses)
+        .set(cambios)
+        .where(eq(buses.id, busIdAdmin))
+        .returning({ id: buses.id, rutaId: buses.ruta_id });
+      if (!row) { res.status(404).json({ error: "Bus no encontrado" }); return; }
     } else {
       // Conductor: NUNCA se confía en un bus_id del cliente — se actualiza
       // directamente el bus cuyo conductor_id es el del JWT (una sola query,
-      // sin el SELECT previo que haría busAutorizado).
+      // sin el SELECT previo que haría busAutorizado). Sin fila → no tiene
+      // ningún bus asignado (403, igual que el busAutorizado original).
       [row] = await db
         .update(buses)
         .set(cambios)
         .where(eq(buses.conductor_id, usuario.id))
         .returning({ id: buses.id, rutaId: buses.ruta_id });
+      if (!row) { res.status(403).json({ error: "No tienes un bus asignado" }); return; }
     }
-    if (!row) { res.status(403).json({ error: "No tienes un bus asignado" }); return; }
 
     const busId = row.id;
     const rutaId = row.rutaId;
