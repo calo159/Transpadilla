@@ -1,6 +1,11 @@
 apply plugin: 'com.android.application'
 
 android {
+    packaging {
+        jniLibs {
+            useLegacyPackaging false
+        }
+    }
     namespace = "co.transpadilla.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
