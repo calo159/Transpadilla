@@ -97,7 +97,9 @@ router.get("/rutas/:id/paradas", async (req, res) => {
     .from(ruta_paradas)
     .innerJoin(paradas, eq(ruta_paradas.parada_id, paradas.id))
     .where(eq(ruta_paradas.ruta_id, rutaId))
-    .orderBy(asc(ruta_paradas.orden));
+    // Desempate estable por id de asignación (ver rutas.ts): si dos paradas
+    // quedaran con el mismo `orden`, el orden de salida es siempre el mismo.
+    .orderBy(asc(ruta_paradas.orden), asc(ruta_paradas.id));
   res.json(stops);
 });
 
@@ -124,6 +126,19 @@ router.post(
     let ordenNum: number;
     if (Number.isFinite(Number(orden))) {
       ordenNum = Number(orden);
+      // El "Orden" del formulario admin se escribe a mano: si ya existe otra
+      // parada de esta ruta con ese mismo número, dos paradas quedan empatadas y
+      // el recorrido sale ambiguo (por dónde va primero) — esto ya pasó una vez
+      // en producción (Ruta B) y el mapa la trazaba distinto en cada carga.
+      const [choque] = await db
+        .select({ nombre: paradas.nombre })
+        .from(ruta_paradas)
+        .innerJoin(paradas, eq(ruta_paradas.parada_id, paradas.id))
+        .where(and(eq(ruta_paradas.ruta_id, rutaId), eq(ruta_paradas.orden, ordenNum)));
+      if (choque) {
+        res.status(409).json({ error: `Ese orden ya lo tiene "${choque.nombre}" en esta ruta` });
+        return;
+      }
     } else {
       const [ultima] = await db
         .select({ orden: ruta_paradas.orden })

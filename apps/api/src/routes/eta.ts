@@ -33,7 +33,9 @@ async function calcularEta(rutaId: number): Promise<EtaResultado> {
     .from(ruta_paradas)
     .innerJoin(paradas, eq(ruta_paradas.parada_id, paradas.id))
     .where(eq(ruta_paradas.ruta_id, rutaId))
-    .orderBy(ruta_paradas.orden);
+    // Desempate estable por id de asignación (ver rutas.ts): si dos paradas
+    // quedaran con el mismo `orden`, el orden de salida es siempre el mismo.
+    .orderBy(ruta_paradas.orden, ruta_paradas.id);
 
   if (secuencia.length === 0) {
     return { ruta_id: rutaId, buses_activos: 0, paradas: [] };

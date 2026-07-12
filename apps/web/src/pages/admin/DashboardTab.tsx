@@ -101,7 +101,8 @@ function DashboardMiniMap({ rutas, buses }: { rutas: Ruta[]; buses: Bus[] }) {
     layerRef.current?.remove();
     const grupo = L.layerGroup();
     rutasConTrazo.forEach((ruta) => {
-      const paradasOrden = ruta.paradas.slice().sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+      // Desempate estable por asignacion_id si dos paradas quedaran con el mismo orden.
+      const paradasOrden = ruta.paradas.slice().sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0) || (a.asignacion_id ?? 0) - (b.asignacion_id ?? 0));
       const fallback: [number, number][] = paradasOrden.map((p) => [p.latitud, p.longitud]);
       const rutaColor = colorSeguro(ruta.color);
       const polyline = L.polyline(fallback, { color: rutaColor, weight: 4, opacity: 0.75, lineCap: "round" }).addTo(grupo);

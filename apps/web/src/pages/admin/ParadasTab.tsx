@@ -43,6 +43,17 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
   const [asignarOrden, setAsignarOrden] = useState("0");
   const [query, setQuery] = useState("");
 
+  // Al elegir la ruta, autocompleta con el siguiente orden libre (máximo actual + 1)
+  // en vez de dejar "0" fijo — reduce que el admin tipee a mano un número que ya
+  // está en uso (eso dejó dos paradas empatadas en producción una vez).
+  useEffect(() => {
+    if (!asignarRutaId) return;
+    const rutaSel = rutas.find((r) => r.id.toString() === asignarRutaId);
+    const usados = (rutaSel?.paradas ?? []).map((p) => p.orden ?? 0);
+    setAsignarOrden(String(usados.length ? Math.max(...usados) + 1 : 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asignarRutaId]);
+
   // ── Mini-mapa selector: el admin toca un punto y esa es la ubicación de la parada ──
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useLeafletMap(mapContainerRef, { zoom: 13 });
@@ -273,6 +284,23 @@ export default function ParadasTab({ rutas, paradas, setConfirmar, setRenombrar 
               <div>
                 <Label className="text-xs mb-1.5">Orden en la ruta</Label>
                 <Input value={asignarOrden} onChange={(e) => setAsignarOrden(e.target.value)} type="number" min="0" className={inputCls} inputMode="numeric" data-testid="input-asignar-orden" />
+                {(() => {
+                  // Avisa qué números ya están usados en ESTA ruta: repetir uno
+                  // deja dos paradas empatadas y el mapa las traza sin saber cuál
+                  // va primero (ya pasó una vez en producción). Se autocompleta
+                  // arriba con el siguiente libre al elegir la ruta.
+                  const rutaSel = rutas.find((r) => r.id.toString() === asignarRutaId);
+                  const usados = (rutaSel?.paradas ?? []).map((p) => p.orden ?? 0).sort((a, b) => a - b);
+                  if (!rutaSel || usados.length === 0) return null;
+                  const chocaConExistente = usados.includes(Number(asignarOrden));
+                  return (
+                    <p className={`text-[11px] mt-1 ${chocaConExistente ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                      {chocaConExistente
+                        ? `Ese orden ya lo tiene otra parada de esta ruta.`
+                        : `Ya usados en esta ruta: ${usados.join(", ")}`}
+                    </p>
+                  );
+                })()}
               </div>
               <Button onClick={asignar} disabled={asignarParadaMutation.isPending} className="w-full h-11 rounded-xl" data-testid="button-asignar-parada">
                 <Route className="w-4 h-4 mr-2" />Asignar parada

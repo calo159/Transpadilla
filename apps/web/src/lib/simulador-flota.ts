@@ -95,7 +95,8 @@ export async function iniciarSimulacion(rutas: Ruta[]): Promise<{ ok: boolean; e
   const nuevos: BusSimulado[] = [];
   try {
     for (const ruta of candidatas) {
-      const paradasOrden = ruta.paradas.slice().sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+      // Desempate estable por asignacion_id si dos paradas quedaran con el mismo orden.
+      const paradasOrden = ruta.paradas.slice().sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0) || (a.asignacion_id ?? 0) - (b.asignacion_id ?? 0));
       // Cierra el circuito (vuelta a la primera parada) para un recorrido continuo,
       // igual que el mapa trata las rutas como circuitos cerrados (ver lib/geo.ts).
       const coords = await fetchStreetRoute([...paradasOrden, paradasOrden[0]!]);

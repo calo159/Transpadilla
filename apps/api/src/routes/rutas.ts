@@ -30,7 +30,11 @@ const rutasCache = crearCacheTtl(3000, async () => {
     .from(rutas)
     .leftJoin(ruta_paradas, eq(ruta_paradas.ruta_id, rutas.id))
     .leftJoin(paradas, eq(ruta_paradas.parada_id, paradas.id))
-    .orderBy(asc(rutas.id), asc(ruta_paradas.orden));
+    // Desempate estable por el id de la asignación: si dos paradas quedaran con
+    // el mismo `orden` (un dato inconsistente, no debería pasar pero ya pasó una
+    // vez por el panel admin), el recorrido sale igual en cada carga en vez de
+    // salir distinto al azar según el orden físico de la tabla.
+    .orderBy(asc(rutas.id), asc(ruta_paradas.orden), asc(ruta_paradas.id));
   return agruparRutasConParadas(rows);
 });
 
