@@ -1540,7 +1540,7 @@ export default function Pasajero() {
                   <span className="w-2 h-2 rounded-full" style={{ background: selectedRuta.color }} />
                   {proximoBus && proxEtaMin != null ? (
                     <span className="text-[11px] font-bold flex items-center gap-1" style={{ color: "var(--color-gold)" }}>
-                      <Bus className="w-3 h-3" /> Próx · {proxEtaMin <= 0 ? "llegando" : `${proxEtaMin} min`}
+                      <Bus className="w-3 h-3" /> Bus <span className="font-mono">{proximoBus.placa}</span> · {proxEtaMin <= 0 ? "llegando" : `${proxEtaMin} min`}
                     </span>
                   ) : (
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-white/70">Ruta</span>
