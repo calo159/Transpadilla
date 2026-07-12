@@ -51,7 +51,10 @@ const CSP_META = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   `img-src 'self' data: blob: ${origenDesdeUrl(TILES_URL_BUILD)}`,
   "font-src 'self' data: https://fonts.gstatic.com",
-  `connect-src 'self' ${origenDesdeUrl(OSRM_URL_BUILD)} ${conexionesApk.join(" ")}`.trim(),
+  // connect-src incluye el origen de tiles: el Service Worker (workbox) los
+  // cachea con fetch(), gobernado por connect-src (no img-src). Sin esto, con
+  // el SW activo la CSP bloquea todos los tiles y el mapa queda en blanco.
+  `connect-src 'self' ${origenDesdeUrl(TILES_URL_BUILD)} ${origenDesdeUrl(OSRM_URL_BUILD)} ${conexionesApk.join(" ")}`.trim(),
   "worker-src 'self' blob:",
   "manifest-src 'self'",
 ].join("; ");

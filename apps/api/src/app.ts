@@ -90,7 +90,11 @@ const csp =
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     `img-src 'self' data: blob: ${origenDesdeUrl(tilesUrlCsp)}`,
     "font-src 'self' data: https://fonts.gstatic.com",
-    `connect-src 'self' ${origenDesdeUrl(osrmUrlCsp)}`,
+    // connect-src incluye el origen de tiles ADEMÁS del de OSRM: el Service
+    // Worker de la PWA (workbox) cachea los tiles con fetch(), y fetch está
+    // gobernado por connect-src — no por img-src. Sin esto, con el SW activo
+    // TODOS los tiles quedan bloqueados por CSP y el mapa se ve en blanco.
+    `connect-src 'self' ${origenDesdeUrl(osrmUrlCsp)} ${origenDesdeUrl(tilesUrlCsp)}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
     ...(isProd ? ["upgrade-insecure-requests"] : []),
