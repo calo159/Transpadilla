@@ -131,19 +131,32 @@ export default defineConfig(({ mode }) => ({
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\.maptiler\.com\/.*/i,
-            handler: "CacheFirst",
+            // StaleWhileRevalidate (no CacheFirst): sirve el tile cacheado al
+            // instante PERO SIEMPRE lo revalida contra el servidor en segundo
+            // plano y actualiza el caché. Con CacheFirst, un tile que se cacheara
+            // roto/en blanco (p. ej. durante un deploy con la config del mapa mal)
+            // se servía para siempre sin volver a pedirlo — el mapa quedaba en
+            // blanco aunque el servidor ya devolviera bien el tile. Con esto se
+            // auto-corrige en la siguiente carga.
+            handler: "StaleWhileRevalidate",
             options: {
-              cacheName: "maptiler-tiles",
+              // Nombre nuevo (-v2): al activarse este Service Worker, el caché
+              // viejo "maptiler-tiles" (posiblemente con tiles rotos) queda
+              // huérfano y ya no se consulta → los usuarios existentes reciben
+              // tiles frescos de inmediato, sin tener que limpiar nada a mano.
+              cacheName: "maptiler-tiles-v2",
               expiration: { maxEntries: 800, maxAgeSeconds: 60 * 60 * 24 * 30 },
-              cacheableResponse: { statuses: [0, 200] },
+              // Solo 200 (no 0/opaco): así nunca se cachea una respuesta de error.
+              cacheableResponse: { statuses: [200] },
             },
           },
           {
             urlPattern: /^https:\/\/[a-z]\.tile\.openstreetmap\.org\/.*/i,
-            handler: "CacheFirst",
+            handler: "StaleWhileRevalidate",
             options: {
-              cacheName: "osm-tiles",
+              cacheName: "osm-tiles-v2",
               expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 7 },
+              cacheableResponse: { statuses: [200] },
             },
           },
           {
