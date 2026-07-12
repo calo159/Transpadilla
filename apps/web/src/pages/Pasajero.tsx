@@ -222,23 +222,6 @@ export default function Pasajero() {
       return next;
     });
   };
-  // Guía de bienvenida: se muestra solo la primera vez (se recuerda en localStorage).
-  const [showWelcome, setShowWelcome] = useState(
-    () => typeof localStorage !== "undefined" && !localStorage.getItem("tp_welcome_visto"),
-  );
-  const dismissWelcome = () => {
-    setShowWelcome(false);
-    try { localStorage.setItem("tp_welcome_visto", "1"); } catch { /* ignore */ }
-    // Tras cerrar la guía, deja la lista de rutas abierta y a la vista (móvil).
-    setVista("rutas");
-  };
-  // Botón principal de la bienvenida: cierra la guía y lleva al usuario directo a
-  // buscar su DESTINO por nombre (enfoca el buscador). Es el flujo pensado para
-  // quien no sabe qué ruta coger.
-  const empezarPorDestino = () => {
-    dismissWelcome();
-    setTimeout(() => busquedaRef.current?.focus(), 120); // tras el cambio de vista
-  };
   // Chip "elige una ruta": guía para quien recién entra y ve el mapa vacío.
   // Se cierra con la X o deslizándolo, y una vez cerrada no vuelve a salir.
   const [showGuiaMapa, setShowGuiaMapa] = useState(
@@ -258,6 +241,18 @@ export default function Pasajero() {
     setUbicacionPromptCerrado(true);
     try { localStorage.setItem("tp_ubicacion_pedida", "1"); } catch { /* ignore */ }
   };
+  // Guía interactiva paso a paso (spotlight) para primerizos: sombrea todo menos el
+  // elemento que hay que pulsar y va avanzando sola según la acción del usuario.
+  // Pasos: ubicacion → destino → elegir → resultado. Reemplaza la vieja bienvenida.
+  type PasoGuia = "off" | "ubicacion" | "destino" | "elegir" | "resultado";
+  const [tourStep, setTourStep] = useState<PasoGuia>("off");
+  const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const ubicacionCardRef = useRef<HTMLDivElement | null>(null);
+  const fabDestinoRef = useRef<HTMLButtonElement | null>(null);
+  // Si el paso de ubicación entró en esta corrida (para el contador "Paso X de N").
+  const tourConUbicacionRef = useRef(false);
+  // Evita relanzar la guía sola más de una vez por sesión.
+  const guiaArrancadaRef = useRef(false);
   const guiaDragRef = useRef<{ startX: number } | null>(null);
   const [guiaDragX, setGuiaDragX] = useState(0);
   const onGuiaTouchStart = (e: React.TouchEvent) => {
@@ -1027,12 +1022,12 @@ export default function Pasajero() {
   };
 
   // Tecla Escape: cierra lo que esté abierto, de lo más superficial a lo más
-  // profundo (ayuda → bienvenida → menú → modo destino → panel de ruta).
+  // profundo (ayuda → guía → menú → modo destino → panel de ruta).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (showAyuda) setShowAyuda(false);
-      else if (showWelcome) dismissWelcome();
+      else if (tourStep !== "off") terminarGuia();
       else if (menuAbierto) setMenuAbierto(false);
       else if (modoDestino) setModoDestino(false);
       else if (selectedRutaId !== null || destino) cerrarCard();
@@ -1040,7 +1035,7 @@ export default function Pasajero() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showAyuda, showWelcome, menuAbierto, modoDestino, selectedRutaId, destino]);
+  }, [showAyuda, tourStep, menuAbierto, modoDestino, selectedRutaId, destino]);
   const onCardTouchStart = (e: React.TouchEvent) => {
     suppressClickRef.current = false;
     dragRef.current = { startY: e.touches[0]!.clientY, moved: false, lastDelta: 0 };
@@ -1138,11 +1133,71 @@ export default function Pasajero() {
   }, []);
 
   // ¿Mostrar la tarjeta suave que invita a activar la ubicación? Solo si aún no la
-  // tenemos, no se está encimando a la bienvenida, el usuario no la cerró antes, y
-  // el navegador realmente puede pedirla (estado "prompt").
+  // tenemos, el usuario no la cerró antes, y el navegador realmente puede pedirla
+  // (estado "prompt"). Es también el target del paso 1 de la guía interactiva.
   const mostrarPromptUbicacion =
-    !userPos && !showWelcome && !ubicacionPromptCerrado &&
+    !userPos && !ubicacionPromptCerrado &&
     permisoGeo === "prompt" && typeof navigator !== "undefined" && !!navigator.geolocation;
+
+  // ── Guía interactiva (spotlight) ─────────────────────────────────────────────
+  const iniciarGuia = () => {
+    setMenuAbierto(false);
+    setVista("mapa");
+    // El paso de ubicación solo aplica si la tarjeta va a poder mostrarse.
+    const conUbicacion =
+      permisoGeo === "prompt" && !ubicacionPromptCerrado && !userPos && !!navigator.geolocation;
+    tourConUbicacionRef.current = conUbicacion;
+    if (permisoGeo === "granted" && !userPos) locateMe({ silencioso: true });
+    setTourStep(conUbicacion ? "ubicacion" : "destino");
+  };
+  const terminarGuia = () => {
+    setTourStep("off");
+    guiaArrancadaRef.current = true;
+    try { localStorage.setItem("tp_guia_visto", "1"); } catch { /* ignore */ }
+  };
+
+  // Arranque automático la PRIMERA visita: espera a que carguen las rutas y a
+  // conocer el estado del permiso, y entonces lanza la guía (reemplaza la bienvenida).
+  useEffect(() => {
+    if (guiaArrancadaRef.current || tourStep !== "off") return;
+    if (typeof localStorage === "undefined") return;
+    if (localStorage.getItem("tp_guia_visto")) { guiaArrancadaRef.current = true; return; }
+    if (rutasLoading || rutas.length === 0 || permisoGeo === null) return; // aún no
+    guiaArrancadaRef.current = true;
+    iniciarGuia();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rutas, rutasLoading, permisoGeo, tourStep]);
+
+  // Avance de la guía según la acción real del usuario (o si el paso deja de aplicar).
+  useEffect(() => {
+    if (tourStep === "off") return;
+    if (tourStep === "ubicacion") {
+      // Avanza al ubicarse, o si el paso ya no aplica (cerró la tarjeta / denegó).
+      if (userPos || ubicacionPromptCerrado || permisoGeo !== "prompt") setTourStep("destino");
+    } else if (tourStep === "destino" && modoDestino) {
+      setTourStep("elegir");
+    } else if (tourStep === "elegir" && destino) {
+      setTourStep("resultado");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tourStep, userPos, ubicacionPromptCerrado, permisoGeo, modoDestino, destino]);
+
+  // Mide el elemento a resaltar del paso actual (coordenadas de viewport). Se
+  // recalcula al cambiar de paso, tras un frame/animación de entrada y al redimensionar.
+  useEffect(() => {
+    if (tourStep === "off") { setTargetRect(null); return; }
+    const medir = () => {
+      const el =
+        tourStep === "ubicacion" ? ubicacionCardRef.current :
+        tourStep === "destino" ? fabDestinoRef.current : null;
+      setTargetRect(el ? el.getBoundingClientRect() : null);
+    };
+    medir();
+    const raf = requestAnimationFrame(medir);
+    const t = setTimeout(medir, 260); // tras la animación de entrada de la tarjeta/FAB
+    window.addEventListener("resize", medir);
+    return () => { cancelAnimationFrame(raf); clearTimeout(t); window.removeEventListener("resize", medir); };
+  }, [tourStep]);
 
   const fmtDist = (km: number) => (km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`);
 
@@ -1900,6 +1955,7 @@ export default function Pasajero() {
             función (recomendar ruta por destino) no se descubre si es solo un ícono. */}
         {vista === "mapa" && (
           <button
+            ref={fabDestinoRef}
             onClick={armarDestino}
             className="absolute left-4 z-[900] flex items-center gap-2 h-12 pl-4 pr-5 rounded-full active:scale-95 transition-transform bottom-[88px] md:bottom-4"
             style={{ background: "var(--color-gold)", color: "var(--color-navy)", border: modoDestino ? "3px solid var(--color-navy)" : "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
@@ -2068,47 +2124,93 @@ export default function Pasajero() {
           })}
         </nav>
 
-        {/* Guía de bienvenida (primera visita) */}
-        {showWelcome && (
-          <div className="absolute inset-0 z-[1001] flex items-end md:items-center justify-center p-4 pb-28 md:pb-4" style={{ background: "rgba(9,14,26,0.65)", backdropFilter: "blur(3px)" }}>
-            <div className="w-full max-w-sm rounded-2xl border shadow-2xl p-5"
-              style={{ background: "rgba(12,18,32,0.97)", borderColor: "rgba(123,184,213,0.3)" }}>
-              <div className="flex items-center gap-3 mb-3">
-                <LogoTP size={40} />
-                <div>
-                  <p className="text-base font-black tracking-wide text-white">
-                    Bienvenido a Trans<span style={{ color: "var(--tp-sky)" }}>Padilla</span>
-                  </p>
-                  <p className="text-[11px] font-semibold" style={{ color: "var(--tp-yellow)" }}>Rastrea tu bus en tiempo real</p>
+        {/* Guía interactiva (spotlight): sombrea todo menos el elemento a pulsar y
+            avanza sola con la acción del usuario. Reemplaza la vieja bienvenida. */}
+        {tourStep !== "off" && (() => {
+          const conUbic = tourConUbicacionRef.current;
+          const total = conUbic ? 4 : 3;
+          const idxMap: Record<PasoGuia, number> = conUbic
+            ? { off: 0, ubicacion: 1, destino: 2, elegir: 3, resultado: 4 }
+            : { off: 0, ubicacion: 0, destino: 1, elegir: 2, resultado: 3 };
+          const paso = idxMap[tourStep];
+          const copia: Record<Exclude<PasoGuia, "off">, { titulo: string; texto: React.ReactNode }> = {
+            ubicacion: { titulo: "Activa tu ubicación", texto: <>Toca <b>Activar</b> para ver qué bus te sirve y cuánto falta para que llegue a ti.</> },
+            destino: { titulo: "Dinos a dónde vas", texto: <>Pulsa <b>¿A dónde vas?</b> para elegir tu destino.</> },
+            elegir: { titulo: "Marca tu destino", texto: <>Toca en el mapa el lugar a donde quieres llegar (o búscalo por nombre).</> },
+            resultado: { titulo: "¡Listo!", texto: <>Aquí tienes la ruta que debes tomar y el bus más cercano, con los minutos que faltan.</> },
+          };
+          const { titulo, texto } = copia[tourStep as Exclude<PasoGuia, "off">];
+          const winH = typeof window !== "undefined" ? window.innerHeight : 800;
+          const winW = typeof window !== "undefined" ? window.innerWidth : 400;
+          // Solo hay hueco recortado en los pasos con un target medido.
+          const conHueco = !!targetRect && (tourStep === "ubicacion" || tourStep === "destino");
+          const pad = 8;
+          const hx = conHueco ? Math.max(0, targetRect!.left - pad) : 0;
+          const hy = conHueco ? Math.max(0, targetRect!.top - pad) : 0;
+          const hw = conHueco ? Math.min(winW - hx, targetRect!.width + pad * 2) : 0;
+          const hh = conHueco ? Math.min(winH - hy, targetRect!.height + pad * 2) : 0;
+          const velo = "rgba(9,14,26,0.72)";
+          // Posición vertical de la burbuja según el paso.
+          const bocadillo: React.CSSProperties =
+            tourStep === "ubicacion"
+              ? { top: (conHueco ? hy + hh : 150) + 14 }
+              : tourStep === "destino"
+              ? { bottom: (conHueco ? winH - hy : 150) + 14 }
+              : tourStep === "elegir"
+              ? { bottom: 150 }
+              : { top: 132 };
+          return (
+            <>
+              {conHueco ? (
+                <>
+                  {/* 4 rectángulos oscuros alrededor del hueco; capturan el toque para
+                      que solo se pueda pulsar el elemento resaltado (queda en el hueco). */}
+                  <div className="fixed left-0 z-[1090]" style={{ top: 0, width: "100vw", height: hy, background: velo }} onClick={(e) => e.stopPropagation()} />
+                  <div className="fixed left-0 z-[1090]" style={{ top: hy + hh, width: "100vw", height: Math.max(0, winH - (hy + hh)), background: velo }} onClick={(e) => e.stopPropagation()} />
+                  <div className="fixed z-[1090]" style={{ left: 0, top: hy, width: hx, height: hh, background: velo }} onClick={(e) => e.stopPropagation()} />
+                  <div className="fixed z-[1090]" style={{ left: hx + hw, top: hy, width: Math.max(0, winW - (hx + hw)), height: hh, background: velo }} onClick={(e) => e.stopPropagation()} />
+                  {/* Anillo dorado sobre el hueco (no captura toques). */}
+                  <div
+                    className="fixed z-[1091] pointer-events-none rounded-2xl"
+                    style={{ left: hx, top: hy, width: hw, height: hh, border: "2px solid var(--color-gold)", boxShadow: "0 0 0 3px rgba(245,183,49,0.25), 0 0 22px rgba(245,183,49,0.55)" }}
+                  />
+                </>
+              ) : null}
+
+              {/* Burbuja guía */}
+              <div className="fixed z-[1092] left-1/2 -translate-x-1/2 w-[calc(100vw-32px)] max-w-[340px] animate-in fade-in slide-in-from-bottom-2 duration-300" style={bocadillo}>
+                <div className="rounded-2xl shadow-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, var(--color-navy), var(--color-blue))", border: "1px solid rgba(245,183,49,0.4)" }}>
+                  <div className="flex items-start gap-2.5 px-4 pt-3.5 pb-2">
+                    <span className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "rgba(245,183,49,0.22)" }}>
+                      {tourStep === "ubicacion" ? <LocateFixed className="w-4 h-4" style={{ color: "var(--color-gold)" }} />
+                        : tourStep === "resultado" ? <Bus className="w-4 h-4" style={{ color: "var(--color-gold)" }} />
+                        : <Navigation className="w-4 h-4" style={{ color: "var(--color-gold)" }} />}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-bold uppercase tracking-wider leading-none mb-1" style={{ color: "rgba(255,255,255,0.6)" }}>Paso {paso} de {total}</p>
+                      <p className="text-sm font-extrabold text-white leading-tight">{titulo}</p>
+                    </div>
+                  </div>
+                  <p className="px-4 text-xs text-white/85 leading-snug">{texto}</p>
+                  <div className="px-4 pt-2.5 pb-3 flex items-center justify-between gap-2">
+                    <button onClick={terminarGuia} className="text-[11px] font-semibold text-white/60 hover:text-white transition-colors">
+                      {tourStep === "resultado" ? "Cerrar" : "Saltar guía"}
+                    </button>
+                    {tourStep === "resultado" && (
+                      <button
+                        onClick={terminarGuia}
+                        className="text-xs font-bold rounded-xl px-4 py-2 active:scale-[0.98] transition-transform"
+                        style={{ background: "var(--color-gold)", color: "var(--color-navy)" }}
+                      >
+                        ¡Entendido!
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-              <p className="text-sm text-white/70 mb-3">¿No sabes qué bus coger? Así de fácil:</p>
-              <div className="space-y-2.5 mb-4">
-                {[
-                  { n: "1", txt: "Dinos a dónde vas (hospital, mercado…) y te decimos qué bus coger." },
-                  { n: "2", txt: "O elige una ruta y mira el bus moverse en vivo en el mapa." },
-                  { n: "3", txt: "Lee cuántos minutos faltan para que llegue." },
-                ].map((step) => (
-                  <div key={step.n} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-black text-white"
-                      style={{ background: "linear-gradient(135deg, #2558A5 0%, var(--tp-sky) 100%)" }}>
-                      {step.n}
-                    </div>
-                    <p className="text-sm text-white/90">{step.txt}</p>
-                  </div>
-                ))}
-              </div>
-              <Button
-                onClick={empezarPorDestino}
-                className="w-full h-12 rounded-xl font-bold text-white border-0 text-base"
-                style={{ background: "linear-gradient(135deg, #2558A5 0%, var(--tp-sky) 100%)" }}
-              >
-                <Navigation className="w-4 h-4 mr-2" /> ¿A dónde vas? →
-              </Button>
-              <p className="text-[11px] text-white/40 text-center mt-2">No necesitas cuenta para ver los buses.</p>
-            </div>
-          </div>
-        )}
+            </>
+          );
+        })()}
 
         {/* Anuncio a pantalla completa (banner del admin) */}
         {showAnuncio && banner && (
@@ -2208,7 +2310,14 @@ export default function Pasajero() {
               </div>
 
               {/* Footer */}
-              <div className="px-5 py-3 border-t border-white/10 shrink-0">
+              <div className="px-5 py-3 border-t border-white/10 shrink-0 space-y-2">
+                <button
+                  onClick={() => { setShowAyuda(false); iniciarGuia(); }}
+                  className="w-full h-11 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
+                  style={{ background: "rgba(245,183,49,0.14)", color: "var(--tp-yellow)", border: "1px solid rgba(245,183,49,0.35)" }}
+                >
+                  <Navigation className="w-4 h-4" /> Ver guía paso a paso
+                </button>
                 <Button onClick={() => setShowAyuda(false)} className="w-full h-11 rounded-xl font-bold text-white border-0" style={{ background: "linear-gradient(135deg, #2558A5 0%, var(--tp-sky) 100%)" }}>
                   Entendido
                 </Button>
@@ -2273,6 +2382,7 @@ export default function Pasajero() {
               Tiene prioridad sobre el chip "elige una ruta" para no apilarlos. */}
           {mostrarPromptUbicacion && (
             <div
+              ref={ubicacionCardRef}
               className="pointer-events-auto relative rounded-2xl shadow-xl overflow-hidden w-[calc(100vw-32px)] max-w-[300px] animate-in fade-in slide-in-from-top-2 duration-300"
               style={{ background: "linear-gradient(135deg, var(--color-navy), var(--color-blue))" }}
             >
