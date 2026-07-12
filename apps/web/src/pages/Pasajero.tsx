@@ -222,15 +222,6 @@ export default function Pasajero() {
       return next;
     });
   };
-  // Chip "elige una ruta": guía para quien recién entra y ve el mapa vacío.
-  // Se cierra con la X o deslizándolo, y una vez cerrada no vuelve a salir.
-  const [showGuiaMapa, setShowGuiaMapa] = useState(
-    () => typeof localStorage !== "undefined" && !localStorage.getItem("tp_guia_mapa_visto"),
-  );
-  const dismissGuiaMapa = () => {
-    setShowGuiaMapa(false);
-    try { localStorage.setItem("tp_guia_mapa_visto", "1"); } catch { /* ignore */ }
-  };
   // Pedir la ubicación al entrar (tarjeta suave). Estado del permiso del navegador
   // + un flag para no volver a mostrar la tarjeta si el usuario la cerró.
   const [permisoGeo, setPermisoGeo] = useState<"granted" | "prompt" | "denied" | null>(null);
@@ -259,20 +250,6 @@ export default function Pasajero() {
   const tourConUbicacionRef = useRef(false);
   // Evita relanzar la guía sola más de una vez por sesión.
   const guiaArrancadaRef = useRef(false);
-  const guiaDragRef = useRef<{ startX: number } | null>(null);
-  const [guiaDragX, setGuiaDragX] = useState(0);
-  const onGuiaTouchStart = (e: React.TouchEvent) => {
-    guiaDragRef.current = { startX: e.touches[0]!.clientX };
-  };
-  const onGuiaTouchMove = (e: React.TouchEvent) => {
-    if (!guiaDragRef.current) return;
-    setGuiaDragX(e.touches[0]!.clientX - guiaDragRef.current.startX);
-  };
-  const onGuiaTouchEnd = () => {
-    guiaDragRef.current = null;
-    if (Math.abs(guiaDragX) > 70) dismissGuiaMapa();
-    setGuiaDragX(0);
-  };
   // Panel de ayuda "¿Cómo funciona?" — accesible en cualquier momento con el botón ?.
   const [showAyuda, setShowAyuda] = useState(false);
   // Anuncio a pantalla completa que publica el admin: se muestra a cada visita (no
@@ -2438,51 +2415,6 @@ export default function Pasajero() {
                   className="text-xs font-semibold px-3 py-2 rounded-xl text-white/70 hover:text-white transition-colors"
                 >
                   Ahora no
-                </button>
-              </div>
-            </div>
-          )}
-          {/* Hay servicio pero el usuario aún no eligió ruta: el mapa se ve sin buses.
-              Guía para quien recién entra: se puede cerrar con la X o deslizándola,
-              y una vez cerrada no vuelve a aparecer (se recuerda en localStorage). */}
-          {activeBuses.length > 0 && !rutasLoading && rutas.length > 0 && selectedRutaId === null && !modoDestino && !mostrarPromptUbicacion && showGuiaMapa && (
-            <div
-              className="pointer-events-auto relative rounded-2xl shadow-xl overflow-hidden w-[calc(100vw-32px)] max-w-[300px] animate-in fade-in slide-in-from-top-2 duration-300"
-              style={{
-                background: "linear-gradient(135deg, var(--color-navy), var(--color-blue))",
-                transform: `translateX(${guiaDragX}px)`,
-                opacity: 1 - Math.min(Math.abs(guiaDragX) / 140, 0.85),
-                transition: guiaDragRef.current ? "none" : "transform 0.25s ease, opacity 0.25s ease",
-                touchAction: "pan-y",
-              }}
-              onTouchStart={onGuiaTouchStart}
-              onTouchMove={onGuiaTouchMove}
-              onTouchEnd={onGuiaTouchEnd}
-            >
-              <button
-                onClick={dismissGuiaMapa}
-                aria-label="Cerrar guía"
-                title="Cerrar"
-                className="absolute top-1.5 right-1.5 p-1.5 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors z-10"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-              <div className="flex items-start gap-2.5 pl-3 pr-7 pt-2.5 pb-2">
-                <span className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "rgba(245,183,49,0.22)" }}>
-                  <Bus className="w-4 h-4" style={{ color: "var(--color-gold)" }} />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-[9px] font-bold uppercase tracking-wider leading-none mb-1" style={{ color: "rgba(255,255,255,0.6)" }}>Guía</p>
-                  <p className="text-xs font-semibold text-white leading-snug">Elige una ruta para ver los buses en vivo</p>
-                </div>
-              </div>
-              <div className="px-3 pb-2.5">
-                <button
-                  onClick={() => setVista("rutas")}
-                  className="w-full text-xs font-bold rounded-xl px-3 py-2 active:scale-[0.98] transition-transform"
-                  style={{ background: "var(--color-gold)", color: "var(--color-navy)" }}
-                >
-                  Ver rutas
                 </button>
               </div>
             </div>
