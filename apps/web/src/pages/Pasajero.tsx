@@ -69,6 +69,9 @@ export default function Pasajero() {
   // Espejo de la ruta seleccionada para leerlo dentro del handler del socket
   // (que se monta una sola vez y de otro modo capturaría un valor obsoleto).
   const selectedRutaIdRef = useRef<number | null>(null);
+  // Espejos de vista/modoDestino para leerlos dentro del callback async de fetchStreetRoute.
+  const vistaRef = useRef<"mapa" | "favoritos" | "rutas" | "paraderos">("mapa");
+  const modoDestinoRef = useRef(false);
   const [etaPorParada, setEtaPorParada] = useState<Record<number, { eta: number; placa: string }>>({});
   // "Seguir mi bus": el mapa hace pan automático al bus elegido cuando se mueve.
   const [siguiendoBusId, setSiguiendoBusId] = useState<number | null>(null);
@@ -388,7 +391,17 @@ export default function Pasajero() {
 
       if (ruta.paradas.length < 2) return;
       const fallback: L.LatLngExpression[] = ruta.paradas.map((p) => [p.latitud, p.longitud]);
-      const polyline = L.polyline(fallback, { color: ruta.color, weight: 5, opacity: 0.65, dashArray: "6 6", lineCap: "round", lineJoin: "round", interactive: true }).addTo(map);
+      const selInicial = selectedRutaIdRef.current;
+      const mostrarInicial = selInicial !== null ? selInicial === ruta.id : (vistaRef.current === "rutas" || modoDestinoRef.current);
+      const polyline = L.polyline(fallback, {
+        color: ruta.color,
+        weight: mostrarInicial ? 5 : 0,
+        opacity: mostrarInicial ? 0.65 : 0,
+        dashArray: "6 6",
+        lineCap: "round",
+        lineJoin: "round",
+        interactive: true,
+      }).addTo(map);
       routeLayersRef.current[ruta.id] = polyline;
       // Tocar la línea de ruta abre el panel de detalle sin mover el mapa.
       polyline.on("click", (e: L.LeafletMouseEvent) => {
@@ -401,43 +414,52 @@ export default function Pasajero() {
       });
       fetchStreetRoute(ruta.paradas).then((coords) => {
         polyline.setLatLngs(coords);
-        polyline.setStyle({ opacity: 0.85, dashArray: undefined });
+        const sel = selectedRutaIdRef.current;
+        const mostrar = sel !== null ? sel === ruta.id : (vistaRef.current === "rutas" || modoDestinoRef.current);
+        polyline.setStyle(
+          sel === ruta.id
+            ? { opacity: 1, weight: 7, dashArray: undefined }
+            : { opacity: mostrar ? 0.85 : 0, weight: mostrar ? 5 : 0, dashArray: undefined },
+        );
         // Flechas de sentido a lo largo de la geometría de calle.
         arrowLayersRef.current[ruta.id]?.remove();
         const flechas = crearFlechasDireccion(coords as [number, number][], ruta.color);
         arrowLayersRef.current[ruta.id] = flechas;
-        const sel = selectedRutaIdRef.current;
-        if (sel === null || sel === ruta.id) flechas.addTo(map);
+        if (mostrar) flechas.addTo(map);
         setGeomVersion((v) => v + 1);
       });
     });
   }, [rutas]);
 
   // Al seleccionar una ruta: mostrar SOLO esa ruta y SOLO sus paradas.
-  // Sin selección: se muestran todas.
+  // Sin selección: se muestran todas SOLO mientras se navega en "Rutas" o se elige un destino.
+  // En el mapa de inicio, sin ninguna acción del usuario, no se muestra ninguna.
   useEffect(() => {
     const map = mapRef.current;
+    const mostrarTodas = vista === "rutas" || modoDestino;
     Object.entries(routeLayersRef.current).forEach(([idStr, polyline]) => {
       const id = Number(idStr);
-      if (selectedRutaId === null) polyline.setStyle({ opacity: 0.85, weight: 5 });
-      else if (id === selectedRutaId) { polyline.setStyle({ opacity: 1, weight: 7 }); polyline.bringToFront(); }
-      else polyline.setStyle({ opacity: 0, weight: 0 }); // oculta las demás rutas
+      if (selectedRutaId !== null) {
+        if (id === selectedRutaId) { polyline.setStyle({ opacity: 1, weight: 7 }); polyline.bringToFront(); }
+        else polyline.setStyle({ opacity: 0, weight: 0 }); // oculta las demás rutas
+      } else if (mostrarTodas) polyline.setStyle({ opacity: 0.85, weight: 5 });
+      else polyline.setStyle({ opacity: 0, weight: 0 }); // mapa de inicio: sin rutas trazadas
       // Las flechas de sentido siguen la visibilidad de su ruta.
       const flechas = arrowLayersRef.current[id];
       if (flechas && map) {
-        const visible = selectedRutaId === null || id === selectedRutaId;
+        const visible = selectedRutaId === null ? mostrarTodas : id === selectedRutaId;
         if (visible && !map.hasLayer(flechas)) flechas.addTo(map);
         else if (!visible && map.hasLayer(flechas)) flechas.remove();
       }
     });
     stopMarkersRef.current.forEach(({ rutaId, marker }) => {
-      const visible = selectedRutaId === null || rutaId === selectedRutaId;
+      const visible = selectedRutaId === null ? mostrarTodas : rutaId === selectedRutaId;
       marker.setOpacity(visible ? 1 : 0);
       // Evita que las paradas ocultas capturen clics
       const el = marker.getElement();
       if (el) el.style.pointerEvents = visible ? "auto" : "none";
     });
-  }, [selectedRutaId, rutas]);
+  }, [selectedRutaId, rutas, vista, modoDestino]);
 
   const updateBusMarker = useCallback(
     (busId: number, lat: number, lng: number, color = "#2558A5", placa = "", rutaId?: number) => {
@@ -795,6 +817,9 @@ export default function Pasajero() {
   useEffect(() => { siguiendoBusRef.current = siguiendoBusId; }, [siguiendoBusId]);
   // Espejo de la ruta seleccionada para el handler del socket.
   useEffect(() => { selectedRutaIdRef.current = selectedRutaId; }, [selectedRutaId]);
+  // Espejos de vista/modoDestino para el callback async de fetchStreetRoute.
+  useEffect(() => { vistaRef.current = vista; }, [vista]);
+  useEffect(() => { modoDestinoRef.current = modoDestino; }, [modoDestino]);
   // Espejo del ETA para el popup del bus (updateBusMarker no depende del estado).
   useEffect(() => { etaRef.current = etaPorParada; }, [etaPorParada]);
 
