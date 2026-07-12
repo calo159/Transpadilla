@@ -59,10 +59,21 @@ router.post(
       res.status(400).json({ error: "ruta_id inválido" });
       return;
     }
-    const [bus] = await db
-      .insert(buses)
-      .values({ placa: placa.toUpperCase(), ruta_id: ruta_id ?? null })
-      .returning();
+    let bus: typeof buses.$inferSelect | undefined;
+    try {
+      [bus] = await db
+        .insert(buses)
+        .values({ placa: placa.toUpperCase(), ruta_id: ruta_id ?? null })
+        .returning();
+    } catch (err) {
+      // 23505 = unique_violation (Postgres): la placa ya existe. Sin este catch,
+      // caía al 500 genérico del final de app.ts (y disparaba una alerta P1).
+      if ((err as { code?: string }).code === "23505") {
+        res.status(409).json({ error: "Ya existe un bus con esa placa" });
+        return;
+      }
+      throw err;
+    }
     registrarAuditoria(req, "crear_bus", "bus", bus?.id, { placa: placa.toUpperCase(), ruta_id: ruta_id ?? null });
     res.status(201).json({ ...bus, actualizado: null });
   },
@@ -112,11 +123,21 @@ router.patch(
     }
     const bid = parseIdParam(req.params["id"]);
     if (bid === null) { res.status(400).json({ error: "Id de bus inválido" }); return; }
-    const [actualizado] = await db
-      .update(buses)
-      .set(cambios)
-      .where(eq(buses.id, bid))
-      .returning({ id: buses.id });
+    let actualizado: { id: number } | undefined;
+    try {
+      [actualizado] = await db
+        .update(buses)
+        .set(cambios)
+        .where(eq(buses.id, bid))
+        .returning({ id: buses.id });
+    } catch (err) {
+      // 23505 = unique_violation: la placa ya la tiene otro bus (ver POST /buses).
+      if ((err as { code?: string }).code === "23505") {
+        res.status(409).json({ error: "Ya existe un bus con esa placa" });
+        return;
+      }
+      throw err;
+    }
     if (!actualizado) { res.status(404).json({ error: "Bus no encontrado" }); return; }
     registrarAuditoria(req, "editar_bus", "bus", actualizado.id, cambios);
     res.json({ mensaje: "Bus actualizado" });
@@ -134,26 +155,51 @@ router.post(
     requerido("lat"), numeroEnRango("lat", -90, 90),
     requerido("lng"), numeroEnRango("lng", -180, 180),
   ),
-  busAutorizado,
+  // Sin busAutorizado a propósito: este es el endpoint de MAYOR frecuencia (un
+  // ping por cada posición de GPS del conductor), así que aquí sí vale la pena
+  // colapsar "resolver el bus" + "actualizarlo" en una sola query en vez de las
+  // 2 que haría busAutorizado (SELECT del bus del conductor + UPDATE por id).
+  // El resto de rutas de este archivo sí usan busAutorizado (no son el hot path).
   async (req, res) => {
-    const busId = req.busId!;
+    const usuario = req.usuario!;
     const { lat, lng, velocidad } = req.body as { lat: number; lng: number; velocidad?: number };
-    // Una sola query: el estado se decide en SQL (si hay novedad activa se mantiene
-    // en "demora" hasta que el conductor la retire) y devolvemos ruta_id para emitir
-    // SOLO a la sala de esa ruta.
-    const [row] = await db
-      .update(buses)
-      .set({
-        lat,
-        lng,
-        velocidad: velocidad ?? null,
-        estado: sql`CASE WHEN ${buses.novedad} IS NOT NULL THEN 'demora' ELSE 'activo' END`,
-        actualizado: new Date(),
-      })
-      .where(eq(buses.id, busId))
-      .returning({ rutaId: buses.ruta_id });
+    const cambios = {
+      lat,
+      lng,
+      velocidad: velocidad ?? null,
+      // El estado se decide en SQL (si hay novedad activa se mantiene en "demora"
+      // hasta que el conductor la retire).
+      estado: sql`CASE WHEN ${buses.novedad} IS NOT NULL THEN 'demora' ELSE 'activo' END`,
+      actualizado: new Date(),
+    };
 
-    const rutaId = row?.rutaId ?? null;
+    let row: { id: number; rutaId: number | null } | undefined;
+    if (usuario.rol === "admin") {
+      // Admin: el bus_id lo indica el body (puede operar cualquiera); se ignora
+      // cualquier otro campo — mismo criterio que busAutorizado.
+      const idRaw = Number((req.body as { bus_id?: unknown }).bus_id);
+      const busIdAdmin = Number.isInteger(idRaw) && idRaw > 0 ? idRaw : null;
+      if (busIdAdmin) {
+        [row] = await db
+          .update(buses)
+          .set(cambios)
+          .where(eq(buses.id, busIdAdmin))
+          .returning({ id: buses.id, rutaId: buses.ruta_id });
+      }
+    } else {
+      // Conductor: NUNCA se confía en un bus_id del cliente — se actualiza
+      // directamente el bus cuyo conductor_id es el del JWT (una sola query,
+      // sin el SELECT previo que haría busAutorizado).
+      [row] = await db
+        .update(buses)
+        .set(cambios)
+        .where(eq(buses.conductor_id, usuario.id))
+        .returning({ id: buses.id, rutaId: buses.ruta_id });
+    }
+    if (!row) { res.status(403).json({ error: "No tienes un bus asignado" }); return; }
+
+    const busId = row.id;
+    const rutaId = row.rutaId;
     // Solo se difunde si el bus tiene ruta (los pasajeros solo ven buses por ruta).
     // rutaId va en el payload: el cliente filtra por él y la sala acota el fan-out.
     if (rutaId != null) {

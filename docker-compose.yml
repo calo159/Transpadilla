@@ -44,6 +44,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # La imagen node:24-slim no trae curl/wget; se usa el propio Node para golpear
+    # /api/healthz (el mismo path que ya usa Render como healthCheckPath).
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/api/healthz', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   pgdata:

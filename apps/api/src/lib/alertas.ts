@@ -6,6 +6,14 @@ import { logger } from "./logger";
 const WEBHOOK = process.env["ALERTA_WEBHOOK_URL"];
 const THROTTLE_MS = Number(process.env["ALERTA_THROTTLE_MS"] ?? 60_000);
 let ultimoEnvio = 0;
+// P1 ignora el throttle general a propósito (no debe perderse un error crítico
+// real), pero sin tope alguien podía inundar el webhook repitiendo la MISMA
+// petición que dispara un 500 (p. ej. una placa duplicada antes de que la ruta
+// devolviera 409). Este cap acota cuántos P1 salen por ventana; el primero
+// SIEMPRE sale de inmediato, los siguientes de la misma ráfaga se descartan.
+const P1_MAX_POR_VENTANA = Number(process.env["ALERTA_P1_MAX_POR_VENTANA"] ?? 5);
+let p1VentanaInicio = 0;
+let p1Conteo = 0;
 
 export const alertasHabilitadas = Boolean(WEBHOOK);
 
@@ -27,8 +35,14 @@ const ETIQUETA: Record<Severidad, string> = {
 export function notificarAlerta(texto: string, sev: Severidad = "P2"): void {
   if (!WEBHOOK) return;
   const ahora = Date.now();
-  if (sev !== "P1" && ahora - ultimoEnvio < THROTTLE_MS) return;
-  ultimoEnvio = ahora;
+  if (sev === "P1") {
+    if (ahora - p1VentanaInicio > THROTTLE_MS) { p1VentanaInicio = ahora; p1Conteo = 0; }
+    p1Conteo++;
+    if (p1Conteo > P1_MAX_POR_VENTANA) return; // tope de la ventana alcanzado
+  } else {
+    if (ahora - ultimoEnvio < THROTTLE_MS) return;
+    ultimoEnvio = ahora;
+  }
 
   const mensaje = `[${ETIQUETA[sev]}] ${texto}`;
   void fetch(WEBHOOK, {

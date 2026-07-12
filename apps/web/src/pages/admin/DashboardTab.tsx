@@ -48,15 +48,16 @@ function DashboardMiniMap({ rutas, buses }: { rutas: Ruta[]; buses: Bus[] }) {
     rutasConTrazo.forEach((ruta) => {
       const paradasOrden = ruta.paradas.slice().sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
       const fallback: [number, number][] = paradasOrden.map((p) => [p.latitud, p.longitud]);
-      const polyline = L.polyline(fallback, { color: ruta.color, weight: 4, opacity: 0.75, lineCap: "round" }).addTo(grupo);
-      let flechas = crearFlechasDireccion(fallback, ruta.color).addTo(grupo);
+      const rutaColor = colorSeguro(ruta.color);
+      const polyline = L.polyline(fallback, { color: rutaColor, weight: 4, opacity: 0.75, lineCap: "round" }).addTo(grupo);
+      let flechas = crearFlechasDireccion(fallback, rutaColor).addTo(grupo);
       // Reemplaza la línea recta por la geometría real de calle (OSRM), igual que
       // el mapa del pasajero — la recta queda como respaldo si OSRM no responde.
       fetchStreetRoute(paradasOrden).then((coords) => {
         if (!vigente) return;
         polyline.setLatLngs(coords);
         flechas.remove();
-        flechas = crearFlechasDireccion(coords as [number, number][], ruta.color).addTo(grupo);
+        flechas = crearFlechasDireccion(coords as [number, number][], rutaColor).addTo(grupo);
       });
     });
     busesConGps.forEach((b) => {

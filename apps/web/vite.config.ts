@@ -11,6 +11,30 @@ const basePath = process.env.BASE_PATH ?? "/";
 // Se activa con la variable de entorno HTTPS=true (ver iniciar-https.ps1).
 const useHttps = process.env.HTTPS === "true";
 
+// Deriva el ORIGEN (con comodín de subdominio si aplica) de una URL, para la CSP
+// en vez de un comodín `https:` que aceptaría cualquier host. Leaflet reemplaza el
+// placeholder `{s}` de las URLs de tiles por un subdominio (a/b/c); si la URL lo
+// trae, el origen resultante lleva un comodín de host (`*.dominio.com`) que cubre
+// esos subdominios sin abrir la puerta a cualquier otro sitio HTTPS.
+function origenDesdeUrl(url: string): string {
+  const sinProtocolo = url.replace(/^https?:\/\//, "");
+  const host = sinProtocolo.split("/")[0] ?? "";
+  const conComodin = host.replace(/^\{s\}\./, "*.");
+  return `https://${conComodin}`;
+}
+
+// Mismos defaults que apps/web/src/lib/map-config.ts (no se puede importar ese
+// módulo aquí: este archivo corre en Node durante el build, no en el bundle).
+const TILES_URL_BUILD = process.env["VITE_MAP_TILES_URL"] ?? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+const OSRM_URL_BUILD = (process.env["VITE_OSRM_URL"] ?? "https://router.project-osrm.org").replace(/\/+$/, "");
+// Solo presente en el build del APK (server.url no se usa; ver capacitor.config.ts):
+// la app corre desde un origen nativo local, así que fetch/socket van por URL
+// absoluta a este host — hace falta permitirlo explícito en connect-src (https+wss).
+const API_URL_BUILD = process.env["VITE_API_URL"];
+const conexionesApk = API_URL_BUILD
+  ? [origenDesdeUrl(API_URL_BUILD), origenDesdeUrl(API_URL_BUILD).replace(/^https:/, "wss:")]
+  : [];
+
 // Content-Security-Policy embebida en el HTML SOLO en el build de producción.
 // En la web (Render) manda la cabecera del backend (apps/api/src/app.ts), pero en
 // el APK de Capacitor esa cabecera NO aplica (el bundle se sirve desde el origen
@@ -25,9 +49,9 @@ const CSP_META = [
   "form-action 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "img-src 'self' data: blob: https:",
+  `img-src 'self' data: blob: ${origenDesdeUrl(TILES_URL_BUILD)}`,
   "font-src 'self' data: https://fonts.gstatic.com",
-  "connect-src 'self' https: wss: ws:",
+  `connect-src 'self' ${origenDesdeUrl(OSRM_URL_BUILD)} ${conexionesApk.join(" ")}`.trim(),
   "worker-src 'self' blob:",
   "manifest-src 'self'",
 ].join("; ");

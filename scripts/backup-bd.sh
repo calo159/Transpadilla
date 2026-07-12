@@ -18,8 +18,15 @@
 #   BACKUP_WEBHOOK   URL de webhook (Slack/Discord) para avisar si el backup
 #                    falla. Mismo formato que ALERTA_WEBHOOK_URL de la API.
 #
-# Cron diario sugerido (3 AM):
-#   0 3 * * * DATABASE_URL="..." /ruta/al/repo/scripts/backup-bd.sh >> /var/log/tp-backup.log 2>&1
+# Cron diario sugerido (3 AM). NO pongas DATABASE_URL inline en el crontab: queda
+# visible para cualquiera que pueda leer `ps`/la lista de tareas en ese momento.
+# Guarda la cadena en un archivo con permisos 600 (solo el dueño la puede leer) y
+# cárgala antes de llamar al script:
+#   # una sola vez:
+#   printf 'DATABASE_URL=postgresql://...\n' > /ruta/al/repo/.env.backup
+#   chmod 600 /ruta/al/repo/.env.backup
+#   # en el crontab:
+#   0 3 * * * . /ruta/al/repo/.env.backup && /ruta/al/repo/scripts/backup-bd.sh >> /var/log/tp-backup.log 2>&1
 #
 # Requiere pg_dump instalado (versión compatible con el servidor — Supabase
 # usa Postgres 15/16; instala el cliente `postgresql-client` correspondiente).

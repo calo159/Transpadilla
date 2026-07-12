@@ -17,5 +17,8 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
   if (options.body != null && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  return fetch(url, { ...options, headers });
+  // Explícito (aunque "same-origin" ya es el default de fetch): consistente con
+  // custom-fetch.ts (el cliente generado), que sí lo fija. Es lo que permite que
+  // la cookie de sesión httpOnly viaje en las llamadas same-origin de la web.
+  return fetch(url, { ...options, headers, credentials: options.credentials ?? "same-origin" });
 }

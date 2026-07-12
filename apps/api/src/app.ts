@@ -53,12 +53,29 @@ app.use((_req, res, next) => {
 //    así que esto es estricto y NO rompe el SPA.
 //  - style-src incluye 'unsafe-inline': Leaflet y los componentes (Radix/shadcn)
 //    inyectan estilos en línea; en estilos el riesgo es bajo.
-//  - img-src https: data: blob:: los tiles del mapa pueden venir de cualquier
-//    proveedor (OSM/Mapbox/MapTiler/propio) y Leaflet usa data:/blob: para marcadores.
-//  - connect-src https: wss: ws:: fetch a OSRM (router.project-osrm.org o el propio)
-//    y el WebSocket de Socket.IO.
+//  - img-src: 'self' + data:/blob: (marcadores de Leaflet) + el origen REAL del
+//    proveedor de tiles configurado (no un comodín `https:` a cualquier host).
+//  - connect-src: 'self' (API/socket same-origin en la web) + el origen de OSRM.
 //  - worker-src 'self' blob:: el service worker de la PWA (vite-plugin-pwa/workbox).
 // Se puede sobreescribir por entorno con la variable CSP.
+
+// Deriva el ORIGEN (con comodín de subdominio si aplica) de una URL de tiles/OSRM,
+// igual que en vite.config.ts (no se comparte módulo: son builds/procesos
+// distintos). Leaflet reemplaza `{s}` por un subdominio (a/b/c) en las URLs de
+// tiles; si la URL lo trae, el origen queda con comodín de host (`*.dominio.com`).
+// IMPORTANTE: mantener en sync con apps/web/vite.config.ts.
+function origenDesdeUrl(url: string): string {
+  const sinProtocolo = url.replace(/^https?:\/\//, "");
+  const host = sinProtocolo.split("/")[0] ?? "";
+  const conComodin = host.replace(/^\{s\}\./, "*.");
+  return `https://${conComodin}`;
+}
+// Mismos defaults que apps/web/src/lib/map-config.ts; en Render, esta misma
+// variable (configurada para el build del frontend) también es visible aquí en
+// runtime, al ser un único servicio.
+const tilesUrlCsp = process.env["VITE_MAP_TILES_URL"] ?? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+const osrmUrlCsp = (process.env["VITE_OSRM_URL"] ?? "https://router.project-osrm.org").replace(/\/+$/, "");
+
 const csp =
   process.env["CSP"] ??
   [
@@ -71,9 +88,9 @@ const csp =
     // Google Fonts: el CSS viene de fonts.googleapis.com y los archivos .woff2
     // de fonts.gstatic.com (la fuente Inter que usa el index.html).
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "img-src 'self' data: blob: https:",
+    `img-src 'self' data: blob: ${origenDesdeUrl(tilesUrlCsp)}`,
     "font-src 'self' data: https://fonts.gstatic.com",
-    "connect-src 'self' https: wss: ws:",
+    `connect-src 'self' ${origenDesdeUrl(osrmUrlCsp)}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
     ...(isProd ? ["upgrade-insecure-requests"] : []),

@@ -52,6 +52,13 @@ interface Lugar {
   longitud: number;
 }
 
+// SVG estáticos del ícono del marcador de bus (sin emoji, regla del UI skill).
+// Izados a constantes de módulo: `updateBusMarker` corre en el hot path del GPS
+// (una vez por cada posición que llega de cada bus), y estas cadenas no dependen
+// de nada por-render — recrearlas ahí era trabajo repetido innecesario.
+const SVG_ALERTA_MARCADOR = `<svg width="9" height="9" viewBox="0 0 24 24" fill="#1B3B6F"><path d="M12 2 1 21h22L12 2Zm0 6a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0V9a1 1 0 0 1 1-1Zm0 9a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4Z"/></svg>`;
+const SVG_BUS_MARCADOR = `<svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M6 2h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H9v1a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-1a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm0 4v5h12V6H6Zm2 7a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm8 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></svg>`;
+
 export default function Pasajero() {
   useDocumentTitle("TransPadilla — Buses de Riohacha en vivo");
   const { toast } = useToast();
@@ -455,7 +462,7 @@ export default function Pasajero() {
       const selInicial = selectedRutaIdRef.current;
       const mostrarInicial = selInicial !== null ? selInicial === ruta.id : (vistaRef.current === "rutas" || modoDestinoRef.current);
       const polyline = L.polyline(fallback, {
-        color: ruta.color,
+        color: rutaColor,
         weight: mostrarInicial ? 5 : 0,
         opacity: mostrarInicial ? 0.65 : 0,
         dashArray: "6 6",
@@ -484,7 +491,7 @@ export default function Pasajero() {
         );
         // Flechas de sentido a lo largo de la geometría de calle.
         arrowLayersRef.current[ruta.id]?.remove();
-        const flechas = crearFlechasDireccion(coords as [number, number][], ruta.color);
+        const flechas = crearFlechasDireccion(coords as [number, number][], rutaColor);
         arrowLayersRef.current[ruta.id] = flechas;
         if (mostrar) flechas.addTo(map);
         setGeomVersion((v) => v + 1);
@@ -558,11 +565,8 @@ export default function Pasajero() {
 
       // ── Ícono: cuerpo con color de ruta + placa; punto de ocupación en la esquina ──
       const ocupDot = ocup ? ocup.color : "#9CA3AF"; // gris si no hay dato
-      // Íconos SVG inline (sin emoji, regla del UI skill).
-      const svgAlerta = `<svg width="9" height="9" viewBox="0 0 24 24" fill="#1B3B6F"><path d="M12 2 1 21h22L12 2Zm0 6a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0V9a1 1 0 0 1 1-1Zm0 9a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4Z"/></svg>`;
-      const svgBus = `<svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M6 2h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H9v1a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-1a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm0 4v5h12V6H6Zm2 7a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm8 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></svg>`;
       const novBadge = bus?.novedad
-        ? `<span style="position:absolute;top:-6px;right:-6px;width:15px;height:15px;border-radius:50%;background:#F5B731;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.4)">${svgAlerta}</span>`
+        ? `<span style="position:absolute;top:-6px;right:-6px;width:15px;height:15px;border-radius:50%;background:#F5B731;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.4)">${SVG_ALERTA_MARCADOR}</span>`
         : "";
       // Halo pulsante cuando el pasajero sigue este bus (sensación "en vivo") +
       // anillo expansivo (ping) detrás de la píldora, estilo mockup.
@@ -575,7 +579,7 @@ export default function Pasajero() {
         html: `<div class="tp-marker-bob" style="display:flex;flex-direction:column;align-items:center;font-family:'Inter',system-ui,sans-serif">
             <div style="position:relative;display:flex;align-items:center;gap:4px;background:${colorSafe};color:#fff;min-height:30px;padding:4px 9px;border-radius:12px;font-size:11px;font-weight:800;white-space:nowrap;${haloRing}border:2px solid #fff;letter-spacing:.3px">
               ${pingRing}
-              <span style="display:flex;line-height:0">${svgBus}</span>${placaSafe}
+              <span style="display:flex;line-height:0">${SVG_BUS_MARCADOR}</span>${placaSafe}
               <span style="position:absolute;bottom:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:${ocupDot};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.45)"></span>
               ${novBadge}
             </div>

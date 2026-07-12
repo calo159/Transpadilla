@@ -198,26 +198,28 @@ function rutasInsightCache(dias: number): CacheTtl<RutasInsights> {
            WHERE capturado >= now() - ($1 || ' days')::interval
            WINDOW w AS (PARTITION BY bus_id ORDER BY capturado)
          ),
-         km AS (
-           SELECT ruta_id,
-             COALESCE(SUM(
+         -- Haversine calculado UNA vez por fila (antes se repetía en el SUM y en
+         -- su propio FILTER); NULL en la primera muestra de cada bus (sin plat).
+         seg AS (
+           SELECT bus_id, ruta_id, ocupacion,
+             CASE WHEN plat IS NOT NULL THEN
                6371 * 2 * asin(sqrt(
                  power(sin(radians(lat - plat) / 2), 2) +
                  cos(radians(plat)) * cos(radians(lat)) *
                  power(sin(radians(lng - plng) / 2), 2)
                ))
-             ) FILTER (WHERE plat IS NOT NULL AND
-               6371 * 2 * asin(sqrt(
-                 power(sin(radians(lat - plat) / 2), 2) +
-                 cos(radians(plat)) * cos(radians(lat)) *
-                 power(sin(radians(lng - plng) / 2), 2)
-               )) < $2), 0) AS km,
+             END AS km
+           FROM p
+         ),
+         km AS (
+           SELECT ruta_id,
+             COALESCE(SUM(km) FILTER (WHERE km IS NOT NULL AND km < $2), 0) AS km,
              COUNT(*)                 AS muestras,
              COUNT(DISTINCT bus_id)   AS buses,
              COUNT(*) FILTER (WHERE ocupacion = 'vacio') AS vacio,
              COUNT(*) FILTER (WHERE ocupacion = 'medio') AS medio,
              COUNT(*) FILTER (WHERE ocupacion = 'lleno') AS lleno
-           FROM p
+           FROM seg
            WHERE ruta_id IS NOT NULL
            GROUP BY ruta_id
          ),

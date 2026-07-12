@@ -2,7 +2,11 @@
 # Imagen para auto-hospedaje en un VPS (alternativa a los servicios de Render).
 # Construye el frontend y el api-server, y sirve todo desde un solo contenedor.
 
-FROM node:22-slim AS build
+# Node 24 (alineado con CI y CLAUDE.md — antes esta imagen usaba 22, distinto al
+# resto del proyecto) pineado a DIGEST (no a tag mutable): reproducibilidad del
+# build. Para actualizar: `docker manifest inspect node:24-slim` y reemplazar el
+# sha256 (o dejar que Dependabot/Renovate lo proponga si se configura para Docker).
+FROM node:24-slim@sha256:cb4e8f7c443347358b7875e717c29e27bf9befc8f5a26cf18af3c3dec80e58c5 AS build
 WORKDIR /app
 RUN corepack enable
 # Copiamos todo el monorepo (el build necesita packages/* y apps/*).
@@ -10,7 +14,7 @@ COPY . .
 RUN pnpm install --frozen-lockfile --prod=false
 RUN pnpm run build:prod
 
-FROM node:22-slim AS run
+FROM node:24-slim@sha256:cb4e8f7c443347358b7875e717c29e27bf9befc8f5a26cf18af3c3dec80e58c5 AS run
 WORKDIR /app
 RUN corepack enable
 ENV NODE_ENV=production

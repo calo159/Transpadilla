@@ -1,0 +1,16 @@
+version: 2
+updates:
+  # Las Actions de CI quedaron pineadas a SHA (no a tag) por seguridad de cadena
+  # de suministro; Dependabot es quien propone el PR para subir el SHA cuando
+  # sale una versión nueva (revisar y mergear manualmente, no auto-merge).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # Dependencias de Node (pnpm) del monorepo.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
