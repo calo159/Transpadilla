@@ -2152,15 +2152,22 @@ export default function Pasajero() {
           const hw = conHueco ? Math.min(winW - hx, targetRect!.width + pad * 2) : 0;
           const hh = conHueco ? Math.min(winH - hy, targetRect!.height + pad * 2) : 0;
           const velo = "rgba(9,14,26,0.72)";
-          // Posición vertical de la burbuja según el paso.
+          // Posición de la burbuja según el paso. En "destino" el target (el FAB
+          // "¿A dónde vas?") está pegado a la izquierda, no al centro: la burbuja se
+          // alinea con él (left:16, igual que el left-4 del botón) en vez de quedar
+          // centrada en medio de la pantalla, lejos de lo que se está señalando.
           const bocadillo: React.CSSProperties =
             tourStep === "ubicacion"
               ? { top: (conHueco ? hy + hh : 150) + 14 }
               : tourStep === "destino"
-              ? { bottom: (conHueco ? winH - hy : 150) + 14 }
+              ? { bottom: (conHueco ? winH - hy : 150) + 14, left: 16, right: "auto" as const }
               : tourStep === "elegir"
               ? { bottom: 150 }
               : { top: 132 };
+          const bocadilloClase =
+            tourStep === "destino"
+              ? "fixed z-[1092] w-[calc(100vw-32px)] max-w-[300px] animate-in fade-in slide-in-from-bottom-2 duration-300"
+              : "fixed z-[1092] left-1/2 -translate-x-1/2 w-[calc(100vw-32px)] max-w-[340px] animate-in fade-in slide-in-from-bottom-2 duration-300";
           return (
             <>
               {conHueco ? (
@@ -2180,7 +2187,7 @@ export default function Pasajero() {
               ) : null}
 
               {/* Burbuja guía */}
-              <div className="fixed z-[1092] left-1/2 -translate-x-1/2 w-[calc(100vw-32px)] max-w-[340px] animate-in fade-in slide-in-from-bottom-2 duration-300" style={bocadillo}>
+              <div className={bocadilloClase} style={bocadillo}>
                 <div className="rounded-2xl shadow-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, var(--color-navy), var(--color-blue))", border: "1px solid rgba(245,183,49,0.4)" }}>
                   <div className="flex items-start gap-2.5 px-4 pt-3.5 pb-2">
                     <span className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "rgba(245,183,49,0.22)" }}>
