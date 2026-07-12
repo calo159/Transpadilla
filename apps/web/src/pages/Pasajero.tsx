@@ -248,6 +248,16 @@ export default function Pasajero() {
     setShowGuiaMapa(false);
     try { localStorage.setItem("tp_guia_mapa_visto", "1"); } catch { /* ignore */ }
   };
+  // Pedir la ubicación al entrar (tarjeta suave). Estado del permiso del navegador
+  // + un flag para no volver a mostrar la tarjeta si el usuario la cerró.
+  const [permisoGeo, setPermisoGeo] = useState<"granted" | "prompt" | "denied" | null>(null);
+  const [ubicacionPromptCerrado, setUbicacionPromptCerrado] = useState(
+    () => typeof localStorage !== "undefined" && !!localStorage.getItem("tp_ubicacion_pedida"),
+  );
+  const dismissPromptUbicacion = () => {
+    setUbicacionPromptCerrado(true);
+    try { localStorage.setItem("tp_ubicacion_pedida", "1"); } catch { /* ignore */ }
+  };
   const guiaDragRef = useRef<{ startX: number } | null>(null);
   const [guiaDragX, setGuiaDragX] = useState(0);
   const onGuiaTouchStart = (e: React.TouchEvent) => {
@@ -1066,9 +1076,14 @@ export default function Pasajero() {
   };
 
   // ── Centrar el mapa en la ubicación del pasajero ───────────────────────────
-  const locateMe = () => {
-    if (!navigator.geolocation || !mapRef.current) {
-      toast({ title: "Ubicación no disponible", description: "Tu dispositivo o navegador no permite ubicarte.", variant: "destructive" });
+  // `silencioso`: para el camino automático al entrar (permiso ya concedido) —
+  // NO toastea errores ni recentra de forma agresiva; solo fija la ubicación. El
+  // centrado + marcador se hacen únicamente si el mapa ya montó (así es seguro
+  // llamarlo apenas resuelve el permiso, aunque el mapa aún no exista).
+  const locateMe = (opts?: { silencioso?: boolean }) => {
+    const silencioso = opts?.silencioso ?? false;
+    if (!navigator.geolocation) {
+      if (!silencioso) toast({ title: "Ubicación no disponible", description: "Tu dispositivo o navegador no permite ubicarte.", variant: "destructive" });
       return;
     }
     setLocating(true);
@@ -1076,8 +1091,9 @@ export default function Pasajero() {
       (pos) => {
         const { latitude, longitude } = pos.coords;
         setUserPos({ lat: latitude, lng: longitude });
+        setLocating(false);
         const map = mapRef.current;
-        if (!map) { setLocating(false); return; }
+        if (!map) return; // aún sin mapa: la posición ya quedó fijada, es suficiente
         const icon = L.divIcon({
           className: "",
           html: `<div style="width:16px;height:16px;border-radius:50%;background:#2558A5;border:3px solid white;box-shadow:0 0 0 6px rgba(37,88,165,.25)"></div>`,
@@ -1085,16 +1101,48 @@ export default function Pasajero() {
         });
         if (userMarkerRef.current) userMarkerRef.current.setLatLng([latitude, longitude]);
         else userMarkerRef.current = L.marker([latitude, longitude], { icon }).bindPopup("Estás aquí").addTo(map);
-        map.setView([latitude, longitude], 15);
-        setLocating(false);
+        // En el camino silencioso no arrebatamos la vista si el usuario ya está
+        // mirando una ruta; en el manual sí centra (es lo que pidió al tocar).
+        if (!silencioso || selectedRutaIdRef.current === null) map.setView([latitude, longitude], 15);
       },
       () => {
         setLocating(false);
-        toast({ title: "No pudimos obtener tu ubicación", description: "Revisa que le hayas dado permiso de ubicación al navegador.", variant: "destructive" });
+        if (!silencioso) toast({ title: "No pudimos obtener tu ubicación", description: "Revisa que le hayas dado permiso de ubicación al navegador.", variant: "destructive" });
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
     );
   };
+
+  // Al entrar: consultar el estado del permiso de ubicación (Permissions API) para
+  // decidir, con lógica, qué hacer sin ser agresivos:
+  //  - granted → ubicar en silencio (mejores resultados de una, sin diálogo).
+  //  - prompt  → dejar que se muestre la tarjeta suave (ver mostrarPromptUbicacion).
+  //  - denied  → no molestar (no se puede pedir de nuevo por JS).
+  // Navegador sin Permissions API → se queda en "prompt" y sale la tarjeta.
+  useEffect(() => {
+    if (!navigator.geolocation) { setPermisoGeo("denied"); return; }
+    const permisos = navigator.permissions;
+    if (!permisos?.query) { setPermisoGeo("prompt"); return; }
+    let status: PermissionStatus | null = null;
+    const onChange = () => { if (status) setPermisoGeo(status.state as "granted" | "prompt" | "denied"); };
+    permisos.query({ name: "geolocation" as PermissionName })
+      .then((s) => {
+        status = s;
+        setPermisoGeo(s.state as "granted" | "prompt" | "denied");
+        if (s.state === "granted") locateMe({ silencioso: true });
+        s.addEventListener("change", onChange);
+      })
+      .catch(() => setPermisoGeo("prompt"));
+    return () => { status?.removeEventListener("change", onChange); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ¿Mostrar la tarjeta suave que invita a activar la ubicación? Solo si aún no la
+  // tenemos, no se está encimando a la bienvenida, el usuario no la cerró antes, y
+  // el navegador realmente puede pedirla (estado "prompt").
+  const mostrarPromptUbicacion =
+    !userPos && !showWelcome && !ubicacionPromptCerrado &&
+    permisoGeo === "prompt" && typeof navigator !== "undefined" && !!navigator.geolocation;
 
   const fmtDist = (km: number) => (km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`);
 
@@ -1152,7 +1200,7 @@ export default function Pasajero() {
         <p className="text-xs text-muted-foreground px-1">Esta ruta no tiene buses circulando ahora mismo.</p>
       )}
       {!userPos && (
-        <button onClick={locateMe} className="mt-2 text-[11px] font-semibold flex items-center gap-1" style={{ color: "var(--tp-sky)" }}>
+        <button onClick={() => locateMe()} className="mt-2 text-[11px] font-semibold flex items-center gap-1" style={{ color: "var(--tp-sky)" }}>
           <LocateFixed className="w-3 h-3" /> Activa tu ubicación para una mejor recomendación
         </button>
       )}
@@ -1253,7 +1301,7 @@ export default function Pasajero() {
         {/* Centrar en mi ubicación */}
         <div className="mt-2.5">
           <button
-            onClick={locateMe}
+            onClick={() => locateMe()}
             disabled={locating}
             className="w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl font-semibold text-sm transition-colors disabled:opacity-60 mb-2"
             style={userPos
@@ -1838,7 +1886,7 @@ export default function Pasajero() {
         {/* FAB ubicación (sky) — abajo-derecha */}
         {vista === "mapa" && (
           <button
-            onClick={locateMe}
+            onClick={() => locateMe()}
             disabled={locating}
             className="absolute right-4 z-[900] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform disabled:opacity-60 bottom-[88px] md:bottom-4"
             style={{ background: "var(--color-sky)", color: "var(--color-navy)", border: "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
@@ -2220,10 +2268,54 @@ export default function Pasajero() {
               <span className="text-xs font-semibold" style={{ color: "var(--color-navy)" }}>Sin buses activos · <span style={{ color: "var(--color-gray-text)" }}>5:00 am – 10:00 pm</span></span>
             </div>
           )}
+          {/* Tarjeta suave: invita a activar la ubicación al entrar (mejores
+              resultados). Solo sale si el navegador puede pedirla y no la cerró.
+              Tiene prioridad sobre el chip "elige una ruta" para no apilarlos. */}
+          {mostrarPromptUbicacion && (
+            <div
+              className="pointer-events-auto relative rounded-2xl shadow-xl overflow-hidden w-[calc(100vw-32px)] max-w-[300px] animate-in fade-in slide-in-from-top-2 duration-300"
+              style={{ background: "linear-gradient(135deg, var(--color-navy), var(--color-blue))" }}
+            >
+              <button
+                onClick={dismissPromptUbicacion}
+                aria-label="Ahora no"
+                title="Ahora no"
+                className="absolute top-1.5 right-1.5 p-1.5 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors z-10"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+              <div className="flex items-start gap-2.5 pl-3 pr-7 pt-2.5 pb-2">
+                <span className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "rgba(245,183,49,0.22)" }}>
+                  <LocateFixed className="w-4 h-4" style={{ color: "var(--color-gold)" }} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold uppercase tracking-wider leading-none mb-1" style={{ color: "rgba(255,255,255,0.6)" }}>Ubicación</p>
+                  <p className="text-xs font-semibold text-white leading-snug">Actívala para ver qué bus te sirve y cuánto falta para que llegue a ti.</p>
+                </div>
+              </div>
+              <div className="px-3 pb-2.5 flex items-center gap-2">
+                <button
+                  onClick={() => locateMe()}
+                  disabled={locating}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-bold rounded-xl px-3 py-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+                  style={{ background: "var(--color-gold)", color: "var(--color-navy)" }}
+                >
+                  {locating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LocateFixed className="w-3.5 h-3.5" />}
+                  {locating ? "Activando…" : "Activar"}
+                </button>
+                <button
+                  onClick={dismissPromptUbicacion}
+                  className="text-xs font-semibold px-3 py-2 rounded-xl text-white/70 hover:text-white transition-colors"
+                >
+                  Ahora no
+                </button>
+              </div>
+            </div>
+          )}
           {/* Hay servicio pero el usuario aún no eligió ruta: el mapa se ve sin buses.
               Guía para quien recién entra: se puede cerrar con la X o deslizándola,
               y una vez cerrada no vuelve a aparecer (se recuerda en localStorage). */}
-          {activeBuses.length > 0 && !rutasLoading && rutas.length > 0 && selectedRutaId === null && !modoDestino && showGuiaMapa && (
+          {activeBuses.length > 0 && !rutasLoading && rutas.length > 0 && selectedRutaId === null && !modoDestino && !mostrarPromptUbicacion && showGuiaMapa && (
             <div
               className="pointer-events-auto relative rounded-2xl shadow-xl overflow-hidden w-[calc(100vw-32px)] max-w-[300px] animate-in fade-in slide-in-from-top-2 duration-300"
               style={{
@@ -2456,7 +2548,7 @@ export default function Pasajero() {
                   <MapPin className="w-8 h-8" style={{ color: "var(--color-sky)" }} />,
                   "Activa tu ubicación",
                   "Para mostrarte los paraderos más cercanos a ti, ordenados por distancia.",
-                  <button onClick={locateMe} disabled={locating} className="inline-flex items-center gap-2 px-6 h-12 rounded-2xl text-white font-bold shadow-sm active:scale-95 transition-transform disabled:opacity-60" style={{ background: "var(--color-blue)" }}>
+                  <button onClick={() => locateMe()} disabled={locating} className="inline-flex items-center gap-2 px-6 h-12 rounded-2xl text-white font-bold shadow-sm active:scale-95 transition-transform disabled:opacity-60" style={{ background: "var(--color-blue)" }}>
                     {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />} Usar mi ubicación
                   </button>,
                 );
