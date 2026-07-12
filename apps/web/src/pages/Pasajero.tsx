@@ -1915,11 +1915,14 @@ export default function Pasajero() {
           </span>
         </div>
 
-        {/* FAB "ver ruta completa" — solo con una ruta seleccionada, encima del de ubicación */}
+        {/* FAB "ver ruta completa" — solo con una ruta seleccionada, encima del de ubicación.
+            z-index por encima del bottom nav (z-[1002]) y el offset suma el "notch" del
+            gesto (safe-area-inset-bottom): así, en CUALQUIER navegador/dispositivo, queda
+            claramente arriba de la barra "Inicio/Rutas/…" y no se ve tapado por ella. */}
         {vista === "mapa" && selectedRutaId !== null && (
           <button
             onClick={encuadrarRuta}
-            className="absolute right-4 z-[900] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform bottom-[148px] md:bottom-[72px]"
+            className="absolute right-4 z-[1010] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform bottom-[calc(148px_+_env(safe-area-inset-bottom,0px))] md:bottom-[72px]"
             style={{ background: "var(--color-white)", color: "var(--color-navy)", border: "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
             aria-label="Ver la ruta completa en el mapa"
             title="Ver ruta completa"
@@ -1933,7 +1936,7 @@ export default function Pasajero() {
           <button
             onClick={() => locateMe()}
             disabled={locating}
-            className="absolute right-4 z-[900] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform disabled:opacity-60 bottom-[88px] md:bottom-4"
+            className="absolute right-4 z-[1010] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform disabled:opacity-60 bottom-[calc(88px_+_env(safe-area-inset-bottom,0px))] md:bottom-4"
             style={{ background: "var(--color-sky)", color: "var(--color-navy)", border: "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
             aria-label="Centrar en mi ubicación"
           >
@@ -1947,7 +1950,7 @@ export default function Pasajero() {
           <button
             ref={fabDestinoRef}
             onClick={armarDestino}
-            className="absolute left-4 z-[900] flex items-center gap-2 h-12 pl-4 pr-5 rounded-full active:scale-95 transition-transform bottom-[88px] md:bottom-4"
+            className="absolute left-4 z-[1010] flex items-center gap-2 h-12 pl-4 pr-5 rounded-full active:scale-95 transition-transform bottom-[calc(88px_+_env(safe-area-inset-bottom,0px))] md:bottom-4"
             style={{ background: "var(--color-gold)", color: "var(--color-navy)", border: modoDestino ? "3px solid var(--color-navy)" : "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
             aria-label="Elegir mi destino en el mapa"
             aria-pressed={modoDestino}
