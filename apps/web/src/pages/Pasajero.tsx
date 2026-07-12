@@ -2124,7 +2124,7 @@ export default function Pasajero() {
               y una vez cerrada no vuelve a aparecer (se recuerda en localStorage). */}
           {activeBuses.length > 0 && !rutasLoading && rutas.length > 0 && selectedRutaId === null && !modoDestino && showGuiaMapa && (
             <div
-              className="pointer-events-auto relative flex items-center gap-3 rounded-2xl shadow-xl pl-3 pr-2.5 py-2.5 animate-in fade-in slide-in-from-top-2 duration-300"
+              className="pointer-events-auto relative rounded-2xl shadow-xl overflow-hidden w-[calc(100vw-32px)] max-w-[300px] animate-in fade-in slide-in-from-top-2 duration-300"
               style={{
                 background: "linear-gradient(135deg, var(--color-navy), var(--color-blue))",
                 transform: `translateX(${guiaDragX}px)`,
@@ -2136,28 +2136,32 @@ export default function Pasajero() {
               onTouchMove={onGuiaTouchMove}
               onTouchEnd={onGuiaTouchEnd}
             >
-              <span className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(245,183,49,0.22)" }}>
-                <Bus className="w-4 h-4" style={{ color: "var(--color-gold)" }} />
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-[9px] font-bold uppercase tracking-wider leading-none mb-1" style={{ color: "rgba(255,255,255,0.6)" }}>Guía</p>
-                <p className="text-xs font-semibold text-white leading-tight">Elige una ruta para ver los buses en vivo</p>
-              </div>
-              <button
-                onClick={() => setVista("rutas")}
-                className="flex-shrink-0 text-xs font-bold rounded-xl px-3 py-1.5 active:scale-95 transition-transform"
-                style={{ background: "var(--color-gold)", color: "var(--color-navy)" }}
-              >
-                Ver rutas
-              </button>
               <button
                 onClick={dismissGuiaMapa}
                 aria-label="Cerrar guía"
                 title="Cerrar"
-                className="flex-shrink-0 p-1.5 -mr-1 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                className="absolute top-1.5 right-1.5 p-1.5 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors z-10"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
+              <div className="flex items-start gap-2.5 pl-3 pr-7 pt-2.5 pb-2">
+                <span className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "rgba(245,183,49,0.22)" }}>
+                  <Bus className="w-4 h-4" style={{ color: "var(--color-gold)" }} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold uppercase tracking-wider leading-none mb-1" style={{ color: "rgba(255,255,255,0.6)" }}>Guía</p>
+                  <p className="text-xs font-semibold text-white leading-snug">Elige una ruta para ver los buses en vivo</p>
+                </div>
+              </div>
+              <div className="px-3 pb-2.5">
+                <button
+                  onClick={() => setVista("rutas")}
+                  className="w-full text-xs font-bold rounded-xl px-3 py-2 active:scale-[0.98] transition-transform"
+                  style={{ background: "var(--color-gold)", color: "var(--color-navy)" }}
+                >
+                  Ver rutas
+                </button>
+              </div>
             </div>
           )}
           {modoDestino && (
