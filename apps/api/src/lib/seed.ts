@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
-import { usuarios, rutas, paradas, ruta_paradas, buses } from "@workspace/db";
+import { usuarios, rutas, paradas, ruta_paradas, buses, lugares } from "@workspace/db";
 import { logger } from "./logger";
 
 /**
@@ -140,5 +140,31 @@ export async function seedIfEmpty(): Promise<{ seeded: boolean }> {
     ]);
   }
 
+  return { seeded: true };
+}
+
+// Lugares de referencia de Riohacha para que la BÚSQUEDA POR DESTINO del pasajero
+// sirva desde el primer arranque (el admin luego agrega/edita el resto en su
+// panel). Coordenadas reales, alineadas con las paradas del seed demo.
+const LUGARES_INICIALES = [
+  { nombre: "Hospital Nuestra Señora de los Remedios", categoria: "Salud", latitud: 11.549, longitud: -72.91 },
+  { nombre: "Mercado Nuevo", categoria: "Comercio", latitud: 11.542, longitud: -72.906 },
+  { nombre: "Terminal de Transporte", categoria: "Transporte", latitud: 11.535, longitud: -72.905 },
+  { nombre: "Aeropuerto Almirante Padilla", categoria: "Transporte", latitud: 11.525, longitud: -72.926 },
+  { nombre: "Parque Simón Bolívar (Centro)", categoria: "Centro", latitud: 11.5444, longitud: -72.9072 },
+  { nombre: "Muelle Turístico", categoria: "Turismo", latitud: 11.55, longitud: -72.918 },
+];
+
+/**
+ * Siembra los lugares de referencia SOLO si la tabla está vacía. Es independiente
+ * del seed de usuarios/rutas (corre también en producción con SEED_DEMO=false),
+ * para que la búsqueda por destino funcione de entrada. Idempotente por el chequeo
+ * de "vacía". (Edge case aceptado: si el admin borra TODOS los lugares, reaparecen
+ * en el siguiente reinicio; en la práctica siempre habrá al menos uno.)
+ */
+export async function seedLugaresIfEmpty(): Promise<{ seeded: boolean }> {
+  const [yaExiste] = await db.select().from(lugares).limit(1);
+  if (yaExiste) return { seeded: false };
+  await db.insert(lugares).values(LUGARES_INICIALES);
   return { seeded: true };
 }

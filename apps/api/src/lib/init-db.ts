@@ -1,6 +1,6 @@
 import { pool } from "@workspace/db";
 import { logger } from "./logger";
-import { seedIfEmpty } from "./seed";
+import { seedIfEmpty, seedLugaresIfEmpty } from "./seed";
 
 /**
  * Crea las tablas de TransPadilla si aún no existen. Es idempotente
@@ -139,6 +139,18 @@ CREATE TABLE IF NOT EXISTS banners (
   creado_en timestamptz NOT NULL DEFAULT now()
 );
 
+-- Lugares / puntos de interés que el admin registra para que el pasajero busque
+-- su DESTINO por nombre (hospital, mercado, terminal…). Ver routes/lugares.ts.
+CREATE TABLE IF NOT EXISTS lugares (
+  id serial PRIMARY KEY,
+  nombre varchar(100) NOT NULL,
+  categoria varchar(40),
+  latitud real NOT NULL,
+  longitud real NOT NULL,
+  activo boolean NOT NULL DEFAULT true,
+  creado_en timestamptz NOT NULL DEFAULT now()
+);
+
 -- Tokens JWT revocados (cierre de sesión). Se guarda el hash, no el token.
 CREATE TABLE IF NOT EXISTS tokens_revocados (
   id serial PRIMARY KEY,
@@ -204,5 +216,9 @@ export async function initDatabase(): Promise<void> {
   if (process.env["SEED_ON_START"] !== "false") {
     const { seeded } = await seedIfEmpty();
     if (seeded) logger.info("Database seeded with demo data");
+    // Lugares de referencia: independiente del seed demo (corre también en prod),
+    // para que la búsqueda por destino del pasajero funcione desde el arranque.
+    const { seeded: lugaresSeeded } = await seedLugaresIfEmpty();
+    if (lugaresSeeded) logger.info("Lugares de referencia sembrados");
   }
 }

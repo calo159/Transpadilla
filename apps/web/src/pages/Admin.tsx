@@ -7,7 +7,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { getUser, cerrarSesion, homeForRol } from "@/lib/auth";
 import {
-  Bus, LogOut, Map, MapPin, BarChart3,
+  Bus, LogOut, Map, MapPin, MapPinned, BarChart3,
   RefreshCw, Users, Route,
   UserCheck, KeyRound, TrendingUp, Megaphone,
 } from "lucide-react";
@@ -18,6 +18,7 @@ import ParadasTab from "./admin/ParadasTab";
 import ConductoresTab from "./admin/ConductoresTab";
 import ResumenEjecutivoTab from "./admin/ResumenEjecutivoTab";
 import BannersTab from "./admin/BannersTab";
+import LugaresTab from "./admin/LugaresTab";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { LogoTP } from "@/components/LogoTP";
@@ -26,7 +27,7 @@ import { PromptDialog, type PromptOpts } from "@/components/PromptDialog";
 import { CambiarPasswordDialog } from "@/components/CambiarPasswordDialog";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 
-type Tab = "dashboard" | "ejecutivo" | "rutas" | "buses" | "paradas" | "conductores" | "anuncios";
+type Tab = "dashboard" | "ejecutivo" | "rutas" | "buses" | "paradas" | "lugares" | "conductores" | "anuncios";
 
 export default function Admin() {
   useDocumentTitle("Panel admin · TransPadilla");
@@ -69,6 +70,7 @@ export default function Admin() {
     { id: "rutas"       as Tab, label: "Rutas",       icon: <Route className="w-4 h-4" /> },
     { id: "buses"       as Tab, label: "Buses",       icon: <Bus className="w-4 h-4" /> },
     { id: "paradas"     as Tab, label: "Paradas",     icon: <MapPin className="w-4 h-4" /> },
+    { id: "lugares"     as Tab, label: "Lugares",     icon: <MapPinned className="w-4 h-4" /> },
     { id: "conductores" as Tab, label: "Conductores", icon: <UserCheck className="w-4 h-4" /> },
     { id: "anuncios"    as Tab, label: "Anuncios",    icon: <Megaphone className="w-4 h-4" /> },
   ];
@@ -80,6 +82,7 @@ export default function Admin() {
     rutas:       "Gestión de Rutas",
     buses:       "Gestión de Buses",
     paradas:     "Gestión de Paradas",
+    lugares:     "Lugares / Puntos de Interés",
     conductores: "Conductores",
     anuncios:    "Anuncios a Pantalla Completa",
   };
@@ -254,6 +257,9 @@ export default function Admin() {
 
           {/* RESUMEN EJECUTIVO (KPIs + km por ruta + ocupación + descarga PDF/CSV) */}
           {tab === "ejecutivo" && <ResumenEjecutivoTab />}
+
+          {/* LUGARES (puntos de interés para la búsqueda de destino del pasajero) */}
+          {tab === "lugares" && <LugaresTab setConfirmar={setConfirmar} setRenombrar={setRenombrar} />}
 
           {/* ANUNCIOS (banners a pantalla completa para el pasajero) */}
           {tab === "anuncios" && <BannersTab setConfirmar={setConfirmar} />}

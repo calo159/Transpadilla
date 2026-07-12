@@ -13,6 +13,7 @@ import pushRouter from "./push";
 import favoritosRouter from "./favoritos";
 import metricsRouter from "./metrics";
 import bannersRouter from "./banners";
+import lugaresRouter from "./lugares";
 import seedRouter from "./seed";
 
 const router: IRouter = Router();
@@ -31,6 +32,7 @@ router.use(pushRouter);
 router.use(favoritosRouter);
 router.use(metricsRouter);
 router.use(bannersRouter);
+router.use(lugaresRouter);
 router.use(seedRouter);
 
 export default router;

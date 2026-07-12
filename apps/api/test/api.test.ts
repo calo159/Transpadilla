@@ -400,4 +400,60 @@ suite("API (integración)", () => {
       else process.env["METRICS_TOKEN"] = prev;
     }
   });
+
+  it("GET /api/lugares es público y devuelve un array (buscador de destino)", async () => {
+    const res = await request(app).get("/api/lugares");
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    // El seed de lugares corre en initDatabase, no en ensureSchema (que es lo que
+    // usa esta suite), así que no exigimos que venga poblado — solo que responda.
+  });
+
+  it("crear lugar: sin token 401, como pasajero 403, como admin 201", async () => {
+    // Sin token.
+    expect((await request(app).post("/api/lugares").send({ nombre: "Sitio", latitud: 11.5, longitud: -72.9 })).status).toBe(401);
+
+    // Como pasajero → 403.
+    const correo = `pas_lugar_${Date.now()}@ejemplo.com`;
+    await request(app).post("/api/auth/register").send({ nombre: "PasL", correo, password: "Secreto123!Fuerte" });
+    const pasLogin = await request(app).post("/api/auth/login").set("X-Forwarded-For", "203.0.113.70").send({ correo, password: "Secreto123!Fuerte" });
+    const pasTok = pasLogin.body.token as string;
+    expect((await request(app).post("/api/lugares").set("Authorization", `Bearer ${pasTok}`).send({ nombre: "Sitio", latitud: 11.5, longitud: -72.9 })).status).toBe(403);
+
+    // Como admin → 201, y luego visible en la lista pública.
+    const adminLogin = await request(app).post("/api/auth/login").set("X-Forwarded-For", "203.0.113.71").send({ correo: "admin@transpadilla.co", password: "admin123" });
+    if (adminLogin.status !== 200) return; // sin admin demo, nada que comprobar
+    const adminTok = adminLogin.body.token as string;
+    const nombre = `Lugar Test ${Date.now()}`;
+    const crear = await request(app).post("/api/lugares").set("Authorization", `Bearer ${adminTok}`).send({ nombre, categoria: "Salud", latitud: 11.55, longitud: -72.91 });
+    expect(crear.status).toBe(201);
+    expect(crear.body.nombre).toBe(nombre);
+
+    const publico = await request(app).get("/api/lugares");
+    expect((publico.body as { nombre: string }[]).some((l) => l.nombre === nombre)).toBe(true);
+  });
+
+  it("crear lugar: coordenadas fuera de rango → 400", async () => {
+    const adminLogin = await request(app).post("/api/auth/login").set("X-Forwarded-For", "203.0.113.72").send({ correo: "admin@transpadilla.co", password: "admin123" });
+    if (adminLogin.status !== 200) return;
+    const adminTok = adminLogin.body.token as string;
+    const res = await request(app).post("/api/lugares").set("Authorization", `Bearer ${adminTok}`).send({ nombre: "Malo", latitud: 999, longitud: -72.9 });
+    expect(res.status).toBe(400);
+  });
+
+  it("lugar inactivo NO aparece en la lista pública, pero sí en /lugares/todos (admin)", async () => {
+    const adminLogin = await request(app).post("/api/auth/login").set("X-Forwarded-For", "203.0.113.73").send({ correo: "admin@transpadilla.co", password: "admin123" });
+    if (adminLogin.status !== 200) return;
+    const adminTok = adminLogin.body.token as string;
+    const nombre = `Lugar Inactivo ${Date.now()}`;
+    const crear = await request(app).post("/api/lugares").set("Authorization", `Bearer ${adminTok}`).send({ nombre, latitud: 11.54, longitud: -72.90, activo: false });
+    expect(crear.status).toBe(201);
+
+    const publico = await request(app).get("/api/lugares");
+    expect((publico.body as { nombre: string }[]).some((l) => l.nombre === nombre)).toBe(false);
+
+    const todos = await request(app).get("/api/lugares/todos").set("Authorization", `Bearer ${adminTok}`);
+    expect(todos.status).toBe(200);
+    expect((todos.body as { nombre: string }[]).some((l) => l.nombre === nombre)).toBe(true);
+  });
 });

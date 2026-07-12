@@ -35,9 +35,22 @@ export function RutaCard({
   dimmed?: boolean;
   compact?: boolean;
 }) {
-  const origen = ruta.paradas[0]?.nombre;
-  const destino = ruta.paradas[ruta.paradas.length - 1]?.nombre;
-  const hayTrayecto = ruta.paradas.length >= 2 && !!origen && !!destino;
+  // "Pasa por": hasta 3 paradas representativas repartidas a lo largo del recorrido
+  // (no los extremos, que en un circuito cerrado quedan en la misma zona y confunden).
+  // Ayuda al usuario a reconocer "esta ruta me sirve" de un vistazo.
+  const pasaPor = (() => {
+    const nombres = ruta.paradas.map((p) => p.nombre).filter(Boolean) as string[];
+    if (nombres.length <= 3) return nombres;
+    // Posiciones ~1/6, 3/6, 5/6 del recorrido (interiores, bien repartidas).
+    const idx = [0, 1, 2].map((k) => Math.round(((k + 0.5) / 3) * nombres.length));
+    const elegidos: string[] = [];
+    for (const i of idx) {
+      const n = nombres[Math.min(i, nombres.length - 1)];
+      if (n && !elegidos.includes(n)) elegidos.push(n);
+    }
+    return elegidos;
+  })();
+  const hayTrayecto = pasaPor.length > 0;
 
   return (
     <div
@@ -106,17 +119,16 @@ export function RutaCard({
         </button>
       </div>
 
-      {/* Trayecto: origen ●───● destino (en el color de la ruta) */}
+      {/* "Pasa por": paradas representativas del recorrido (en vez de los extremos,
+          que en un circuito cerrado quedan en la misma zona y confunden). */}
       {hayTrayecto ? (
-        <div className={compact ? "mt-2.5 pl-0.5" : "mt-3 pl-0.5"}>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: ruta.color, boxShadow: `0 0 0 3px ${ruta.color}22` }} />
-            <span className="flex-1 h-[3px] rounded-full" style={{ background: `linear-gradient(90deg, ${ruta.color}, ${ruta.color}66)` }} />
-            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: "#fff", border: `2.5px solid ${ruta.color}` }} />
-          </div>
-          <div className="flex justify-between mt-1.5 gap-2" style={{ color: "var(--color-gray-text)" }}>
-            <span className={`truncate max-w-[46%] font-medium ${compact ? "text-[11px]" : "text-xs"}`}>{origen}</span>
-            <span className={`truncate max-w-[46%] text-right font-medium ${compact ? "text-[11px]" : "text-xs"}`}>{destino}</span>
+        <div className={compact ? "mt-2 pl-0.5" : "mt-2.5 pl-0.5"}>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: ruta.color }} />
+            <p className={`truncate ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--color-gray-text)" }}>
+              <span className="font-semibold" style={{ color: "var(--color-navy)" }}>Pasa por: </span>
+              {pasaPor.join(" · ")}
+            </p>
           </div>
         </div>
       ) : (

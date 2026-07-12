@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useGetRutas, useGetBuses, getGetBusesQueryKey, useGetBannerActivo, getGetBannerActivoQueryKey } from "@workspace/api-client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { cerrarSesion, getUser } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import {
@@ -9,7 +9,7 @@ import {
   Search, Clock, LogIn, Shield, ChevronRight, ChevronUp,
   Menu, MessageCircle, Instagram, LocateFixed, Loader2, Star, HelpCircle, Navigation, RefreshCw,
   User, Map as MapIcon, Route as RouteIcon, Check, History, Download, Maximize2,
-  Share, SquarePlus,
+  Share, SquarePlus, MapPinned,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +41,15 @@ import { ocupacionInfo, OCUPACION_ORDEN } from "@/lib/ocupacion";
 interface BeforeInstallPrompt extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
+/** Lugar / punto de interés (GET /api/lugares) para la búsqueda por destino. */
+interface Lugar {
+  id: number;
+  nombre: string;
+  categoria: string | null;
+  latitud: number;
+  longitud: number;
 }
 
 export default function Pasajero() {
@@ -89,6 +98,8 @@ export default function Pasajero() {
   // Menú ☰ del header (acciones: destino, atención, info).
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState("");
+  // Ref al buscador (móvil) para enfocarlo desde la bienvenida ("¿A dónde vas?").
+  const busquedaRef = useRef<HTMLInputElement>(null);
   // Estado real de la conexión en vivo (Socket.IO). Empieza false; "connect" lo pone true.
   const [conectado, setConectado] = useState(false);
   // Gracia de arranque: en los primeros instantes el socket aún no conectó, así que
@@ -214,6 +225,13 @@ export default function Pasajero() {
     // Tras cerrar la guía, deja la lista de rutas abierta y a la vista (móvil).
     setVista("rutas");
   };
+  // Botón principal de la bienvenida: cierra la guía y lleva al usuario directo a
+  // buscar su DESTINO por nombre (enfoca el buscador). Es el flujo pensado para
+  // quien no sabe qué ruta coger.
+  const empezarPorDestino = () => {
+    dismissWelcome();
+    setTimeout(() => busquedaRef.current?.focus(), 120); // tras el cambio de vista
+  };
   // Chip "elige una ruta": guía para quien recién entra y ve el mapa vacío.
   // Se cierra con la X o deslizándolo, y una vez cerrada no vuelve a salir.
   const [showGuiaMapa, setShowGuiaMapa] = useState(
@@ -308,6 +326,17 @@ export default function Pasajero() {
   const { data: buses = [], refetch: refetchBuses } = useGetBuses({
     query: { queryKey: getGetBusesQueryKey(), refetchInterval: 10000 },
   });
+  // Lugares / puntos de interés que el admin registró: dejan al pasajero buscar su
+  // DESTINO por nombre (hospital, mercado…) y disparar la recomendación de ruta.
+  const { data: lugares = [] } = useQuery({
+    queryKey: ["lugares"],
+    queryFn: async (): Promise<Lugar[]> => {
+      const res = await apiFetch("/api/lugares");
+      if (!res.ok) throw new Error("No se pudieron cargar los lugares");
+      return res.json();
+    },
+    staleTime: 5 * 60_000, // cambian poco; no hace falta refrescarlos seguido
+  });
   const reintentarCarga = () => { refetchRutas(); refetchBuses(); };
 
   // Espejo de `buses` en un ref: permite que el socket y los marcadores lean el
@@ -335,6 +364,15 @@ export default function Pasajero() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [rutas, buses, busqueda, favoritos],
   );
+  // Lugares que casan con la búsqueda (por nombre o categoría). Solo con texto:
+  // sin búsqueda no se listan (la lista de rutas manda cuando no se busca nada).
+  const lugaresFiltrados = useMemo(() => {
+    const q = busqueda.trim().toLowerCase();
+    if (!q) return [] as Lugar[];
+    return lugares
+      .filter((l) => l.nombre.toLowerCase().includes(q) || (l.categoria ?? "").toLowerCase().includes(q))
+      .slice(0, 6);
+  }, [lugares, busqueda]);
   const selectedRuta = useMemo(() => rutas.find((r) => r.id === selectedRutaId), [rutas, selectedRutaId]);
   const activeBuses = useMemo(() => buses.filter((b) => b.estado === "activo"), [buses]);
   // ETA aproximada por ruta para la lista del sidebar (sin llamar al endpoint
@@ -907,6 +945,54 @@ export default function Pasajero() {
     setDestino(null);
     setSelectedRutaId(null);
   };
+  // Elegir un LUGAR buscado por nombre = fijar ese punto como destino (sin tener
+  // que tocarlo en el mapa) y disparar la recomendación de ruta que ya existe.
+  const elegirLugar = (lugar: Lugar) => {
+    const p = { lat: lugar.latitud, lng: lugar.longitud };
+    setModoDestino(false);
+    setBusqueda("");
+    setDestino(p);
+    setVista("mapa");
+    const sug = recomendarRuta(rutas, p, userPos ?? undefined);
+    if (sug) handleSelectRuta(sug.ruta.id);
+    setSheetSnap("half");
+    // Centrar el mapa en el destino elegido para que se vea de inmediato.
+    if (mapRef.current) mapRef.current.setView([p.lat, p.lng], 15);
+  };
+  // Bloque de resultados de LUGARES en el buscador (grupo etiquetado, filas
+  // compactas). Se muestra arriba de las rutas cuando la búsqueda casa un lugar.
+  // Tocar uno fija el destino y dispara la recomendación (elegirLugar).
+  const grupoLugares = () => {
+    if (lugaresFiltrados.length === 0) return null;
+    return (
+      <div className="mb-3">
+        <p className="text-[10px] font-bold uppercase tracking-widest px-1 mb-1.5" style={{ color: "var(--color-gray-text)" }}>
+          Lugares
+        </p>
+        <div className="space-y-1.5">
+          {lugaresFiltrados.map((l) => (
+            <button
+              key={l.id}
+              onClick={() => elegirLugar(l)}
+              className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left active:scale-[0.99] transition-transform"
+              style={{ background: "var(--color-white)", border: "1px solid #e8edf4" }}
+            >
+              <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(37,88,165,0.10)" }}>
+                <MapPinned className="w-4 h-4" style={{ color: "var(--color-blue)" }} />
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-semibold truncate" style={{ color: "var(--color-navy)" }}>{l.nombre}</span>
+                {l.categoria && <span className="block text-[11px] truncate" style={{ color: "var(--color-gray-text)" }}>{l.categoria}</span>}
+              </span>
+              <span className="flex items-center gap-1 text-[11px] font-bold flex-shrink-0" style={{ color: "var(--color-blue)" }}>
+                Ver ruta <ChevronRight className="w-3.5 h-3.5" />
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   // ── Card de detalle: snap de 3 estados (peek/half/full). Bajarlo NO cierra ──
   // (solo la X cierra). Orden de menor a mayor altura para el paso de los gestos.
@@ -1142,7 +1228,7 @@ export default function Pasajero() {
           <Input
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar ruta"
+            placeholder="Busca tu destino o una ruta"
             className="pl-9 h-10 text-xs rounded-xl border-transparent"
             style={{ background: "#f4f7fb", color: "var(--color-navy)" }}
           />
@@ -1172,6 +1258,8 @@ export default function Pasajero() {
 
       {/* Lista de rutas */}
       <div className="flex-1 overflow-y-auto py-2">
+        {/* Lugares que casan con la búsqueda (buscar por destino) */}
+        {lugaresFiltrados.length > 0 && <div className="px-3 pb-1">{grupoLugares()}</div>}
         <p className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5" style={{ color: "#8a97a8" }}>
           Rutas {rutasFiltradas.length !== rutas.length && `(${rutasFiltradas.length})`}
         </p>
@@ -1179,7 +1267,7 @@ export default function Pasajero() {
           : rutasLoading && rutas.length === 0 ? skeletonRutas
           : rutas.length === 0 ? <p className="px-4 py-8 text-xs text-muted-foreground text-center">No hay rutas configuradas todavía.</p>
           : null}
-        {busqueda && rutasFiltradas.length === 0 && rutas.length > 0 && (
+        {busqueda && rutasFiltradas.length === 0 && lugaresFiltrados.length === 0 && rutas.length > 0 && (
           <p className="px-4 py-8 text-xs text-muted-foreground text-center">Sin resultados para "{busqueda}"</p>
         )}
         <div className="px-2 space-y-0.5">
@@ -1797,11 +1885,12 @@ export default function Pasajero() {
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: "var(--color-blue)" }} />
             <input
+              ref={busquedaRef}
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               onFocus={() => setVista("rutas")}
-              placeholder="Buscar ruta…"
-              aria-label="Buscar ruta"
+              placeholder="Busca tu destino o una ruta"
+              aria-label="Busca tu destino o una ruta"
               className="w-full h-12 pl-12 pr-10 text-sm rounded-2xl outline-none border-0 shadow-md"
               style={{ background: "#fff", color: "var(--color-navy)" }}
             />
@@ -1933,11 +2022,11 @@ export default function Pasajero() {
                   <p className="text-[11px] font-semibold" style={{ color: "var(--tp-yellow)" }}>Rastrea tu bus en tiempo real</p>
                 </div>
               </div>
-              <p className="text-sm text-white/70 mb-3">En 3 pasos sabes cuándo pasa tu bus:</p>
+              <p className="text-sm text-white/70 mb-3">¿No sabes qué bus coger? Así de fácil:</p>
               <div className="space-y-2.5 mb-4">
                 {[
-                  { n: "1", txt: "Elige tu ruta en la lista de abajo." },
-                  { n: "2", txt: "Mira el bus moverse en vivo en el mapa." },
+                  { n: "1", txt: "Dinos a dónde vas (hospital, mercado…) y te decimos qué bus coger." },
+                  { n: "2", txt: "O elige una ruta y mira el bus moverse en vivo en el mapa." },
                   { n: "3", txt: "Lee cuántos minutos faltan para que llegue." },
                 ].map((step) => (
                   <div key={step.n} className="flex items-center gap-3">
@@ -1950,11 +2039,11 @@ export default function Pasajero() {
                 ))}
               </div>
               <Button
-                onClick={dismissWelcome}
+                onClick={empezarPorDestino}
                 className="w-full h-12 rounded-xl font-bold text-white border-0 text-base"
                 style={{ background: "linear-gradient(135deg, #2558A5 0%, var(--tp-sky) 100%)" }}
               >
-                Elegir mi ruta →
+                <Navigation className="w-4 h-4 mr-2" /> ¿A dónde vas? →
               </Button>
               <p className="text-[11px] text-white/40 text-center mt-2">No necesitas cuenta para ver los buses.</p>
             </div>
@@ -2287,18 +2376,36 @@ export default function Pasajero() {
               if (vista === "rutas") {
                 if (rutasError) return errorCarga;
                 if (rutasLoading && rutas.length === 0) return skeletonRutas;
-                if (rutasFiltradas.length === 0)
+                // Sin coincidencias NI en rutas NI en lugares: estado vacío útil.
+                if (rutasFiltradas.length === 0 && lugaresFiltrados.length === 0) {
+                  if (!busqueda) {
+                    return Estado(
+                      <Search className="w-8 h-8" style={{ color: "var(--color-sky)" }} />,
+                      "No hay rutas",
+                      "Aún no hay rutas configuradas.",
+                    );
+                  }
                   return Estado(
-                    <Search className="w-8 h-8" style={{ color: "var(--color-sky)" }} />,
-                    busqueda ? "Sin resultados" : "No hay rutas",
-                    busqueda ? `No encontramos rutas para "${busqueda}".` : "Aún no hay rutas configuradas.",
+                    <Navigation className="w-8 h-8" style={{ color: "var(--color-sky)" }} />,
+                    "Sin resultados",
+                    `No encontramos "${busqueda}" entre las rutas ni los lugares. Prueba con un nombre de lugar (hospital, mercado, terminal…) o marca tu destino en el mapa.`,
+                    <button
+                      onClick={() => { setBusqueda(""); setVista("mapa"); armarDestino(); }}
+                      className="inline-flex items-center gap-2 px-6 h-12 rounded-2xl text-white font-bold shadow-sm active:scale-95 transition-transform"
+                      style={{ background: "var(--color-blue)" }}
+                    >
+                      <Navigation className="w-4 h-4" /> ¿A dónde vas?
+                    </button>,
                   );
+                }
                 // Rutas vistas recientemente (solo sin búsqueda activa).
                 const recientesRutas = busqueda
                   ? []
                   : recientes.map((id) => rutas.find((r) => r.id === id)).filter((r): r is typeof rutas[number] => !!r);
                 return (
                   <>
+                    {/* Lugares que casan con la búsqueda (buscar por destino) */}
+                    {grupoLugares()}
                     {recientesRutas.length > 0 && (
                       <>
                         {SubHeader(<History className="w-4 h-4" />, "Última ruta")}
@@ -2306,8 +2413,12 @@ export default function Pasajero() {
                         <div className="h-1" />
                       </>
                     )}
-                    {Header("Rutas", "Toca una para verla en el mapa", rutasFiltradas.length)}
-                    {rutasFiltradas.map(RouteCard)}
+                    {rutasFiltradas.length > 0 && (
+                      <>
+                        {Header("Rutas", "Toca una para verla en el mapa", rutasFiltradas.length)}
+                        {rutasFiltradas.map(RouteCard)}
+                      </>
+                    )}
                   </>
                 );
               }

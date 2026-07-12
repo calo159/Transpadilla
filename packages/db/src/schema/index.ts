@@ -186,6 +186,21 @@ export const banners = pgTable("banners", {
   creado_en: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Lugares / puntos de interés de la ciudad (hospital, mercado, terminal,
+// universidad, centro…) que el admin registra para que el pasajero busque su
+// DESTINO por nombre. Al elegir uno, la app recomienda la mejor ruta hacia él
+// (ver lib/sugerencia.ts en el frontend). Solo `activo` se muestra al pasajero.
+export const lugares = pgTable("lugares", {
+  id: serial("id").primaryKey(),
+  nombre: varchar("nombre", { length: 100 }).notNull(),
+  // Categoría opcional (Salud, Comercio, Transporte…) para agrupar/ordenar.
+  categoria: varchar("categoria", { length: 40 }),
+  latitud: real("latitud").notNull(),
+  longitud: real("longitud").notNull(),
+  activo: boolean("activo").notNull().default(true),
+  creado_en: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // Lista negra de tokens JWT revocados (cierre de sesión real). Se guarda el hash
 // del token, no el token. Se purga cuando `expira_en` pasa (ya no hace falta).
 export const tokens_revocados = pgTable("tokens_revocados", {
@@ -203,3 +218,4 @@ export type Bus = typeof buses.$inferSelect;
 export type PosicionHistorial = typeof posiciones_historial.$inferSelect;
 export type Auditoria = typeof auditoria.$inferSelect;
 export type Banner = typeof banners.$inferSelect;
+export type Lugar = typeof lugares.$inferSelect;
