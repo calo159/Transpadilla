@@ -1112,6 +1112,14 @@ export default function Pasajero() {
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
     );
   };
+  // Quita "mi ubicación": borra el marcador y limpia la posición (segundo toque del
+  // FAB de ubicación = apagarla). Las funciones que la usan (recomendación, paradero
+  // más cercano) vuelven solas a su modo "sin ubicación".
+  const quitarUbicacion = () => {
+    userMarkerRef.current?.remove();
+    userMarkerRef.current = null;
+    setUserPos(null);
+  };
 
   // Al entrar: consultar el estado del permiso de ubicación (Permissions API) para
   // decidir, con lógica, qué hacer sin ser agresivos:
@@ -1997,14 +2005,16 @@ export default function Pasajero() {
           </button>
         )}
 
-        {/* FAB ubicación (sky) — abajo-derecha */}
+        {/* FAB ubicación (sky) — abajo-derecha. Toca para ubicarte; toca de nuevo para
+            quitar tu ubicación (toggle). Cuando está activa, el borde se pone navy. */}
         {vista === "mapa" && (
           <button
-            onClick={() => locateMe()}
+            onClick={() => (userPos ? quitarUbicacion() : locateMe())}
             disabled={locating}
             className="absolute right-4 z-[1010] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform disabled:opacity-60 bottom-[calc(88px_+_env(safe-area-inset-bottom,0px))] md:bottom-4"
-            style={{ background: "var(--color-sky)", color: "var(--color-navy)", border: "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
-            aria-label="Centrar en mi ubicación"
+            style={{ background: "var(--color-sky)", color: "var(--color-navy)", border: userPos ? "3px solid var(--color-navy)" : "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
+            aria-label={userPos ? "Quitar mi ubicación" : "Centrar en mi ubicación"}
+            aria-pressed={!!userPos}
           >
             {locating ? <Loader2 className="w-5 h-5 animate-spin" /> : <LocateFixed className="w-5 h-5" />}
           </button>
@@ -2015,11 +2025,11 @@ export default function Pasajero() {
         {vista === "mapa" && (
           <button
             ref={fabDestinoRef}
-            onClick={armarDestino}
+            onClick={() => (modoDestino || destino ? limpiarDestino() : armarDestino())}
             className="absolute left-4 z-[1010] flex items-center gap-2 h-12 pl-4 pr-5 rounded-full active:scale-95 transition-transform bottom-[calc(88px_+_env(safe-area-inset-bottom,0px))] md:bottom-4"
-            style={{ background: "var(--color-gold)", color: "var(--color-navy)", border: modoDestino ? "3px solid var(--color-navy)" : "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
-            aria-label="Elegir mi destino en el mapa"
-            aria-pressed={modoDestino}
+            style={{ background: "var(--color-gold)", color: "var(--color-navy)", border: modoDestino || destino ? "3px solid var(--color-navy)" : "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
+            aria-label={modoDestino || destino ? "Cancelar destino" : "Elegir mi destino en el mapa"}
+            aria-pressed={modoDestino || !!destino}
           >
             <Navigation className="w-5 h-5 flex-shrink-0" />
             <span className="text-sm font-extrabold whitespace-nowrap">¿A dónde vas?</span>
