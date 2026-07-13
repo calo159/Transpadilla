@@ -1982,7 +1982,13 @@ export default function Pasajero() {
   const hojaTapaFabs = (selectedRutaId !== null || !!destino) && sheetSnap !== "peek";
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" style={{ background: "#fff", ["--tp-nav-h" as string]: `${navH}px` } as React.CSSProperties}>
+    // h-dvh (100dvh) en vez de h-screen (100vh): en un TAB normal del navegador (no
+    // instalado como PWA), la barra de Chrome ocupa espacio variable y 100vh no la
+    // descuenta (se mide contra el viewport de layout, no el visible real) — el
+    // contenedor quedaba más alto de lo visible y los FAB (dentro) terminaban más
+    // abajo que el bottom-nav (fixed, anclado al viewport visual real), solapándose.
+    // 100dvh sigue el viewport VISIBLE de verdad, igual en PWA y en navegador normal.
+    <div className="flex flex-col h-dvh overflow-hidden" style={{ background: "#fff", ["--tp-nav-h" as string]: `${navH}px` } as React.CSSProperties}>
 
       {/* ── Fila sidebar + mapa (escritorio sin TopBar: el sidebar lleva la marca) ── */}
       <div className="flex flex-1 overflow-hidden">
