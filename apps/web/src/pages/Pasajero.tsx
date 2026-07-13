@@ -1957,6 +1957,12 @@ export default function Pasajero() {
     );
   };
 
+  // La hoja de detalle/recomendación sube desde abajo (destino elegido o ruta
+  // seleccionada). Cuando está ABIERTA y no minimizada (peek), tapa los FAB de la
+  // esquina inferior → se ocultan para no solaparse con la lista. En "peek" (mapa
+  // visible) los FAB siguen disponibles.
+  const hojaTapaFabs = (selectedRutaId !== null || !!destino) && sheetSnap !== "peek";
+
   return (
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: "#fff" }}>
 
@@ -1993,7 +1999,7 @@ export default function Pasajero() {
             z-index por encima del bottom nav (z-[1002]) y el offset suma el "notch" del
             gesto (safe-area-inset-bottom): así, en CUALQUIER navegador/dispositivo, queda
             claramente arriba de la barra "Inicio/Rutas/…" y no se ve tapado por ella. */}
-        {vista === "mapa" && selectedRutaId !== null && (
+        {vista === "mapa" && selectedRutaId !== null && !hojaTapaFabs && (
           <button
             onClick={encuadrarRuta}
             className="absolute right-4 z-[1010] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform bottom-[calc(148px_+_env(safe-area-inset-bottom,0px))] md:bottom-[72px]"
@@ -2006,8 +2012,9 @@ export default function Pasajero() {
         )}
 
         {/* FAB ubicación (sky) — abajo-derecha. Toca para ubicarte; toca de nuevo para
-            quitar tu ubicación (toggle). Cuando está activa, el borde se pone navy. */}
-        {vista === "mapa" && (
+            quitar tu ubicación (toggle). Cuando está activa, el borde se pone navy.
+            Se oculta cuando la hoja de detalle la tapa (ver hojaTapaFabs). */}
+        {vista === "mapa" && !hojaTapaFabs && (
           <button
             onClick={() => (userPos ? quitarUbicacion() : locateMe())}
             disabled={locating}
@@ -2021,11 +2028,14 @@ export default function Pasajero() {
         )}
 
         {/* Botón "¿A dónde vas?" (gold) — abajo-izquierda. Píldora CON texto: su
-            función (recomendar ruta por destino) no se descubre si es solo un ícono. */}
-        {vista === "mapa" && (
+            función (recomendar ruta por destino) no se descubre si es solo un ícono.
+            Se OCULTA cuando ya hay un destino elegido o una ruta seleccionada: en ese
+            caso sube la hoja de detalle/recomendación y el botón se solapaba sobre
+            ella (la hoja ya trae su propia ✕ para cancelar). */}
+        {vista === "mapa" && !destino && selectedRutaId === null && (
           <button
             ref={fabDestinoRef}
-            onClick={() => (modoDestino || destino ? limpiarDestino() : armarDestino())}
+            onClick={() => (modoDestino ? limpiarDestino() : armarDestino())}
             className="absolute left-4 z-[1010] flex items-center gap-2 h-12 pl-4 pr-5 rounded-full active:scale-95 transition-transform bottom-[calc(88px_+_env(safe-area-inset-bottom,0px))] md:bottom-4"
             style={{ background: "var(--color-gold)", color: "var(--color-navy)", border: modoDestino || destino ? "3px solid var(--color-navy)" : "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
             aria-label={modoDestino || destino ? "Cancelar destino" : "Elegir mi destino en el mapa"}
