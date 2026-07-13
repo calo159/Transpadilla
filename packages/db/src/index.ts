@@ -45,6 +45,16 @@ export const pool = new Pool({
       }
     : {}),
 });
+// Sin este handler, un error en una conexión INACTIVA del pool (p. ej. el pooler
+// de Supabase corta conexiones ociosas → `ECONNRESET`) se emite como evento
+// 'error' no manejado y **tumba todo el proceso de Node**. `pg` ya descarta y
+// reemplaza la conexión rota sola; aquí solo hay que registrarlo para que la API
+// siga viva. Es un evento de conexión ociosa, no de una consulta (esas las maneja
+// su propio try/catch en las rutas).
+pool.on("error", (err) => {
+  console.error("[db] Error en una conexión inactiva del pool (se descarta y se reemplaza):", err.message);
+});
+
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";
