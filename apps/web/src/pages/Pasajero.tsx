@@ -1705,15 +1705,15 @@ export default function Pasajero() {
   // Card de detalle deslizable: aparece SOLO al seleccionar una ruta/bus o al pedir
   // una recomendación de destino. Se arrastra desde la barrita (swipe ↓ cierra/colapsa,
   // ↑ expande, tap alterna); el contenido scrollea aparte. Mapa limpio el resto del tiempo.
-  // z-[1002]: al expandirse debe quedar SOBRE la capa ambiente z-[1001] (buscador,
-  // banner instalar, bienvenida, píldora) para que su cabecera con la X (más abajo)
-  // no quede tapada por el buscador y sea fácil de cerrar. Sigue por debajo de los
-  // modales (ayuda/banner full) y no solapa el bottom-nav (está anclada en bottom-[72px]).
+  // z-[1005]: por ENCIMA de los FAB del mapa (z-[1003]) para que, al deslizar la hoja
+  // hacia abajo, los FAB queden DETRÁS de ella; y sobre la capa ambiente z-[1001]
+  // (buscador, banner, bienvenida). Sigue por debajo de los modales globales
+  // (ayuda z-[1006], anuncio, guía) y no solapa el bottom-nav (anclada en bottom-[72px]).
   const MobileSheet = () => {
     if (!selectedRuta && !destino) return null;
     return (
       <div
-        className="md:hidden fixed left-0 right-0 bottom-[72px] z-[1002] rounded-t-3xl overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-300 ease-out"
+        className="md:hidden fixed left-0 right-0 bottom-[72px] z-[1005] rounded-t-3xl overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-300 ease-out"
         style={{
           background: "var(--color-white)",
           boxShadow: "0 -8px 28px rgba(27,59,111,0.18)",
@@ -1996,13 +1996,14 @@ export default function Pasajero() {
         </div>
 
         {/* FAB "ver ruta completa" — solo con una ruta seleccionada, encima del de ubicación.
-            z-index por encima del bottom nav (z-[1002]) y el offset suma el "notch" del
-            gesto (safe-area-inset-bottom): así, en CUALQUIER navegador/dispositivo, queda
-            claramente arriba de la barra "Inicio/Rutas/…" y no se ve tapado por ella. */}
+            z-[1003]: por ENCIMA del bottom nav (z-[1002]) para no quedar recortados por él, y por
+            DEBAJO de la hoja de detalle (z-[1005]) para que al deslizarla hacia abajo los FAB
+            queden detrás de ella. El offset (safe-area-inset-bottom) los mantiene además
+            físicamente por encima del bottom nav en cualquier dispositivo. */}
         {vista === "mapa" && selectedRutaId !== null && !hojaTapaFabs && (
           <button
             onClick={encuadrarRuta}
-            className="absolute right-4 z-[1010] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform bottom-[calc(148px_+_env(safe-area-inset-bottom,0px))] md:bottom-[72px]"
+            className="absolute right-4 z-[1003] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform bottom-[calc(148px_+_env(safe-area-inset-bottom,0px))] md:bottom-[72px]"
             style={{ background: "var(--color-white)", color: "var(--color-navy)", border: "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
             aria-label="Ver la ruta completa en el mapa"
             title="Ver ruta completa"
@@ -2018,7 +2019,7 @@ export default function Pasajero() {
           <button
             onClick={() => (userPos ? quitarUbicacion() : locateMe())}
             disabled={locating}
-            className="absolute right-4 z-[1010] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform disabled:opacity-60 bottom-[calc(88px_+_env(safe-area-inset-bottom,0px))] md:bottom-4"
+            className="absolute right-4 z-[1003] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform disabled:opacity-60 bottom-[calc(88px_+_env(safe-area-inset-bottom,0px))] md:bottom-4"
             style={{ background: "var(--color-sky)", color: "var(--color-navy)", border: userPos ? "3px solid var(--color-navy)" : "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
             aria-label={userPos ? "Quitar mi ubicación" : "Centrar en mi ubicación"}
             aria-pressed={!!userPos}
@@ -2036,7 +2037,7 @@ export default function Pasajero() {
           <button
             ref={fabDestinoRef}
             onClick={() => (modoDestino ? limpiarDestino() : armarDestino())}
-            className="absolute left-4 z-[1010] flex items-center gap-2 h-12 pl-4 pr-5 rounded-full active:scale-95 transition-transform bottom-[calc(88px_+_env(safe-area-inset-bottom,0px))] md:bottom-4"
+            className="absolute left-4 z-[1003] flex items-center gap-2 h-12 pl-4 pr-5 rounded-full active:scale-95 transition-transform bottom-[calc(88px_+_env(safe-area-inset-bottom,0px))] md:bottom-4"
             style={{ background: "var(--color-gold)", color: "var(--color-navy)", border: modoDestino || destino ? "3px solid var(--color-navy)" : "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
             aria-label={modoDestino || destino ? "Cancelar destino" : "Elegir mi destino en el mapa"}
             aria-pressed={modoDestino || !!destino}
@@ -2321,9 +2322,9 @@ export default function Pasajero() {
           </div>
         )}
 
-        {/* Panel de ayuda "¿Cómo funciona?" */}
+        {/* Panel de ayuda "¿Cómo funciona?" — modal por encima de la hoja de detalle (z-[1005]) */}
         {showAyuda && (
-          <div onClick={() => setShowAyuda(false)} className="absolute inset-0 z-[1003] flex items-end md:items-center justify-center p-3 md:p-4" style={{ background: "rgba(0,0,0,0.5)" }}>
+          <div onClick={() => setShowAyuda(false)} className="absolute inset-0 z-[1006] flex items-end md:items-center justify-center p-3 md:p-4" style={{ background: "rgba(0,0,0,0.5)" }}>
             <div
               onClick={(e) => e.stopPropagation()}
               className="pointer-events-auto w-full max-w-md rounded-2xl border shadow-2xl flex flex-col max-h-[85vh]"
