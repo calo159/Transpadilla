@@ -109,6 +109,10 @@ export default function Pasajero() {
   const [ejemploIdx, setEjemploIdx] = useState(0);
   // Ref al buscador (móvil) para enfocarlo desde la bienvenida ("¿A dónde vas?").
   const busquedaRef = useRef<HTMLInputElement>(null);
+  // Alto REAL del bottom nav (varía por dispositivo/escala de fuente). Los FAB del
+  // mapa se anclan encima de este valor para no solaparse con la barra Inicio/Rutas.
+  const bottomNavRef = useRef<HTMLElement>(null);
+  const [navH, setNavH] = useState(76);
   // Estado real de la conexión en vivo (Socket.IO). Empieza false; "connect" lo pone true.
   const [conectado, setConectado] = useState(false);
   // Gracia de arranque: en los primeros instantes el socket aún no conectó, así que
@@ -1121,6 +1125,20 @@ export default function Pasajero() {
     setUserPos(null);
   };
 
+  // Mide el alto real del bottom nav para anclar los FAB justo encima (no importa
+  // si el dispositivo lo hace más alto por la escala de fuente). Re-mide al montar,
+  // tras el primer paint (fuentes) y al cambiar el tamaño/orientación.
+  useEffect(() => {
+    const medir = () => {
+      const h = bottomNavRef.current?.offsetHeight;
+      if (h && h > 0) setNavH(h);
+    };
+    medir();
+    const t = setTimeout(medir, 300);
+    window.addEventListener("resize", medir);
+    return () => { clearTimeout(t); window.removeEventListener("resize", medir); };
+  }, []);
+
   // Al entrar: consultar el estado del permiso de ubicación (Permissions API) para
   // decidir, con lógica, qué hacer sin ser agresivos:
   //  - granted → ubicar en silencio (mejores resultados de una, sin diálogo).
@@ -1964,7 +1982,7 @@ export default function Pasajero() {
   const hojaTapaFabs = (selectedRutaId !== null || !!destino) && sheetSnap !== "peek";
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" style={{ background: "#fff" }}>
+    <div className="flex flex-col h-screen overflow-hidden" style={{ background: "#fff", ["--tp-nav-h" as string]: `${navH}px` } as React.CSSProperties}>
 
       {/* ── Fila sidebar + mapa (escritorio sin TopBar: el sidebar lleva la marca) ── */}
       <div className="flex flex-1 overflow-hidden">
@@ -2003,7 +2021,7 @@ export default function Pasajero() {
         {vista === "mapa" && selectedRutaId !== null && !hojaTapaFabs && (
           <button
             onClick={encuadrarRuta}
-            className="absolute right-4 z-[1003] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform bottom-[calc(148px_+_env(safe-area-inset-bottom,0px))] md:bottom-[72px]"
+            className="absolute right-4 z-[1003] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform bottom-[calc(var(--tp-nav-h)_+_72px_+_env(safe-area-inset-bottom,0px))] md:bottom-[72px]"
             style={{ background: "var(--color-white)", color: "var(--color-navy)", border: "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
             aria-label="Ver la ruta completa en el mapa"
             title="Ver ruta completa"
@@ -2019,7 +2037,7 @@ export default function Pasajero() {
           <button
             onClick={() => (userPos ? quitarUbicacion() : locateMe())}
             disabled={locating}
-            className="absolute right-4 z-[1003] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform disabled:opacity-60 bottom-[calc(88px_+_env(safe-area-inset-bottom,0px))] md:bottom-4"
+            className="absolute right-4 z-[1003] flex items-center justify-center w-12 h-12 rounded-full active:scale-95 transition-transform disabled:opacity-60 bottom-[calc(var(--tp-nav-h)_+_12px_+_env(safe-area-inset-bottom,0px))] md:bottom-4"
             style={{ background: "var(--color-sky)", color: "var(--color-navy)", border: userPos ? "3px solid var(--color-navy)" : "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
             aria-label={userPos ? "Quitar mi ubicación" : "Centrar en mi ubicación"}
             aria-pressed={!!userPos}
@@ -2037,7 +2055,7 @@ export default function Pasajero() {
           <button
             ref={fabDestinoRef}
             onClick={() => (modoDestino ? limpiarDestino() : armarDestino())}
-            className="absolute left-4 z-[1003] flex items-center gap-2 h-12 pl-4 pr-5 rounded-full active:scale-95 transition-transform bottom-[calc(88px_+_env(safe-area-inset-bottom,0px))] md:bottom-4"
+            className="absolute left-4 z-[1003] flex items-center gap-2 h-12 pl-4 pr-5 rounded-full active:scale-95 transition-transform bottom-[calc(var(--tp-nav-h)_+_12px_+_env(safe-area-inset-bottom,0px))] md:bottom-4"
             style={{ background: "var(--color-gold)", color: "var(--color-navy)", border: modoDestino || destino ? "3px solid var(--color-navy)" : "3px solid #fff", boxShadow: "0 6px 16px rgba(15,30,60,0.25)" }}
             aria-label={modoDestino || destino ? "Cancelar destino" : "Elegir mi destino en el mapa"}
             aria-pressed={modoDestino || !!destino}
@@ -2179,7 +2197,7 @@ export default function Pasajero() {
         )}
 
         {/* ── Bottom nav (estilo Stitch): Inicio / Rutas / Favoritos / Perfil ── */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[1002] flex justify-around items-center px-2 pt-2 pb-3 bg-white" style={{ boxShadow: "0 -4px 16px rgba(15,30,60,0.10)" }} aria-label="Navegación principal">
+        <nav ref={bottomNavRef} className="md:hidden fixed bottom-0 left-0 right-0 z-[1002] flex justify-around items-center px-2 pt-2 pb-3 bg-white" style={{ boxShadow: "0 -4px 16px rgba(15,30,60,0.10)" }} aria-label="Navegación principal">
           {([
             { id: "mapa", label: "Inicio", icon: <MapIcon className="w-5 h-5" /> },
             { id: "rutas", label: "Rutas", icon: <RouteIcon className="w-5 h-5" /> },
