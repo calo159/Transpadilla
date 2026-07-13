@@ -105,6 +105,8 @@ export default function Pasajero() {
   // Menú ☰ del header (acciones: destino, atención, info).
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState("");
+  // Índice del ejemplo que rota en el placeholder del buscador (solo cuando está vacío).
+  const [ejemploIdx, setEjemploIdx] = useState(0);
   // Ref al buscador (móvil) para enfocarlo desde la bienvenida ("¿A dónde vas?").
   const busquedaRef = useRef<HTMLInputElement>(null);
   // Estado real de la conexión en vivo (Socket.IO). Empieza false; "connect" lo pone true.
@@ -373,6 +375,23 @@ export default function Pasajero() {
   }, [lugares, busqueda]);
   const selectedRuta = useMemo(() => rutas.find((r) => r.id === selectedRutaId), [rutas, selectedRutaId]);
   const activeBuses = useMemo(() => buses.filter((b) => b.estado === "activo"), [buses]);
+  // Ejemplos que rotan en el placeholder del buscador: se arman con datos reales
+  // (lugares + rutas) para que quede claro que busca AMBAS cosas; fallback estático.
+  const ejemplosBusqueda = useMemo(() => {
+    const deLugares = lugares.map((l) => l.nombre).filter(Boolean).slice(0, 3);
+    const deRutas = rutas.map((r) => r.nombre).filter(Boolean).slice(0, 2);
+    const lista = [...deLugares, ...deRutas];
+    return lista.length > 0 ? lista : ["hospital", "mercado", "terminal", "RUTA A"];
+  }, [lugares, rutas]);
+  // Rota el ejemplo cada ~2.8s, solo mientras el buscador está vacío (para no molestar).
+  useEffect(() => {
+    if (busqueda !== "" || ejemplosBusqueda.length <= 1) return;
+    const t = setInterval(() => setEjemploIdx((i) => (i + 1) % ejemplosBusqueda.length), 2800);
+    return () => clearInterval(t);
+  }, [busqueda, ejemplosBusqueda.length]);
+  const placeholderBusqueda = busqueda === "" && ejemplosBusqueda.length > 0
+    ? `Buscar: "${ejemplosBusqueda[ejemploIdx % ejemplosBusqueda.length]}"…`
+    : "Busca tu destino o una ruta";
   // ETA aproximada por ruta para la lista del sidebar (sin llamar al endpoint
   // /eta de cada una): distancia del bus más cercano de la ruta a su parada más
   // próxima, a la velocidad efectiva del bus. El detalle de la ruta seleccionada
@@ -1749,7 +1768,7 @@ export default function Pasajero() {
               style={{ background: "var(--color-navy)", cursor: sheetSnap === "peek" ? "pointer" : "default" }}
               onClick={sheetSnap === "peek" ? () => setSheetSnap("half") : undefined}
             >
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center font-extrabold text-xl shrink-0" style={{ background: "#fff", color: "var(--color-navy)" }}>{rutaNumero}</div>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center font-extrabold text-xl shrink-0 shadow-md" style={{ background: selectedRuta.color, color: "#fff" }}>{rutaNumero}</div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-display font-bold text-lg text-white leading-tight truncate">{selectedRuta.nombre}</h3>
                 <div className="flex items-center gap-1.5 mt-0.5">
@@ -1804,7 +1823,15 @@ export default function Pasajero() {
                 ))}
               </div>
             )}
-            {/* Lista de paraderos */}
+            {/* Lista de paraderos — línea de tiempo estilo metro (línea vertical del
+                color de la ruta uniendo las paradas). Cada parada es tocable: centra
+                el mapa en ella y minimiza la hoja para verla. */}
+            {paradas.length > 0 && (
+              <div className="flex items-center justify-between px-4 pt-3 pb-1.5 bg-white">
+                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-gray-text)" }}>Paraderos del recorrido</span>
+                <span className="text-[10px] font-semibold flex items-center gap-1" style={{ color: "var(--color-blue)" }}><MapPin className="w-3 h-3" /> Toca para verla</span>
+              </div>
+            )}
             {paradas.length > 0 && (
               <ul className="bg-white">
                 {paradas.map((p, i) => {
@@ -1812,25 +1839,56 @@ export default function Pasajero() {
                   const past = nextI >= 0 && i < nextI;
                   const current = i === nextI;
                   const cercana = i === miParadaI; // la más cercana a mi ubicación
+                  const isFirst = i === 0;
+                  const isLast = i === paradas.length - 1;
+                  const irAParada = () => {
+                    if (mapRef.current) mapRef.current.setView([p.latitud, p.longitud], 16);
+                    setSheetSnap("peek");
+                  };
+                  // Color de los segmentos de línea: gris si el tramo ya lo pasó el
+                  // bus, color de la ruta si está por venir.
+                  const lineaArriba = i <= nextI && nextI >= 0 ? "#d7dde6" : `${selectedRuta.color}80`;
+                  const lineaAbajo = i < nextI && nextI >= 0 ? "#d7dde6" : `${selectedRuta.color}80`;
                   return (
-                    <li key={p.asignacion_id ?? i} className="relative flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "#f1f4f8", background: current ? "rgba(123,184,213,0.10)" : cercana ? "rgba(56,161,105,0.07)" : "transparent", opacity: past ? 0.55 : 1 }}>
+                    <li
+                      key={p.asignacion_id ?? i}
+                      onClick={irAParada}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); irAParada(); } }}
+                      aria-label={`Ver ${p.nombre} en el mapa`}
+                      className="relative flex items-stretch gap-3 pr-4 border-b cursor-pointer transition-colors active:bg-black/[0.03]"
+                      style={{ borderColor: "#f1f4f8", background: current ? "rgba(123,184,213,0.10)" : cercana ? "rgba(56,161,105,0.07)" : "transparent", opacity: past ? 0.55 : 1 }}
+                    >
                       {current && <span className="absolute left-0 top-0 bottom-0 w-1" style={{ background: "var(--color-gold)" }} />}
                       {cercana && !current && <span className="absolute left-0 top-0 bottom-0 w-1" style={{ background: "var(--color-success)" }} />}
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={current ? { background: "rgba(37,88,165,0.12)" } : cercana ? { background: "rgba(56,161,105,0.15)" } : { background: "#eef2f7" }}>
-                          {past ? <Check className="w-4 h-4" style={{ color: "var(--color-gray-text)" }} /> : current ? <MapPin className="w-4 h-4" style={{ color: "var(--color-blue)" }} /> : cercana ? <LocateFixed className="w-4 h-4" style={{ color: "var(--color-success)" }} /> : <span className="w-2 h-2 rounded-full" style={{ background: "#cbd5e1" }} />}
+                      {/* Rail: los segmentos de línea (flex-1) y el punto viven en su
+                          propia columna, así la línea SIEMPRE queda centrada bajo el
+                          círculo y jamás se solapa con el texto o el ETA. */}
+                      <div className="flex flex-col items-center flex-shrink-0 ml-4" style={{ width: 28 }} aria-hidden="true">
+                        <span className="w-[3px] flex-1 rounded-full" style={{ background: lineaArriba, visibility: isFirst ? "hidden" : "visible" }} />
+                        <span className="w-7 h-7 rounded-full flex items-center justify-center shadow-sm" style={current ? { background: "rgba(37,88,165,0.12)", boxShadow: `0 0 0 3px ${selectedRuta.color}22` } : cercana ? { background: "rgba(56,161,105,0.15)" } : { background: "#eef2f7" }}>
+                          {past ? <Check className="w-4 h-4" style={{ color: "var(--color-gray-text)" }} /> : current ? <MapPin className="w-4 h-4" style={{ color: "var(--color-blue)" }} /> : cercana ? <LocateFixed className="w-4 h-4" style={{ color: "var(--color-success)" }} /> : <span className="w-2 h-2 rounded-full" style={{ background: selectedRuta.color, opacity: 0.7 }} />}
                         </span>
+                        <span className="w-[3px] flex-1 rounded-full" style={{ background: lineaAbajo, visibility: isLast ? "hidden" : "visible" }} />
+                      </div>
+                      {/* Contenido: nombre + sublabel a la izquierda, ETA a la derecha */}
+                      <div className="flex-1 min-w-0 flex items-center justify-between gap-2 py-3">
                         <div className="min-w-0">
                           <span className={"truncate block text-sm " + (current || cercana ? "font-bold" : "font-medium")} style={{ color: "var(--color-navy)" }}>{p.nombre}</span>
-                          {cercana && <span className="text-[10px] font-bold" style={{ color: "var(--color-success)" }}>Súbete aquí · a {miParada.d < 1 ? `${Math.round(miParada.d * 1000)} m` : `${miParada.d.toFixed(1)} km`} de ti</span>}
+                          {cercana ? (
+                            <span className="text-[10px] font-bold" style={{ color: "var(--color-success)" }}>Súbete aquí · a {miParada.d < 1 ? `${Math.round(miParada.d * 1000)} m` : `${miParada.d.toFixed(1)} km`} de ti</span>
+                          ) : current ? (
+                            <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--color-blue)" }}>Próxima parada del bus</span>
+                          ) : null}
                         </div>
+                        {eta != null && (
+                          <div className="text-right shrink-0">
+                            <div className={"font-display " + (current ? "text-3xl" : "text-lg") + " font-extrabold tabular-nums leading-none"} style={{ color: current ? "var(--color-gold)" : "var(--color-gray-text)" }}>{eta <= 0 ? "•" : eta}</div>
+                            <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--color-gray-text)" }}>{eta <= 0 ? "llegando" : "min"}</div>
+                          </div>
+                        )}
                       </div>
-                      {eta != null && (
-                        <div className="text-right shrink-0 ml-2">
-                          <div className={"font-display " + (current ? "text-3xl" : "text-lg") + " font-extrabold tabular-nums leading-none"} style={{ color: current ? "var(--color-gold)" : "var(--color-gray-text)" }}>{eta <= 0 ? "•" : eta}</div>
-                          <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--color-gray-text)" }}>{eta <= 0 ? "llegando" : "min"}</div>
-                        </div>
-                      )}
                     </li>
                   );
                 })}
@@ -1998,7 +2056,7 @@ export default function Pasajero() {
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               onFocus={() => setVista("rutas")}
-              placeholder="Busca tu destino o una ruta"
+              placeholder={placeholderBusqueda}
               aria-label="Busca tu destino o una ruta"
               className="w-full h-12 pl-12 pr-10 text-sm rounded-2xl outline-none border-0 shadow-md"
               style={{ background: "#fff", color: "var(--color-navy)" }}
@@ -2497,6 +2555,7 @@ export default function Pasajero() {
                   key={r.id}
                   ruta={r}
                   vivos={rutaBusesVivos(r.id)}
+                  etaMin={etaAproxPorRuta[r.id] ?? null}
                   demora={buses.some((b) => b.ruta_id === r.id && b.estado === "demora")}
                   favorito={favoritos.includes(r.id)}
                   onSelect={() => handleSelectRuta(r.id)}
@@ -2571,8 +2630,35 @@ export default function Pasajero() {
                 const recientesRutas = busqueda
                   ? []
                   : recientes.map((id) => rutas.find((r) => r.id === id)).filter((r): r is typeof rutas[number] => !!r);
+                // Lista agrupada por estado (con/sin buses ahora) para leerla de un vistazo.
+                const enServicio = rutasFiltradas.filter((r) => rutaTieneVivos(r.id));
+                const sinBuses = rutasFiltradas.filter((r) => !rutaTieneVivos(r.id));
+                const seccion = (dot: React.ReactNode, titulo: string, n: number, badgeBg: string) => (
+                  <div className="flex items-center gap-2 px-1 pt-1 pb-0.5">
+                    {dot}
+                    <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--color-gray-text)" }}>{titulo}</span>
+                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full text-white" style={{ background: badgeBg }}>{n}</span>
+                  </div>
+                );
                 return (
                   <>
+                    {/* CTA "¿A dónde vas?" — el camino para quien no sabe qué ruta tomar */}
+                    {!busqueda && (
+                      <button
+                        onClick={() => { setVista("mapa"); armarDestino(); }}
+                        className="w-full rounded-2xl p-3.5 flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
+                        style={{ background: "linear-gradient(135deg, #2558A5 0%, #1B3B6F 70%)", boxShadow: "0 8px 20px rgba(27,59,111,0.20)" }}
+                      >
+                        <span className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(245,183,49,0.20)" }}>
+                          <Navigation className="w-5 h-5" style={{ color: "var(--color-gold)" }} />
+                        </span>
+                        <span className="flex-1 min-w-0">
+                          <span className="block font-display font-extrabold text-white text-[15px]">¿A dónde vas?</span>
+                          <span className="block text-[12px] text-white/75 leading-snug">Elige tu destino y te decimos qué bus tomar</span>
+                        </span>
+                        <ChevronRight className="w-5 h-5 flex-shrink-0 text-white/70" />
+                      </button>
+                    )}
                     {/* Lugares que casan con la búsqueda (buscar por destino) */}
                     {grupoLugares()}
                     {recientesRutas.length > 0 && (
@@ -2582,10 +2668,17 @@ export default function Pasajero() {
                         <div className="h-1" />
                       </>
                     )}
-                    {rutasFiltradas.length > 0 && (
+                    {/* Agrupadas por estado: primero las que sirven ahora */}
+                    {enServicio.length > 0 && (
                       <>
-                        {Header("Rutas", "Toca una para verla en el mapa", rutasFiltradas.length)}
-                        {rutasFiltradas.map(RouteCard)}
+                        {seccion(<span className="w-2 h-2 rounded-full animate-pulse" style={{ background: "var(--color-success)" }} />, "En servicio ahora", enServicio.length, "var(--color-success)")}
+                        {enServicio.map(RouteCard)}
+                      </>
+                    )}
+                    {sinBuses.length > 0 && (
+                      <>
+                        {seccion(<span className="w-2 h-2 rounded-full" style={{ background: "#c3ccd9" }} />, "Sin buses ahora", sinBuses.length, "#9aa7b8")}
+                        {sinBuses.map(RouteCard)}
                       </>
                     )}
                   </>

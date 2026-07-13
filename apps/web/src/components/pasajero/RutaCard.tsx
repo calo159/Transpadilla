@@ -1,16 +1,19 @@
-import { Bus, Star, Bell, BellRing, ChevronRight, AlertTriangle } from "lucide-react";
+import { Bus, Star, Bell, BellRing, AlertTriangle } from "lucide-react";
 import type { Ruta } from "@workspace/api-client";
 
 /**
- * Tarjeta de ruta estilo "transit" (Moovit/Transit): rail del color de la ruta,
- * badge de línea, estado en vivo con pulso, y el TRAYECTO origen ●───● destino en
- * el color de la ruta. Se usa igual en el sidebar de escritorio (`compact`) y en
- * las vistas móviles a pantalla completa. Presentacional puro (sin fetch): recibe
- * por props los datos ya calculados en Pasajero (buses vivos, favorito, demora).
+ * Tarjeta de ruta estilo "tablero de llegadas": a la izquierda la identidad de la
+ * ruta (badge + nombre), el estado en vivo y el corredor por donde pasa (mini línea
+ * ●──●──● del color de la ruta); a la derecha, como el panel de una parada, el
+ * tiempo GRANDE del próximo bus. Se usa igual en el sidebar de escritorio
+ * (`compact`) y en las vistas móviles a pantalla completa. Presentacional puro
+ * (sin fetch): recibe por props los datos ya calculados en Pasajero (buses vivos,
+ * ETA, favorito, demora).
  */
 export function RutaCard({
   ruta,
   vivos,
+  etaMin = null,
   demora = false,
   favorito,
   onSelect,
@@ -24,6 +27,7 @@ export function RutaCard({
 }: {
   ruta: Ruta;
   vivos: number;
+  etaMin?: number | null;
   demora?: boolean;
   favorito: boolean;
   onSelect: () => void;
@@ -51,6 +55,10 @@ export function RutaCard({
     return elegidos;
   })();
   const hayTrayecto = pasaPor.length > 0;
+  const enVivo = vivos > 0;
+  const hayEta = enVivo && etaMin != null;
+  // Puntos del corredor: uno por parada representativa (mínimo 2 para que se vea "línea").
+  const puntos = Math.max(2, Math.min(pasaPor.length, 3));
 
   return (
     <div
@@ -69,23 +77,36 @@ export function RutaCard({
       {/* Rail lateral del color de la ruta */}
       <span className="absolute left-0 top-0 bottom-0 w-1.5" style={{ background: ruta.color }} />
 
-      {/* Fila superior: badge + nombre + estado */}
-      <div className="flex items-center gap-3">
-        <span
-          className={`flex items-center justify-center flex-shrink-0 shadow-md ${compact ? "w-9 h-9 rounded-lg" : "w-11 h-11 rounded-xl"}`}
-          style={{ background: ruta.color }}
-        >
-          <Bus className={compact ? "w-[18px] h-[18px] text-white" : "w-[22px] h-[22px] text-white"} />
-        </span>
-        <div className="flex-1 min-w-0">
-          <span
-            className={`font-display block font-bold truncate ${compact ? "text-sm" : "text-[17px]"}`}
-            style={{ color: "var(--color-navy)" }}
-          >
-            {ruta.nombre}
-          </span>
-          <span className="mt-0.5 flex items-center gap-1.5 flex-wrap">
-            <EstadoPill vivos={vivos} compact={compact} />
+      <div className="flex items-stretch gap-3">
+        {/* ── Columna izquierda: identidad + estado + corredor ── */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          {/* Identidad: badge + nombre */}
+          <div className="flex items-center gap-2.5">
+            <span
+              className={`flex items-center justify-center flex-shrink-0 shadow-md ${compact ? "w-9 h-9 rounded-lg" : "w-11 h-11 rounded-xl"}`}
+              style={{ background: ruta.color }}
+            >
+              <Bus className={compact ? "w-[18px] h-[18px] text-white" : "w-[22px] h-[22px] text-white"} />
+            </span>
+            <span
+              className={`font-display block font-extrabold truncate ${compact ? "text-sm" : "text-lg"}`}
+              style={{ color: "var(--color-navy)" }}
+            >
+              {ruta.nombre}
+            </span>
+          </div>
+
+          {/* Estado en vivo + demora */}
+          <span className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+            <span className="inline-flex items-center gap-1.5">
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${enVivo ? "animate-pulse" : ""}`}
+                style={{ background: enVivo ? "var(--color-success)" : "var(--color-gray-text)" }}
+              />
+              <span className={`font-bold ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: enVivo ? "var(--color-success)" : "var(--color-gray-text)" }}>
+                {enVivo ? `${vivos} ${vivos === 1 ? "bus" : "buses"} en vivo` : "Sin buses ahora"}
+              </span>
+            </span>
             {demora && (
               <span
                 className="inline-flex items-center gap-1 font-bold rounded-full"
@@ -95,75 +116,85 @@ export function RutaCard({
               </span>
             )}
           </span>
-        </div>
-        {mostrarNotificar && onToggleNotificar && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggleNotificar(); }}
-            className={`flex-shrink-0 flex flex-col items-center gap-0.5 rounded-xl active:scale-90 transition-transform ${compact ? "p-1.5" : "px-1.5 py-1"}`}
-            aria-label={notificando ? "Quitar notificaciones de esta ruta" : "Notificarme de esta ruta"}
-            aria-pressed={notificando}
-          >
-            {notificando
-              ? <BellRing className={compact ? "w-5 h-5" : "w-6 h-6"} style={{ color: "var(--color-gold)" }} />
-              : <Bell className={compact ? "w-5 h-5" : "w-6 h-6"} style={{ color: "#94a3b8" }} />}
-            {!compact && <span className="text-[10px] font-semibold leading-none" style={{ color: notificando ? "var(--tp-gold-ink)" : "#94a3b8" }}>Avisos</span>}
-          </button>
-        )}
-        <button
-          onClick={(e) => { e.stopPropagation(); onToggleFavorito(); }}
-          className={`flex-shrink-0 flex flex-col items-center gap-0.5 rounded-xl active:scale-90 transition-transform ${compact ? "p-1.5 -mr-0.5" : "px-1.5 py-1 -mr-1"}`}
-          aria-label={favorito ? "Quitar de favoritas" : "Marcar favorita"}
-        >
-          <Star className={compact ? "w-5 h-5" : "w-6 h-6"} style={favorito ? { color: "var(--color-gold)", fill: "var(--color-gold)" } : { color: "#94a3b8" }} />
-          {!compact && <span className="text-[10px] font-semibold leading-none" style={{ color: favorito ? "var(--tp-gold-ink)" : "#94a3b8" }}>Guardar</span>}
-        </button>
-      </div>
 
-      {/* "Pasa por": paradas representativas del recorrido (en vez de los extremos,
-          que en un circuito cerrado quedan en la misma zona y confunden). */}
-      {hayTrayecto ? (
-        <div className={compact ? "mt-2 pl-0.5" : "mt-2.5 pl-0.5"}>
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: ruta.color }} />
-            <p className={`truncate ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--color-gray-text)" }}>
-              <span className="font-semibold" style={{ color: "var(--color-navy)" }}>Pasa por: </span>
-              {pasaPor.join(" · ")}
-            </p>
+          {/* Corredor: mini línea ●──●──● del color de la ruta + nombres */}
+          {hayTrayecto && (
+            <div className={`flex items-center gap-2 min-w-0 ${compact ? "mt-2" : "mt-2.5"}`}>
+              <span className="flex items-center flex-shrink-0" aria-hidden="true">
+                {Array.from({ length: puntos }).map((_, i) => (
+                  <span key={i} className="flex items-center">
+                    <span className="w-2 h-2 rounded-full" style={{ background: ruta.color }} />
+                    {i < puntos - 1 && <span className="block w-3 h-[3px]" style={{ background: ruta.color, opacity: 0.5 }} />}
+                  </span>
+                ))}
+              </span>
+              <p className={`truncate ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--color-gray-text)" }}>
+                {pasaPor.join(" · ")}
+              </p>
+            </div>
+          )}
+
+          {/* Nº de paradas, al pie de la columna */}
+          <span className={`font-semibold ${compact ? "text-[10px] mt-1.5" : "text-[11px] mt-auto pt-2"}`} style={{ color: "var(--color-gray-text)" }}>
+            {ruta.paradas.length} {ruta.paradas.length === 1 ? "parada" : "paradas"}
+          </span>
+        </div>
+
+        {/* ── Columna derecha: acciones (arriba) + tablero de llegada (abajo) ── */}
+        <div
+          className={`flex-shrink-0 flex flex-col items-end justify-between ${compact ? "w-[64px] pl-2" : "w-[86px] pl-3"}`}
+          style={{ borderLeft: "1px solid rgba(27,59,111,0.08)" }}
+        >
+          {/* Acciones como íconos chicos (sin etiqueta, para dar aire al ETA) */}
+          <div className="flex items-center gap-0.5 -mt-0.5 -mr-1">
+            {mostrarNotificar && onToggleNotificar && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onToggleNotificar(); }}
+                className="flex-shrink-0 p-1.5 rounded-full active:scale-90 transition-transform"
+                aria-label={notificando ? "Quitar notificaciones de esta ruta" : "Notificarme de esta ruta"}
+                aria-pressed={notificando}
+              >
+                {notificando
+                  ? <BellRing className={compact ? "w-4 h-4" : "w-5 h-5"} style={{ color: "var(--color-gold)" }} />
+                  : <Bell className={compact ? "w-4 h-4" : "w-5 h-5"} style={{ color: "#94a3b8" }} />}
+              </button>
+            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleFavorito(); }}
+              className="flex-shrink-0 p-1.5 rounded-full active:scale-90 transition-transform"
+              aria-label={favorito ? "Quitar de favoritas" : "Marcar favorita"}
+            >
+              <Star className={compact ? "w-4 h-4" : "w-5 h-5"} style={favorito ? { color: "var(--color-gold)", fill: "var(--color-gold)" } : { color: "#94a3b8" }} />
+            </button>
+          </div>
+
+          {/* Tablero de llegada */}
+          <div className="flex flex-col items-end leading-none mt-1">
+            <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--color-gray-text)" }}>
+              {hayEta ? "Próximo bus" : "Sin buses"}
+            </span>
+            {hayEta ? (
+              etaMin! <= 0 ? (
+                <span className={`font-black tabular-nums mt-0.5 ${compact ? "text-lg" : "text-[26px]"}`} style={{ color: ruta.color }}>
+                  YA
+                </span>
+              ) : (
+                <span className="flex items-baseline gap-0.5 mt-0.5">
+                  <span className={`font-black tabular-nums ${compact ? "text-lg" : "text-[28px]"}`} style={{ color: ruta.color, lineHeight: 1 }}>
+                    {etaMin}
+                  </span>
+                  <span className={`font-bold ${compact ? "text-[10px]" : "text-xs"}`} style={{ color: "var(--color-gray-text)" }}>min</span>
+                </span>
+              )
+            ) : (
+              <>
+                <span className={`font-black mt-0.5 ${compact ? "text-lg" : "text-[26px]"}`} style={{ color: "#cbd5e1", lineHeight: 1 }}>—</span>
+                {!compact && <span className="text-[9px] font-semibold mt-0.5" style={{ color: "var(--color-gray-text)" }}>5 am–10 pm</span>}
+              </>
+            )}
           </div>
         </div>
-      ) : (
-        <div className={compact ? "mt-2" : "mt-2.5"} />
-      )}
-
-      {/* Fila meta: paradas + chevron */}
-      <div className="mt-2 flex items-center justify-between">
-        <span className={`font-semibold ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--color-gray-text)" }}>
-          {ruta.paradas.length} {ruta.paradas.length === 1 ? "parada" : "paradas"}
-        </span>
-        <ChevronRight className="w-5 h-5 flex-shrink-0" style={{ color: "#cbd5e1" }} />
       </div>
     </div>
-  );
-}
-
-/** Pill de estado en vivo: "X en vivo" (verde, pulso) o "Sin buses" (gris). */
-function EstadoPill({ vivos, compact }: { vivos: number; compact: boolean }) {
-  const hay = vivos > 0;
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 font-bold rounded-full"
-      style={{
-        fontSize: 11,
-        padding: compact ? "2px 7px" : "3px 9px",
-        background: hay ? "rgba(56,161,105,0.14)" : "rgba(107,114,128,0.12)",
-        color: hay ? "var(--color-success)" : "var(--color-gray-text)",
-      }}
-    >
-      <span
-        className={`w-1.5 h-1.5 rounded-full ${hay ? "animate-pulse" : ""}`}
-        style={{ background: hay ? "var(--color-success)" : "var(--color-gray-text)" }}
-      />
-      {hay ? `${vivos} en vivo` : "Sin buses ahora"}
-    </span>
   );
 }
