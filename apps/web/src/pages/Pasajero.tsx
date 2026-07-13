@@ -1245,21 +1245,29 @@ export default function Pasajero() {
         </div>
       </div>
       {busSugerido ? (
-        <div className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
-          <span className="text-xs text-foreground">
-            Bus más cercano <span className="font-mono font-bold">{busSugerido.bus.placa}</span>:{" "}
-            <span className="font-bold text-green-400">{busSugerido.etaMin <= 0 ? "llegando" : `~${busSugerido.etaMin} min`}</span>
-          </span>
+        <>
+          {/* Estado (info): qué bus y en cuánto llega */}
+          <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg mb-2" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
+            <Bus className="w-4 h-4 flex-shrink-0" style={{ color: "var(--color-success)" }} />
+            <span className="text-xs text-foreground min-w-0 truncate">
+              Bus más cercano <span className="font-mono font-bold">{busSugerido.bus.placa}</span>{" · "}
+              <span className="font-bold" style={{ color: "var(--color-success)" }}>{busSugerido.etaMin <= 0 ? "llegando" : `~${busSugerido.etaMin} min`}</span>
+            </span>
+          </div>
+          {/* Acción (CTA): botón ancho y sólido, claramente tocable */}
           <button
             onClick={() => seguirBus(busSugerido.bus.id)}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold flex-shrink-0"
+            aria-pressed={siguiendoBusId === busSugerido.bus.id}
+            className="w-full h-11 flex items-center justify-center gap-2 rounded-xl text-sm font-bold active:scale-[0.98] transition-transform"
             style={siguiendoBusId === busSugerido.bus.id
-              ? { background: "var(--tp-sky)", color: "#001018" }
-              : { background: "rgba(123,184,213,0.15)", color: "var(--tp-sky)" }}
+              ? { background: "var(--color-navy)", color: "#fff" }
+              : { background: "var(--color-gold)", color: "var(--color-navy)", boxShadow: "0 6px 16px rgba(245,183,49,0.40)" }}
           >
-            <LocateFixed className="w-3 h-3" />{siguiendoBusId === busSugerido.bus.id ? "Siguiendo" : "Seguir bus"}
+            {siguiendoBusId === busSugerido.bus.id
+              ? <><Check className="w-5 h-5" /> Siguiendo este bus</>
+              : <><LocateFixed className="w-5 h-5" /> Seguir bus</>}
           </button>
-        </div>
+        </>
       ) : (
         <p className="text-xs text-muted-foreground px-1">Esta ruta no tiene buses circulando ahora mismo.</p>
       )}
