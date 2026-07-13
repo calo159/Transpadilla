@@ -33,6 +33,10 @@ export default function Conductor() {
   const mapRef = useLeafletMap(mapContainerRef, { zoom: 14 });
   const busMarkerRef = useRef<L.Marker | null>(null);
   const gpsWatchRef = useRef<number | string | null>(null);
+  // ¿Estamos transmitiendo la posición? Se pone en false al finalizar/cortar el
+  // watcher para que ningún ping tardío del GPS (watchPosition se dispara solo)
+  // reactive el bus en el backend tras "finalizar".
+  const transmitiendoRef = useRef(false);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   const [activo, setActivo] = useState(false);
@@ -93,6 +97,9 @@ export default function Conductor() {
 
   const sendGps = useCallback((lat: number, lng: number, vel: number) => {
     if (!busId) return;
+    // Ya se finalizó/cortó la transmisión: descartar pings tardíos del watcher
+    // (si no, reactivarían el bus en el backend justo después de finalizar).
+    if (!transmitiendoRef.current) return;
     setGpsError(false); // llegó una posición: el GPS está OK
     setGpsLat(lat); setGpsLng(lng); setGpsVel(vel); setGpsCount((c) => c + 1);
     if (mapRef.current) {
@@ -120,6 +127,7 @@ export default function Conductor() {
   // watcher: sirve para "sondear" el GPS al iniciar el viaje (ok=true si llegó una
   // posición real; ok=false si el GPS está apagado o el permiso denegado).
   const iniciarWatch = useCallback((onFirst?: (ok: boolean) => void) => {
+    transmitiendoRef.current = true;
     let firstFired = false;
     const fireFirst = (ok: boolean) => { if (!firstFired) { firstFired = true; onFirst?.(ok); } };
     if (Capacitor.isNativePlatform()) {
@@ -156,6 +164,7 @@ export default function Conductor() {
   // Detiene el watcher GPS (según plataforma). Reutilizable por finalizar() y por
   // iniciar() cuando la sonda de GPS falla.
   const detenerWatch = useCallback(() => {
+    transmitiendoRef.current = false;
     if (gpsWatchRef.current !== null) {
       if (Capacitor.isNativePlatform()) {
         BackgroundGeolocation.removeWatcher({ id: gpsWatchRef.current as string }).catch(() => {});
@@ -243,19 +252,24 @@ export default function Conductor() {
   }, [activo, pedirWakeLock, iniciarWatch]);
 
   const finalizar = async (): Promise<boolean> => {
-    // Primero confirmamos con el backend que el recorrido terminó. Si la red
-    // falla, NO limpiamos el estado local: el bus sigue activo y el conductor
-    // puede reintentar (evita que el front diga "finalizado" y el backend no).
+    // Cortar la transmisión ANTES de avisar al backend: si no, un ping tardío del
+    // watcher (se dispara solo) podría reactivar el bus justo después de finalizar
+    // y "reaparecería" en el mapa del pasajero. `detenerWatch` pone
+    // transmitiendoRef=false, así que `sendGps` descarta cualquier ping en curso.
+    detenerWatch();
+    // Luego confirmamos con el backend que el recorrido terminó. Si la red falla,
+    // NO limpiamos el estado local (el bus sigue activo y el conductor reintenta) y
+    // reanudamos la transmisión de GPS.
     if (busId) {
       try {
         await finalizarRecorrido.mutateAsync({ data: { bus_id: busId } });
         queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
       } catch {
+        iniciarWatch();
         toast({ title: "No se pudo finalizar — revisa tu conexión e inténtalo de nuevo", variant: "destructive" });
         return false;
       }
     }
-    detenerWatch();
     liberarWakeLock();
     setActivo(false); setGpsLat(null); setGpsLng(null); setGpsCount(0); setGpsError(false); setGpsFallos(0);
     busMarkerRef.current?.remove(); busMarkerRef.current = null;

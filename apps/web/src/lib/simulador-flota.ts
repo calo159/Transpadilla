@@ -134,11 +134,16 @@ export async function iniciarSimulacion(rutas: Ruta[]): Promise<{ ok: boolean; e
 }
 
 async function tick(): Promise<void> {
+  // Si se detuvo la simulación (intervalId=null) no seguir: evita que un tick que
+  // ya estaba en vuelo mande pings tardíos que reactiven buses que están por borrarse.
+  if (intervalId === null) return;
   const dtHoras = INTERVALO_MS / 1000 / 3600;
   await Promise.all(
     busesSimulados.map(async (b) => {
       b.sM += b.velocidadKmh * 1000 * dtHoras;
       const [lat, lng] = puntoEn(b.sM, b.coords, b.acumuladoM, b.longitudTotalM);
+      // Re-chequeo por si se detuvo mientras se calculaba la posición de otros buses.
+      if (intervalId === null) return;
       try {
         await apiFetch("/api/buses/gps", {
           method: "POST",
