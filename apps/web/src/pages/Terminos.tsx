@@ -62,8 +62,6 @@ export default function Terminos() {
       <LegalH2>9. Contacto</LegalH2>
       <LegalP>Para dudas sobre estos términos, escríbenos por WhatsApp al {WHATSAPP_NUMERO}.</LegalP>
 
-      <LegalP><em>Nota: este documento es un borrador de referencia y debe ser revisado y validado
-        por el área jurídica de la entidad antes de su adopción formal.</em></LegalP>
     </LegalPage>
   );
 }
