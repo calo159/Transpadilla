@@ -680,8 +680,8 @@ export default function Pasajero() {
   useEffect(() => {
     const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
     const socket = apiUrl
-      ? io(apiUrl, { path: "/socket.io", transports: ["websocket", "polling"] })
-      : io({ path: "/socket.io", transports: ["websocket", "polling"] });
+      ? io(apiUrl, { path: "/socket.io", transports: ["polling", "websocket"] })
+      : io({ path: "/socket.io", transports: ["polling", "websocket"] });
     socketRef.current = socket;
     socket.on("connect", () => setConectado(true));
     socket.on("disconnect", () => setConectado(false));
