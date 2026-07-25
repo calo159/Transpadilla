@@ -203,6 +203,38 @@ app.use("/api", (req, res, next) => {
   return apiLimiter(req, res, next);
 }, router);
 
+// ── API v1 (versionada) ──────────────────────────────────────────────────────
+// Mismos handlers que /api, pero bajo /api/v1. Las rutas /api/* siguen
+// funcionando para no romper clientes existentes (el APK del conductor, bookmarks,
+// etc.) pero devuelven un header Deprecation para que migren. Cuando se quiera
+// eliminar /api/*, basta con cambiarlos por un 301 a /api/v1/*.
+app.use("/api/v1", (req, res, next) => {
+  const ruta = req.originalUrl.split("?")[0];
+  if (ruta.startsWith("/api/v1/healthz") || ruta.startsWith("/api/v1/readyz")) return next();
+  return apiLimiter(req, res, next);
+}, router);
+
+// Header Deprecation en /api/* (no en /api/v1/*): avisa a los clientes que deben
+// migrar. Sigue respondiendo normalmente (200) — es solo un aviso.
+app.use("/api", (req, res, next) => {
+  if (req.path.startsWith("/v1")) return next();
+  res.setHeader("Deprecation", "true");
+  res.setHeader("Sunset", "2027-01-01");
+  res.setHeader("Link", '</api/v1' + req.path + '>; rel="successor-version"');
+  next();
+});
+
+// Endpoint de descubrimiento de versión: los clientes pueden preguntar a qué
+// versiones están disponibles y cuál es la recomendada.
+app.get("/api/version", (_req, res) => {
+  res.json({
+    current: "v1",
+    available: ["v1"],
+    latest: "v1",
+    deprecation: { "/api/*": "Usa /api/v1/* en su lugar (Sunset: 2027-01-01)" },
+  });
+});
+
 // 404 JSON para rutas de API no encontradas (en vez de caer al SPA o a HTML).
 app.use("/api", (_req, res) => {
   res.status(404).json({ error: "Recurso no encontrado" });
