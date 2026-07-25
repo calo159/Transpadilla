@@ -31,17 +31,23 @@ function BotonSimularTrafico({ rutas }: { rutas: Ruta[] }) {
 
   const refrescarBuses = () => queryClient.invalidateQueries({ queryKey: getGetBusesQueryKey() });
 
-  const alClick = async () => {
+  const iniciar = async () => {
     setCargando(true);
     try {
-      if (activa) {
-        await detenerSimulacion();
-        toast({ title: "Simulación detenida", description: "Los buses de prueba se eliminaron." });
-      } else {
-        const r = await iniciarSimulacion(rutas);
-        if (!r.ok) { toast({ title: "No se pudo iniciar", description: r.error, variant: "destructive" }); return; }
-        toast({ title: "Simulación iniciada", description: "10 buses de prueba circulando (5 por ruta)." });
-      }
+      const r = await iniciarSimulacion(rutas);
+      if (!r.ok) { toast({ title: "No se pudo iniciar", description: r.error, variant: "destructive" }); return; }
+      toast({ title: "Simulación iniciada", description: "10 buses de prueba circulando (5 por ruta)." });
+      refrescarBuses();
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const cancelar = async () => {
+    setCargando(true);
+    try {
+      await detenerSimulacion();
+      toast({ title: "Simulación cancelada", description: "Los buses de prueba se eliminaron." });
       refrescarBuses();
     } finally {
       setCargando(false);
@@ -49,18 +55,30 @@ function BotonSimularTrafico({ rutas }: { rutas: Ruta[] }) {
   };
 
   return (
-    <button
-      onClick={alClick}
-      disabled={cargando}
-      className="inline-flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl disabled:opacity-60 active:scale-[0.98] transition-transform"
-      style={activa
-        ? { background: "rgba(229,62,62,0.15)", color: "#ef4444" }
-        : { background: "rgba(255,255,255,0.12)", color: "#fff" }}
-      title="Solo para pruebas: crea buses temporales (placa SIM-) que se borran al detener."
-    >
-      {activa ? <Square className="w-3.5 h-3.5" /> : <FlaskConical className="w-3.5 h-3.5" />}
-      {cargando ? "Un momento…" : activa ? "Detener simulación" : "Simular tráfico (10 buses)"}
-    </button>
+    <div className="inline-flex items-center gap-1.5">
+      <button
+        onClick={iniciar}
+        disabled={cargando || activa}
+        className="inline-flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl disabled:opacity-40 active:scale-[0.98] transition-transform"
+        style={{ background: "rgba(255,255,255,0.12)", color: "#fff" }}
+        title="Solo para pruebas: crea buses temporales (placa SIM-) que se borran al detener."
+      >
+        <FlaskConical className="w-3.5 h-3.5" />
+        {cargando && !activa ? "Un momento…" : "Simular tráfico (10 buses)"}
+      </button>
+      {activa && (
+        <button
+          onClick={cancelar}
+          disabled={cargando}
+          className="inline-flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl disabled:opacity-60 active:scale-[0.98] transition-transform"
+          style={{ background: "rgba(229,62,62,0.15)", color: "#ef4444" }}
+          title="Detiene la simulación y elimina los buses de prueba."
+        >
+          <Square className="w-3.5 h-3.5" />
+          {cargando && activa ? "Un momento…" : "Cancelar simulación"}
+        </button>
+      )}
+    </div>
   );
 }
 
