@@ -4,7 +4,7 @@ import { eq, sql } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
 import { busAutorizado } from "../middleware/bus-autorizado";
 import { emitirSeguro } from "../lib/socket";
-import { validarBody, requerido, texto, numeroEnRango, parseIdParam } from "../middleware/validate";
+import { validarBody, requerido, texto, numeroEnRango, parseIdParam, sanitizarCampo } from "../middleware/validate";
 import { crearCacheTtl } from "../lib/cache";
 import { registrarAuditoria } from "../lib/auditoria";
 import { enviarPushARuta, notificarProximidad } from "../lib/push";
@@ -231,7 +231,7 @@ router.post(
   "/buses/novedad",
   authMiddleware,
   requireRol("conductor", "admin"),
-  validarBody(requerido("novedad"), texto("novedad", 1, 200)),
+  validarBody(requerido("novedad"), texto("novedad", 1, 200), sanitizarCampo("novedad")),
   busAutorizado,
   async (req, res) => {
     const busId = req.busId!;

@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { db, buses, usuarios } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
-import { validarBody, requerido, texto, correoValido, passwordFuerte, parseIdParam } from "../middleware/validate";
+import { validarBody, requerido, texto, correoValido, passwordFuerte, parseIdParam, sanitizarCampo } from "../middleware/validate";
 import { registrarAuditoria } from "../lib/auditoria";
 
 // Toda la gestión de conductores es exclusiva del administrador autenticado.
@@ -33,10 +33,10 @@ router.post(
   "/conductores",
   ...soloAdmin,
   validarBody(
-    requerido("nombre"), texto("nombre", 2, 100),
+    requerido("nombre"), texto("nombre", 2, 100), sanitizarCampo("nombre"),
     requerido("correo"), correoValido("correo"),
     requerido("password"), passwordFuerte("password"),
-    requerido("identificacion"), texto("identificacion", 3, 30),
+    requerido("identificacion"), texto("identificacion", 3, 30), sanitizarCampo("identificacion"),
   ),
   async (req, res) => {
     const { nombre, correo, password, identificacion } = req.body as {

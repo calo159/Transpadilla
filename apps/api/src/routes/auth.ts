@@ -6,7 +6,7 @@ import { usuarios, buses } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { pool } from "@workspace/db";
 import { JWT_SECRET, authMiddleware, hashToken, setSessionCookie, clearSessionCookie } from "../middleware/auth";
-import { validarBody, requerido, correoValido, texto, passwordFuerte } from "../middleware/validate";
+import { validarBody, requerido, correoValido, texto, passwordFuerte, sanitizarCampo } from "../middleware/validate";
 import { rateLimit } from "../middleware/rate-limit";
 import { estaBloqueado, minutosRestantes, registrarFallo, limpiarIntentos } from "../lib/lockout";
 import { clienteIp } from "../lib/client-ip";
@@ -111,7 +111,7 @@ router.post(
   "/auth/register",
   registerLimiter,
   validarBody(
-    requerido("nombre"), texto("nombre", 2, 100),
+    requerido("nombre"), texto("nombre", 2, 100), sanitizarCampo("nombre"),
     requerido("correo"), correoValido("correo"),
     requerido("password"), passwordFuerte("password"),
   ),

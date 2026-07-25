@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, banners } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
-import { validarBody, requerido, texto, booleano, dataUrlImagen, parseIdParam } from "../middleware/validate";
+import { validarBody, requerido, texto, booleano, dataUrlImagen, parseIdParam, sanitizarCampo } from "../middleware/validate";
 import { registrarAuditoria } from "../lib/auditoria";
 
 // Banners / anuncios a pantalla completa que el admin publica al pasajero. La
@@ -29,7 +29,7 @@ router.post(
   "/banners",
   authMiddleware,
   requireRol("admin"),
-  validarBody(requerido("imagen_url"), dataUrlImagen("imagen_url"), texto("titulo", 0, 120), booleano("activo")),
+  validarBody(requerido("imagen_url"), dataUrlImagen("imagen_url"), texto("titulo", 0, 120), sanitizarCampo("titulo"), booleano("activo")),
   async (req, res) => {
     const { imagen_url, titulo = null, activo = true } = req.body as {
       imagen_url: string;

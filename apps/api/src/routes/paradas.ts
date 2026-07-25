@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, paradas, ruta_paradas, rutas } from "@workspace/db";
 import { eq, asc, and, desc } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
-import { validarBody, requerido, texto, numeroEnRango, parseIdParam } from "../middleware/validate";
+import { validarBody, requerido, texto, numeroEnRango, parseIdParam, sanitizarCampo, sanitizar } from "../middleware/validate";
 import { registrarAuditoria } from "../lib/auditoria";
 
 // Paradas y su asignación a rutas. Las lecturas son públicas (las usa el mapa);
@@ -21,7 +21,7 @@ router.post(
   authMiddleware,
   requireRol("admin"),
   validarBody(
-    requerido("nombre"), texto("nombre", 2, 100),
+    requerido("nombre"), texto("nombre", 2, 100), sanitizarCampo("nombre"),
     requerido("latitud"), numeroEnRango("latitud", -90, 90),
     requerido("longitud"), numeroEnRango("longitud", -180, 180),
   ),
@@ -49,7 +49,7 @@ router.patch(
       longitud?: number;
     };
     const cambios: { nombre?: string; latitud?: number; longitud?: number } = {};
-    if (nombre?.trim()) cambios.nombre = nombre.trim();
+    if (nombre?.trim()) cambios.nombre = sanitizar(nombre.trim());
     if (typeof latitud === "number" && !Number.isNaN(latitud)) cambios.latitud = latitud;
     if (typeof longitud === "number" && !Number.isNaN(longitud)) cambios.longitud = longitud;
     if (Object.keys(cambios).length === 0) {

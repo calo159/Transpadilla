@@ -134,3 +134,44 @@ export function parseIdParam(raw: unknown): number | null {
   const n = Number(s);
   return Number.isSafeInteger(n) && n > 0 ? n : null;
 }
+
+// ── Sanitización de outputs (defense-in-depth contra XSS) ─────────────────────
+// React escapa HTML por defecto, pero como capa adicional de seguridad,
+// sanitizamos los textos de entrada del servidor para que nunca contengan
+// HTML/JS, incluso si algún cliente lo renderiza de forma insegura.
+
+const TAGS_HTML = /<[^>]*>/g;
+const ENTIDADES_HTML = /&[a-zA-Z]+;|&#\d+;/g;
+
+/**
+ * Limpia un texto eliminando etiquetas HTML y decodificando entidades comunes.
+ * No distingue entre tags maliciosos y legítimos: los elimina todos.
+ * Para contenido que SÍ debe permitir HTML (ej. banners con rich text),
+ * usar un sanitizer DOMPurify en el frontend.
+ */
+export function sanitizar(texto: string): string {
+  return texto
+    .replace(TAGS_HTML, "")
+    .replace(ENTIDADES_HTML, (e) => {
+      if (e === "&lt;") return "<";
+      if (e === "&gt;") return ">";
+      if (e === "&amp;") return "&";
+      if (e === "&quot;") return '"';
+      if (e === "&#39;") return "'";
+      return "";
+    })
+    .trim();
+}
+
+/**
+ * Regla de validación que sanitiza un campo de texto: elimina HTML tags
+ * y entidades del body *antes* de que llegue al handler. El campo queda
+ * limpio en req.body.campo. Úsalo en campos de entrada de usuarios
+ * (novedades, nombres, categorías, etc.).
+ */
+export const sanitizarCampo = (campo: string): Regla => (b) => {
+  const v = b[campo];
+  if (typeof v !== "string") return null;
+  b[campo] = sanitizar(v);
+  return null;
+};

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, lugares } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
-import { validarBody, requerido, texto, numeroEnRango, booleano, parseIdParam } from "../middleware/validate";
+import { validarBody, requerido, texto, numeroEnRango, booleano, parseIdParam, sanitizarCampo } from "../middleware/validate";
 import { rateLimit } from "../middleware/rate-limit";
 import { registrarAuditoria } from "../lib/auditoria";
 
@@ -39,10 +39,10 @@ router.post(
   authMiddleware,
   requireRol("admin"),
   validarBody(
-    requerido("nombre"), texto("nombre", 2, 100),
+    requerido("nombre"), texto("nombre", 2, 100), sanitizarCampo("nombre"),
     requerido("latitud"), numeroEnRango("latitud", -90, 90),
     requerido("longitud"), numeroEnRango("longitud", -180, 180),
-    texto("categoria", 0, 40),
+    texto("categoria", 0, 40), sanitizarCampo("categoria"),
     booleano("activo"),
   ),
   async (req, res) => {

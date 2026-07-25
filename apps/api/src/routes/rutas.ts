@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, rutas, paradas, ruta_paradas } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
-import { validarBody, requerido, texto, booleano, colorHex, parseIdParam } from "../middleware/validate";
+import { validarBody, requerido, texto, booleano, colorHex, parseIdParam, sanitizarCampo } from "../middleware/validate";
 import { agruparRutasConParadas } from "../lib/agrupar-rutas";
 import { crearCacheTtl } from "../lib/cache";
 import { registrarAuditoria } from "../lib/auditoria";
@@ -46,7 +46,7 @@ router.post(
   "/rutas",
   authMiddleware,
   requireRol("admin"),
-  validarBody(requerido("nombre"), texto("nombre", 2, 100), colorHex("color")),
+  validarBody(requerido("nombre"), texto("nombre", 2, 100), colorHex("color"), sanitizarCampo("nombre")),
   async (req, res) => {
     const { nombre, color = "#3498db" } = req.body as { nombre: string; color?: string };
     const [ruta] = await db.insert(rutas).values({ nombre, color }).returning();
