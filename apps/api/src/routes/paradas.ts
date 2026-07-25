@@ -3,11 +3,14 @@ import { db, paradas, ruta_paradas, rutas } from "@workspace/db";
 import { eq, asc, and, desc } from "drizzle-orm";
 import { authMiddleware, requireRol } from "../middleware/auth";
 import { validarBody, requerido, texto, numeroEnRango, parseIdParam, sanitizarCampo, sanitizar } from "../middleware/validate";
+import { rateLimit } from "../middleware/rate-limit";
 import { registrarAuditoria } from "../lib/auditoria";
 
 // Paradas y su asignación a rutas. Las lecturas son públicas (las usa el mapa);
 // crear/editar/borrar/asignar es solo de administrador.
 const router = Router();
+
+router.use(rateLimit({ ventanaMs: 60_000, max: 120 }));
 
 // ─── Catálogo de paradas ──────────────────────────────────────────────────────
 
