@@ -34,7 +34,7 @@ allowBuilds:
   core-js: true
 
 overrides:
-  '@capacitor/cli>tar': ^7.5.16
+  'tar': '^7.5.21'
   'replace>minimatch': ^3.1.4
   'xcode>uuid': ^11.1.1
   '@esbuild-kit/core-utils>esbuild': ^0.25.0
@@ -43,3 +43,4 @@ overrides:
   'fast-uri': ~3.1.4
   'js-yaml': ~4.3.0
   'brace-expansion': ^5.0.8
+  'postcss': ^8.5.18
