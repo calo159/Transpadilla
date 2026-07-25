@@ -79,3 +79,7 @@ keystore.properties
 
 # Backups de base de datos (archivos .dump grandes)
 backups/
+
+# Playwright test results
+apps/web/test-results/
+apps/web/playwright-report/
