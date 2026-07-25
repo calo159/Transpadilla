@@ -132,6 +132,29 @@ curl -X POST http://localhost:8080/api/seed
 pnpm --filter @workspace/api run test   # unitarias siempre; integración si hay DATABASE_URL
 ```
 
+### Backups de la base de datos
+```powershell
+# Backup manual
+./scripts/backup-bd.ps1
+
+# Programar backup diario automático (3 AM)
+./scripts/programar-backup.ps1
+
+# Verificar integridad de un backup
+./scripts/verificar-backup.ps1 -Archivo ".\backups\tp_2026-07-24_0300.dump"
+```
+Guía completa: [docs/BACKUPS.md](docs/BACKUPS.md)
+
+### Monitoreo de producción
+```powershell
+# Verificar salud del sistema
+./scripts/verificar-salud.ps1
+
+# Configurar monitoreo con UptimeRobot (gratis)
+./scripts/configurar-monitoreo.ps1 -UptimeRobotApiKey "tu-api-key"
+```
+Guía completa: [docs/MONITOREO.md](docs/MONITOREO.md)
+
 ### En Windows (atajo)
 ```powershell
 ./iniciar.ps1   # arranca API + frontend juntos
@@ -205,7 +228,7 @@ packages/
   api-types/        Tipos Zod generados — NO editar a mano
 docs/               Guías: ONBOARDING, DESPLIEGUE-PRODUCCION, SUPABASE, SEGURIDAD,
                     CLOUDFLARE, MAPA, CAPACITOR-ANDROID, UI-SKILL,
-                    ESCALADO-MULTI-INSTANCIA
+                    ESCALADO-MULTI-INSTANCIA, BACKUPS, MONITOREO
 .github/workflows/  CI: typecheck, build, test (con Postgres), audit
 render.yaml         Blueprint de Render (servicio web)
 CLAUDE.md           Referencia profunda de arquitectura y decisiones

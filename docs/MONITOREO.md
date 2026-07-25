@@ -72,7 +72,33 @@ scrape_configs:
 
 ## 4.3 — Monitoreo de uptime
 
-Configura UptimeRobot, Better Uptime o Checkly apuntando a:
+### Configuración rápida con UptimeRobot (gratis)
+
+```powershell
+# 1. Crea cuenta gratis en https://uptimerobot.com
+# 2. Obtén tu API Key en https://uptimerobot.com/dashboard.php#apiKeys
+# 3. Ejecuta:
+./scripts/configurar-monitoreo.ps1 -UptimeRobotApiKey "tu-api-key"
+```
+
+Esto crea 3 monitores automáticos:
+- `/api/healthz` — Liveness (proceso vivo)
+- `/api/readyz` — Readiness (DB conectada)
+- `/api/buses` — Flujo crítico
+
+### Verificación manual
+
+```powershell
+# Verificar salud del sistema
+./scripts/verificar-salud.ps1
+
+# Con URL personalizada
+./scripts/verificar-salud.ps1 -BaseUrl "https://transpadilla-web.onrender.com"
+```
+
+### Configuración manual
+
+Si prefieres configurar manualmente UptimeRobot, Better Uptime o Checkly:
 
 | Chequeo | Frecuencia | Espera |
 |---|---|---|

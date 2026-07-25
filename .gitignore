@@ -76,3 +76,6 @@ keystore.properties
 
 # Reportes generados
 *-report.json
+
+# Backups de base de datos (archivos .dump grandes)
+backups/
