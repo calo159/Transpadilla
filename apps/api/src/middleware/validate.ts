@@ -140,7 +140,6 @@ export function parseIdParam(raw: unknown): number | null {
 // sanitizamos los textos de entrada del servidor para que nunca contengan
 // HTML/JS, incluso si algún cliente lo renderiza de forma insegura.
 
-const TAGS_HTML = /<[^>]*>/g;
 const ENTIDADES_HTML = /&[a-zA-Z]+;|&#\d+;/g;
 
 /**
@@ -150,8 +149,7 @@ const ENTIDADES_HTML = /&[a-zA-Z]+;|&#\d+;/g;
  * usar un sanitizer DOMPurify en el frontend.
  */
 export function sanitizar(texto: string): string {
-  return texto
-    .replace(TAGS_HTML, "")
+  return quitarTagsHtml(texto)
     .replace(ENTIDADES_HTML, (e) => {
       if (e === "&lt;") return "<";
       if (e === "&gt;") return ">";
@@ -161,6 +159,28 @@ export function sanitizar(texto: string): string {
       return "";
     })
     .trim();
+}
+
+// Quita etiquetas HTML con escaneo lineal. La regex /<[^>]*>/g es cuadrática
+// (js/polynomial-redos): en inputs tipo "<<<<<" sin ">" cada "<" retrocede sobre
+// el resto de la cadena. indexOf visita cada carácter un número constante de veces
+// con la MISMA semántica: quita desde un "<" hasta el primer ">" que le sigue.
+function quitarTagsHtml(texto: string): string {
+  let resultado = "";
+  let desde = 0;
+  let lt = texto.indexOf("<", desde);
+  while (lt !== -1) {
+    const gt = texto.indexOf(">", lt + 1);
+    if (gt === -1) {
+      resultado += texto.slice(desde);
+      return resultado;
+    }
+    resultado += texto.slice(desde, lt);
+    desde = gt + 1;
+    lt = texto.indexOf("<", desde);
+  }
+  resultado += texto.slice(desde);
+  return resultado;
 }
 
 /**
